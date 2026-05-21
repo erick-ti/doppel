@@ -8,6 +8,7 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "aiolimiter>=1.2.1",
     "httpx[http2]>=0.28.1",
     "rapidfuzz>=3.14.5",
 ]
@@ -26,8 +27,13 @@ clap = [
 ]
 dev = [
     "pytest>=9.0.3",
+    "pytest-asyncio>=0.24.0",
 ]
 
 [tool.pytest.ini_options]
 pythonpath = ["scripts"]
 testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "integration: hits live Deezer/MusicBrainz APIs; run with --run-integration",
+]
