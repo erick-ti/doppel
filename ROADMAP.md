@@ -40,11 +40,12 @@ Graceful degradation:
 
 ## Current Milestone
 
-**Day 0**: External dependency validation — go/no-go checkpoint for Deezer coverage, ISRC lookup, ListenBrainz Labs, CLAP memory/latency.
+**Day 1-2**: Matcher and resolver module — recording-level MusicBrainz canonicalization, ISRC-first Deezer preview fetch, and match verification (ISRC / duration / RapidFuzz), with a 30-50 case test suite.
+
+_Day 0 (external dependency validation) — **complete, verdict GO** (2026-05-21). All 6 checks passed; see SESSION_NOTES.md / DECISIONS.md._
 
 ## Upcoming Milestones
 
-- **Day 1-2**: Matcher and resolver module with recording-level canonicalization and match verification tests
 - **Day 3**: Candidate aggregator with conservative dedupe, Gate 1 async check, cultural ranking (RRF)
 - **Day 4**: CLAP embedder + similarity scoring with batch normalization
 - **Day 5**: Full database schema (tracks, audio_assets, canonical_lookups, embeddings, query_logs)
@@ -67,10 +68,11 @@ Graceful degradation:
 
 ## Open Questions
 
-- **Deezer ISRC lookup**: `/track/isrc:<ISRC>` may be undocumented. Day 0 validates availability. Config flag `DEEZER_ISRC_ENABLED` toggles it.
-- **Deezer rate limits**: Provisionally configured at 45 req/5 sec. Actual throttling behavior validated Day 0.
+- **Deezer ISRC lookup** — **RESOLVED (Day 0)**: `/track/isrc:<ISRC>` works reliably (5/5); `DEEZER_ISRC_ENABLED` defaults true, with search+verify as the fallback. (An ISRC may map to a different release of the same recording.)
+- **Deezer rate limits** — **PARTIAL (Day 0)**: no throttling observed at 60 concurrent (~100 req/s burst), so the true ceiling is above that and unmeasured. Keep the provisioned 45 req/5 sec as a conservative limit.
 - **Deezer terms permissibility**: Ephemeral embedding computation from previews is consistent with storage restrictions but not explicitly addressed in developer terms. Validate before any public deployment.
-- **ListenBrainz Labs stability**: similar-recordings endpoint is experimental. Isolated behind adapter. Rate-limit header behavior validated Day 0.
+- **ListenBrainz Labs stability** — **RESOLVED (Day 0)**: similar-recordings works (4/5 seeds, 100 results each; jazz/older = thin data). Requires resolving the seed to a canonical MBID via Labs `recording-search` first — MusicBrainz MBIDs return `[]`. Still experimental; keep behind the adapter.
 - **CLAP text encoder quality**: May handle cultural/emotional descriptors ("sad late night driving vibes") less well than literal acoustic terms. If evaluation shows this, an LLM pre-processing translation step is the fix.
 - **Candidate pool yield**: Target 200-300 after dedupe. Actual yield depends on Last.fm/ListenBrainz coverage per genre. Validated Day 3.
-- **CLAP dual-load memory**: Model loads separately in FastAPI and ARQ worker. Exact footprint measured Day 0.
+- **CLAP dual-load memory** — **RESOLVED (Day 0)**: ~659 MB process RSS per load (~1.3 GB dual-load across FastAPI + ARQ worker), 76 ms/clip warm on CPU, 512-dim. Fits a modest VPS.
+- **Coverage matrix representativeness**: Day 0 measured 100% Deezer coverage on 5 tracks (one per genre). Re-measure across R&B, pre-2000 classics, and non-English before treating coverage as a corpus-wide claim — the small sample likely overstates it.
