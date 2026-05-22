@@ -29,13 +29,21 @@ A confidence below ``MATCH_ACCEPT_THRESHOLD`` (0.75) is a reject. The weights an
 threshold are decision-grade (see DECISIONS.md): change them only together with
 the test suite, which is calibrated against them.
 
-Known residual gap: a cover/karaoke that shares the seed's *exact* title and
-duration but credits a different artist can still clear 0.75, because artist's
-0.25 weight cannot override a perfect title+duration. The test suite marks those
-cases ``xfail``. See DECISIONS.md / SESSION_NOTES.md "artist floor" open question.
+Cover/karaoke/tribute handling: a candidate carrying a cover marker the seed lacks
+("<artist> Karaoke", "In the Style of <artist>", "(Originally Performed by …)") is
+hard-rejected (:func:`cover_mismatch`). These defeat the string signals on their
+own — ``token_set_ratio`` scores "<artist> Karaoke" against "<artist>" at ~1.0, the
+same way it absorbs a "feat." credit. No artist *floor* is applied: calibration found
+no value cleanly separating low-similarity covers (≤0.32) from legitimate stylized
+spellings (Ke$ha/Kesha ≈0.40, P!nk/Pink ≈0.50). Different-artist covers split two ways:
+low-similarity ones ("Glee Cast") are rejected by the source relevance gate, and a
+*bare artist-name superset* ("The Weeknd Experience") — which scores ~1.0 by name — is
+rejected at canonicalization by an artist-identity (MusicBrainz artist MBID) check, the
+one signal that separates it from a legit band/collaboration. See DECISIONS.md.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -69,6 +77,7 @@ class MatchReason(str, Enum):
 
     ISRC = "isrc"                                  # exact ISRC match → 1.0
     WEIGHTED = "weighted"                          # the duration/title/artist blend
+    COVER_MISMATCH = "cover-mismatch"              # candidate carries a cover/karaoke marker → 0.0
     DURATION_HARD_REJECT = "duration-hard-reject"  # |Δduration| beyond the threshold → 0.0
 
 
@@ -149,6 +158,43 @@ def _string_score(a: str, b: str) -> float:
     return fuzz.token_set_ratio(a, b, processor=default_process) / 100.0
 
 
+# Cover/karaoke/tribute markers. A candidate carrying one of these that the seed
+# does not is a different rendition — and it defeats the string signals on its own,
+# since token_set_ratio scores "<artist> Karaoke" against "<artist>" at ~1.0.
+_COVER_TOKENS = frozenset({
+    "karaoke", "tribute", "cover", "covers", "instrumental", "rendition",
+    "soundalike", "backing",
+})
+_COVER_PHRASES = (
+    "in the style of", "made famous by", "originally performed by",
+    "as made famous by", "in the manner of", "tribute to",
+    "as performed by", "originally by",
+)
+
+
+def _cover_markers(*texts: str) -> set[str]:
+    blob = " ".join(texts).lower()
+    found = {t for t in _COVER_TOKENS if re.search(rf"\b{re.escape(t)}\b", blob)}
+    found.update(p for p in _COVER_PHRASES if p in blob)
+    return found
+
+
+def cover_mismatch(ref_title: str, ref_artist: str, cand_title: str, cand_artist: str) -> bool:
+    """True if the candidate carries cover/karaoke/tribute markers the reference does not.
+
+    Compared *per field*: a marker the candidate adds in its title counts only against
+    the reference title, and one in its artist only against the reference artist. This
+    is symmetric (a song legitimately titled "Tribute"/"Cover Me" is not flagged) yet
+    still catches a marker that moves fields — e.g. "Bruce Springsteen Cover Band"
+    covering the song "Cover Me", where the reference's title "cover" must not excuse
+    the "cover" added to the candidate's artist. Used both as a source-side relevance
+    gate and as a hard reject in :func:`score_match`.
+    """
+    title_added = _cover_markers(cand_title) - _cover_markers(ref_title)
+    artist_added = _cover_markers(cand_artist) - _cover_markers(ref_artist)
+    return bool(title_added or artist_added)
+
+
 def _duration_delta_ms(seed_ms: int | None, provider_ms: int | None) -> int | None:
     """Absolute duration delta in ms, or ``None`` if either side is unusable."""
     if seed_ms is None or provider_ms is None or seed_ms <= 0 or provider_ms <= 0:
@@ -191,13 +237,19 @@ def score_match(seed: SeedRecording, candidate: ProviderTrack) -> MatchScore:
         return MatchScore(1.0, True, MatchReason.ISRC, title_score, artist_score,
                           None, delta_ms, isrc_match=True)
 
-    # 2. Duration hard reject — a big delta means a different recording.
+    # 2. Cover/karaoke/tribute marker the seed lacks — a different rendition that the
+    #    string signals cannot catch on their own (subset scoring inflates them).
+    if cover_mismatch(seed.title, seed.artist, candidate.title, candidate.artist):
+        return MatchScore(0.0, False, MatchReason.COVER_MISMATCH, title_score,
+                          artist_score, None, delta_ms, isrc_match=False)
+
+    # 3. Duration hard reject — a big delta means a different recording.
     duration_score = _duration_score(delta_ms)
     if duration_score is None:
         return MatchScore(0.0, False, MatchReason.DURATION_HARD_REJECT, title_score,
                           artist_score, None, delta_ms, isrc_match=False)
 
-    # 3. Weighted blend.
+    # 4. Weighted blend.
     confidence = (
         duration_score * DURATION_WEIGHT
         + title_score * TITLE_WEIGHT

@@ -15,7 +15,7 @@ from rapidfuzz import fuzz
 from rapidfuzz.utils import default_process
 
 from doppel.config import DEEZER_API, DEEZER_ISRC_ENABLED, SEARCH_RELEVANCE_MIN
-from doppel.matching.verify import ProviderTrack
+from doppel.matching.verify import ProviderTrack, cover_mismatch
 
 
 def _hit_artist(hit: dict) -> str:
@@ -40,11 +40,21 @@ class DeezerClient:
         """Return the best relevant track that has a preview, or ``None``.
 
         Tries a field-scoped query first, then a plain one; within each, takes the
-        first hit that has a preview and clears the relevance gate.
+        first hit that has a preview, clears the relevance gate, and is not a
+        cover/karaoke/tribute of the query.
         """
         for query in (f'artist:"{artist}" track:"{title}"', f"{artist} {title}"):
             data = await self._search(query)
-            hit = next((h for h in data if h.get("preview") and _relevant(title, artist, h)), None)
+            hit = next(
+                (
+                    h
+                    for h in data
+                    if h.get("preview")
+                    and _relevant(title, artist, h)
+                    and not cover_mismatch(title, artist, h.get("title", ""), _hit_artist(h))
+                ),
+                None,
+            )
             if hit is not None:
                 return await self._build(hit)
         return None

@@ -80,6 +80,16 @@ async def test_not_found_when_no_canonical_recording() -> None:
     assert r.preview_url == "https://prev.mp3"
 
 
+async def test_cover_candidate_is_rejected() -> None:
+    # If a cover that names the original artist reaches verification (it would normally
+    # be stopped at the Deezer gate), score_match's cover guard still rejects it.
+    cand = ProviderTrack("Blinding Lights", "The Weeknd Karaoke", 200_000, None, "https://prev.mp3", 1)
+    seed = SeedRecording("Blinding Lights", "The Weeknd", 200_000, frozenset(), "mbid-1")
+    r = await resolve(FakeFinder(cand), FakeCanonicalizer(seed), "Blinding Lights", "The Weeknd")
+    assert r.status is ResolveStatus.REJECTED
+    assert r.match is not None and r.match.reason.value == "cover-mismatch"
+
+
 async def test_candidate_isrc_and_duration_forwarded_to_canonicalizer() -> None:
     cand = ProviderTrack("HUMBLE.", "Kendrick Lamar", 177_000, "USUM71703085", "p", 5)
     seed = SeedRecording("HUMBLE.", "Kendrick Lamar", 177_000, frozenset({"USUM71703085"}), "m")

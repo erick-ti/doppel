@@ -131,3 +131,32 @@ async def test_isrc_enrichment_failure_still_returns_candidate() -> None:
     assert cand.isrc is None
     assert cand.provider_track_duration_ms == 324_000  # falls back to the search-hit duration
     assert cand.preview_url == PREVIEW
+
+
+async def test_cover_hit_skipped_for_genuine_result() -> None:
+    # A karaoke that NAMES the original artist clears the similarity gate (token_set
+    # subset → 100), so the cover gate must reject it and take the genuine result.
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/search":
+            return httpx.Response(200, json={"data": [
+                _hit(1, "Blinding Lights", "The Weeknd Karaoke", 200),  # cover → reject
+                _hit(2, "Blinding Lights", "The Weeknd", 200),          # genuine → take
+            ]})
+        return httpx.Response(200, json={"id": 2, "title": "Blinding Lights", "artist": {"name": "The Weeknd"},
+                                         "duration": 200, "isrc": "USUG11904206", "preview": PREVIEW})
+
+    async with _client(handler) as c:
+        cand = await DeezerClient(c).find_track("Blinding Lights", "The Weeknd")
+
+    assert cand is not None and cand.provider_track_id == 2  # skipped the karaoke hit
+
+
+async def test_only_cover_results_returns_none() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"data": [
+            _hit(1, "Blinding Lights", "The Weeknd Karaoke", 200),
+            _hit(2, "Blinding Lights (Karaoke Version)", "The Weeknd", 200),
+        ]})
+
+    async with _client(handler) as c:
+        assert await DeezerClient(c).find_track("Blinding Lights", "The Weeknd") is None

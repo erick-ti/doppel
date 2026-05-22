@@ -20,6 +20,7 @@ from doppel.matching.verify import (
     MatchReason,
     ProviderTrack,
     SeedRecording,
+    cover_mismatch,
     score_match,
     verify_match,
 )
@@ -300,27 +301,95 @@ class TestRejectedVariants:
 # Known residual gap — documented, not a bug
 # --------------------------------------------------------------------------- #
 
-class TestKnownGaps:
-    """A cover/karaoke that shares the seed's *exact* title and duration but
-    credits a different artist still clears 0.75: a perfect title (0.35) + duration
-    (0.40) already sums to the threshold, and artist's 0.25 weight cannot pull it
-    back down. These are marked ``xfail`` (asserting the *desired* reject) so the
-    suite documents the gap and flags it as ``xpass`` the moment an artist floor —
-    or a mandatory-ISRC-for-low-artist-similarity rule — closes it. See
-    SESSION_NOTES.md / DECISIONS.md "artist floor" open question.
+class TestCoverRejection:
+    """Covers/karaoke/tributes are the corpus-poisoning inputs the matcher exists to
+    stop. The dangerous case is the one that *names* the original artist ("The Weeknd
+    Karaoke", "In the Style of …") with the exact title and duration: title + duration
+    alone sum to the 0.75 threshold and token_set_ratio scores the named artist ~1.0,
+    so only the cover-marker guard rejects it.
     """
 
-    @pytest.mark.xfail(strict=True, reason="same-duration cover clears 0.75; artist weight too low to reject")
-    def test_same_duration_cover_should_reject(self) -> None:
-        s = seed("Don't Stop Believin'", "Journey", 250_000)
-        c = track("Don't Stop Believin'", "Glee Cast", 250_000)  # identical duration
-        assert verify_match(s, c) < MATCH_ACCEPT_THRESHOLD
-
-    @pytest.mark.xfail(strict=True, reason="same-duration karaoke clears 0.75; artist weight too low to reject")
-    def test_same_duration_karaoke_should_reject(self) -> None:
+    @pytest.mark.parametrize(
+        "cand_title, cand_artist",
+        [
+            pytest.param("Blinding Lights", "The Weeknd Karaoke", id="artist-karaoke-suffix"),
+            pytest.param("Blinding Lights", "In the Style of The Weeknd", id="in-the-style-of"),
+            pytest.param("Blinding Lights", "The Weeknd Tribute Band", id="tribute-band"),
+            pytest.param("Blinding Lights (Karaoke Version)", "The Weeknd", id="title-karaoke"),
+            pytest.param("Blinding Lights", "Karaoke Version", id="karaoke-label-artist"),
+            pytest.param("Blinding Lights (Originally Performed by The Weeknd)", "Sing King", id="originally-performed-by"),
+        ],
+    )
+    def test_named_cover_rejected_even_at_exact_title_and_duration(self, cand_title: str, cand_artist: str) -> None:
         s = seed("Blinding Lights", "The Weeknd", 200_000)
-        c = track("Blinding Lights", "Karaoke Version", 200_000)  # identical duration
-        assert verify_match(s, c) < MATCH_ACCEPT_THRESHOLD
+        r = score_match(s, track(cand_title, cand_artist, 200_000))  # exact title + duration
+        assert not r.accepted
+        assert r.reason is MatchReason.COVER_MISMATCH
+        assert r.confidence == 0.0
+
+    def test_isrc_match_still_overrides_for_genuine_recording(self) -> None:
+        # A real ISRC match is definitionally the same recording, not a cover → still 1.0.
+        s = seed("Blinding Lights", "The Weeknd", 200_000, {"USUG11904206"})
+        c = track("Blinding Lights", "The Weeknd", 200_000, "USUG11904206")
+        assert verify_match(s, c) == 1.0
+
+    def test_legit_variants_not_flagged_as_cover(self) -> None:
+        # feat. / remaster / edit must NOT trip the cover guard.
+        s = seed("One More Time", "Daft Punk", 320_000)
+        for cand_title in ("One More Time (feat. Romanthony)", "One More Time - Radio Edit"):
+            assert score_match(s, track(cand_title, "Daft Punk", 320_000)).reason is not MatchReason.COVER_MISMATCH
+
+    def test_unmarked_different_artist_cover_is_a_relevance_gate_concern(self) -> None:
+        # A cover with a *different* artist but no marker ("Glee Cast") is NOT caught
+        # here — it scores on the weighted blend. Its low artist similarity means the
+        # source relevance gate rejects it before verify runs (see test_deezer); that
+        # division of responsibility is deliberate (no artist floor — see module docs).
+        s = seed("Don't Stop Believin'", "Journey", 250_000)
+        r = score_match(s, track("Don't Stop Believin'", "Glee Cast", 250_000))
+        assert r.reason is MatchReason.WEIGHTED
+
+
+class TestCoverDetector:
+    @pytest.mark.parametrize(
+        "rt, ra, ct, ca",
+        [
+            ("Blinding Lights", "The Weeknd", "Blinding Lights", "The Weeknd Karaoke"),
+            ("Blinding Lights", "The Weeknd", "Blinding Lights", "In the Style of The Weeknd"),
+            ("Blinding Lights", "The Weeknd", "Blinding Lights (Karaoke Version)", "The Weeknd"),
+            ("Don't Stop Believin'", "Journey", "Don't Stop Believin'", "Journey Tribute Band"),
+            ("Bohemian Rhapsody", "Queen", "Bohemian Rhapsody (Originally Performed by Queen)", "Karaoke"),
+            ("Yesterday", "The Beatles", "Yesterday (As Performed by The Beatles)", "Sing King"),
+            # marker added in the candidate ARTIST, where the reference TITLE legitimately
+            # carries the same word — must still flag (per-field comparison)
+            ("Cover Me", "Bruce Springsteen", "Cover Me", "Bruce Springsteen Cover Band"),
+            ("Tribute", "Tenacious D", "Tribute", "Tenacious D Tribute Band"),
+        ],
+    )
+    def test_flags_cover_markers(self, rt: str, ra: str, ct: str, ca: str) -> None:
+        assert cover_mismatch(rt, ra, ct, ca)
+
+    @pytest.mark.parametrize(
+        "rt, ra, ct, ca",
+        [
+            ("Halo", "Beyoncé", "Halo", "Beyoncé"),                                  # exact
+            ("Cover Me", "Bruce Springsteen", "Cover Me", "Bruce Springsteen"),      # legit "cover" in title (symmetric)
+            ("Tribute", "Tenacious D", "Tribute", "Tenacious D"),                    # legit "tribute" title (symmetric)
+            ("One More Time", "Daft Punk", "One More Time (feat. Romanthony)", "Daft Punk"),
+            ("Take Five", "Dave Brubeck", "Take Five (Remastered 1999)", "Dave Brubeck"),
+            # legit title that contains a cover-ish phrase, with only an article difference
+            # vs the query — must NOT be flagged (4th adversarial review)
+            ("Music of the Night", "Andrew Lloyd Webber", "The Music of the Night", "Andrew Lloyd Webber"),
+        ],
+    )
+    def test_does_not_flag_legit(self, rt: str, ra: str, ct: str, ca: str) -> None:
+        assert not cover_mismatch(rt, ra, ct, ca)
+
+    def test_bare_superset_artist_name_is_not_a_cover_marker(self) -> None:
+        # A bare artist-name superset ("The Weeknd Experience") carries no cover marker,
+        # so cover_mismatch — string-only by design — does not flag it. It is rejected one
+        # layer up, at canonicalization, by the artist-identity (MBID) check; see
+        # tests/test_musicbrainz.py::test_tribute_recording_rejected_by_artist_mbid.
+        assert not cover_mismatch("Blinding Lights", "The Weeknd", "Blinding Lights", "The Weeknd Experience")
 
 
 # --------------------------------------------------------------------------- #
