@@ -40,13 +40,12 @@ Graceful degradation:
 
 ## Current Milestone
 
-**Day 1-2**: Matcher and resolver module — recording-level MusicBrainz canonicalization, ISRC-first Deezer preview fetch, and match verification (ISRC / duration / RapidFuzz), with a 30-50 case test suite.
+**Day 3**: Candidate aggregator — Last.fm + ListenBrainz Labs candidate sources, conservative token-preserving dedupe, Gate-1 async warm/cold check, and cultural ranking via Reciprocal Rank Fusion (k=60); feeds the matcher's `resolve()`.
 
-_Day 0 (external dependency validation) — **complete, verdict GO** (2026-05-21). All 6 checks passed; see SESSION_NOTES.md / DECISIONS.md._
+_Day 0 (external dependency validation) — **complete, verdict GO** (2026-05-21). Day 1-2 (matcher/resolver) — **complete, merged 2026-05-21** (PR #2): match verification, provider-informed canonicalization, and cover/ISRC/artist-MBID hardening. See SESSION_NOTES.md / DECISIONS.md._
 
 ## Upcoming Milestones
 
-- **Day 3**: Candidate aggregator with conservative dedupe, Gate 1 async check, cultural ranking (RRF)
 - **Day 4**: CLAP embedder + similarity scoring with batch normalization
 - **Day 5**: Full database schema (tracks, audio_assets, canonical_lookups, embeddings, query_logs)
 - **Day 6**: LLM explainer + FastAPI `/recommend` endpoint with both async gates and degraded modes
