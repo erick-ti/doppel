@@ -40,13 +40,12 @@ Graceful degradation:
 
 ## Current Milestone
 
-**Day 3**: Candidate aggregator — Last.fm + ListenBrainz Labs candidate sources, conservative token-preserving dedupe, Gate-1 async warm/cold check, and cultural ranking via Reciprocal Rank Fusion (k=60); feeds the matcher's `resolve()`.
+**Day 4**: CLAP embedder + similarity scoring — decode Deezer previews in memory (PyAV), embed with LAION-CLAP (512-dim), and score candidates by audio cosine (+ optional text-to-vibe), min-max normalized within the batch.
 
-_Day 0 (external dependency validation) — **complete, verdict GO** (2026-05-21). Day 1-2 (matcher/resolver) — **complete, merged 2026-05-21** (PR #2): match verification, provider-informed canonicalization, and cover/ISRC/artist-MBID hardening. See SESSION_NOTES.md / DECISIONS.md._
+_Day 0 (external dependency validation) — **complete, verdict GO** (2026-05-21). Day 1-2 (matcher/resolver) — **complete, merged 2026-05-21** (PR #2): match verification, provider-informed canonicalization, and cover/ISRC/artist-MBID hardening. Day 3 (candidate aggregator) — **complete, merged 2026-05-22** (PR #3): Last.fm + ListenBrainz sources, conservative dedupe, RRF (k=60), Gate-1, per-source isolation/observability. See SESSION_NOTES.md / DECISIONS.md._
 
 ## Upcoming Milestones
 
-- **Day 4**: CLAP embedder + similarity scoring with batch normalization
 - **Day 5**: Full database schema (tracks, audio_assets, canonical_lookups, embeddings, query_logs)
 - **Day 6**: LLM explainer + FastAPI `/recommend` endpoint with both async gates and degraded modes
 - **Day 7**: Deploy to VPS, first evaluation round against benchmark seeds
@@ -72,6 +71,6 @@ _Day 0 (external dependency validation) — **complete, verdict GO** (2026-05-21
 - **Deezer terms permissibility**: Ephemeral embedding computation from previews is consistent with storage restrictions but not explicitly addressed in developer terms. Validate before any public deployment.
 - **ListenBrainz Labs stability** — **RESOLVED (Day 0)**: similar-recordings works (4/5 seeds, 100 results each; jazz/older = thin data). Requires resolving the seed to a canonical MBID via Labs `recording-search` first — MusicBrainz MBIDs return `[]`. Still experimental; keep behind the adapter.
 - **CLAP text encoder quality**: May handle cultural/emotional descriptors ("sad late night driving vibes") less well than literal acoustic terms. If evaluation shows this, an LLM pre-processing translation step is the fix.
-- **Candidate pool yield**: Target 200-300 after dedupe. Actual yield depends on Last.fm/ListenBrainz coverage per genre. Validated Day 3.
+- **Candidate pool yield**: Target 200-300 after dedupe. Actual yield depends on Last.fm/ListenBrainz coverage per genre. Aggregator built (Day 3); full multi-genre yield run still pending.
 - **CLAP dual-load memory** — **RESOLVED (Day 0)**: ~659 MB process RSS per load (~1.3 GB dual-load across FastAPI + ARQ worker), 76 ms/clip warm on CPU, 512-dim. Fits a modest VPS.
 - **Coverage matrix representativeness**: Day 0 measured 100% Deezer coverage on 5 tracks (one per genre). Re-measure across R&B, pre-2000 classics, and non-English before treating coverage as a corpus-wide claim — the small sample likely overstates it.

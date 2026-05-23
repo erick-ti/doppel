@@ -164,6 +164,7 @@ source = { editable = "." }
 dependencies = [
     { name = "aiolimiter" },
     { name = "httpx", extra = ["http2"] },
+    { name = "numpy" },
     { name = "python-dotenv" },
     { name = "rapidfuzz" },
 ]
@@ -171,7 +172,6 @@ dependencies = [
 [package.dev-dependencies]
 clap = [
     { name = "av" },
-    { name = "numpy" },
     { name = "psutil" },
     { name = "torch" },
     { name = "transformers" },
@@ -185,6 +185,7 @@ dev = [
 requires-dist = [
     { name = "aiolimiter", specifier = ">=1.2.1" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.28.1" },
+    { name = "numpy", specifier = ">=2.4.6" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "rapidfuzz", specifier = ">=3.14.5" },
 ]
@@ -192,7 +193,6 @@ requires-dist = [
 [package.metadata.requires-dev]
 clap = [
     { name = "av", specifier = ">=17.0.1" },
-    { name = "numpy", specifier = ">=2.4.6" },
     { name = "psutil", specifier = ">=7.2.2" },
     { name = "torch", specifier = ">=2.12.0" },
     { name = "transformers", specifier = ">=5.9.0" },
