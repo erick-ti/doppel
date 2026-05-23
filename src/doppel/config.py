@@ -3,10 +3,22 @@
 Deliberately framework-free (no pydantic): the matcher needs a handful of base
 URLs, a mandatory MusicBrainz User-Agent, pacing, and a couple of toggles. Richer
 settings can graduate to a typed Settings object when the API/worker need them.
+
+Secrets (e.g. ``LASTFM_API_KEY``) come from the environment. For local dev a
+gitignored ``.env`` at the repo root is loaded below (template: ``.env.example``);
+real environment variables take precedence, so CI and production inject them
+directly rather than shipping a ``.env``.
 """
 from __future__ import annotations
 
 import os
+
+from dotenv import find_dotenv, load_dotenv
+
+# Load a local .env (gitignored) before reading any config below. Search from the CWD
+# upward so it's found regardless of where the installed package lives; values already
+# in the real environment are NOT overridden (CI / prod / an explicit `export` win).
+load_dotenv(find_dotenv(usecwd=True))
 
 
 def _env_bool(name: str, default: bool) -> bool:
