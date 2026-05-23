@@ -1,0 +1,29 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:  # allow manual runs from the Actions tab
+
+permissions:
+  contents: read  # least privilege: the suite only reads the checked-out code
+
+jobs:
+  pytest:
+    name: offline test suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: install uv + Python 3.12
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          python-version: "3.12"
+
+      # Core + dev groups only. NOT --group clap (torch/transformers are GBs, and the
+      # offline suite imports CLAP lazily). NOT --run-integration (the live Deezer / MB /
+      # ListenBrainz / Last.fm tests self-skip via conftest — keep CI offline and hermetic).
+      - name: run offline pytest
+        run: uv run --frozen --group dev pytest

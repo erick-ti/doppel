@@ -5,6 +5,9 @@ on:
   pull_request:
   workflow_dispatch:  # allow manual runs from the Actions tab
 
+permissions:
+  contents: read  # least privilege; fixes CodeQL actions/missing-workflow-permissions
+
 jobs:
   scan:
     name: scan for secrets
