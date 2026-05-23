@@ -40,14 +40,12 @@ Graceful degradation:
 
 ## Current Milestone
 
-**Day 4**: CLAP embedder + similarity scoring — decode Deezer previews in memory (PyAV), embed with LAION-CLAP (512-dim), and score candidates by audio cosine (+ optional text-to-vibe), min-max normalized within the batch.
+**Day 6**: LLM explainer + FastAPI `/recommend` — drive the resolve loop over the aggregator's candidate pool through both async gates + ARQ, persisting/reading via the Day-5 `db/` layer, embedding cache misses, scoring, and generating LLM rationales (explanation, not ranking) for the top results.
 
-_Day 0 (external dependency validation) — **complete, verdict GO** (2026-05-21). Day 1-2 (matcher/resolver) — **complete, merged 2026-05-21** (PR #2): match verification, provider-informed canonicalization, and cover/ISRC/artist-MBID hardening. Day 3 (candidate aggregator) — **complete, merged 2026-05-22** (PR #3): Last.fm + ListenBrainz sources, conservative dedupe, RRF (k=60), Gate-1, per-source isolation/observability. See SESSION_NOTES.md / DECISIONS.md._
+_Day 0 (external dependency validation) — **complete, verdict GO** (2026-05-21). Day 1-2 (matcher/resolver) — **complete, merged 2026-05-21** (PR #2): match verification, provider-informed canonicalization, and cover/ISRC/artist-MBID hardening. Day 3 (candidate aggregator) — **complete, merged 2026-05-22** (PR #3): Last.fm + ListenBrainz sources, conservative dedupe, RRF (k=60), Gate-1, per-source isolation/observability. Day 4 (CLAP embedder + similarity scoring) — **complete, merged 2026-05-23** (PR #4): in-memory PyAV decode, deterministic duration-weighted window pooling, audio (+ optional vibe-text) cosine with within-batch min-max + α/β fusion, and hardened preview/text input guards. Day 5 (full database schema + asyncpg access layer) — **complete 2026-05-23**: Postgres 16 + pgvector (`tracks`/`audio_assets`/`canonical_lookups`/`embeddings`/`query_logs`), a checksum-guarded raw-SQL migration runner, and the cache/corpus access layer. See SESSION_NOTES.md / DECISIONS.md._
 
 ## Upcoming Milestones
 
-- **Day 5**: Full database schema (tracks, audio_assets, canonical_lookups, embeddings, query_logs)
-- **Day 6**: LLM explainer + FastAPI `/recommend` endpoint with both async gates and degraded modes
 - **Day 7**: Deploy to VPS, first evaluation round against benchmark seeds
 
 ## Non-Goals

@@ -1,0 +1,45 @@
+# Local dev services for Doppel — Postgres + pgvector (Day 5) and Redis (Day-6 ARQ queue).
+# OrbStack provides the Docker daemon: `orb start`, then `docker compose up -d` (Postgres only).
+#
+# Redis is defined now but gated behind the `worker` profile, so it doesn't start by default
+# (nothing uses it until Day 6): bring it up with `docker compose --profile worker up -d`.
+#
+# Already running Postgres/Redis on the standard ports? Override the HOST port (and point
+# DATABASE_URL at it): e.g. `DOPPEL_DB_PORT=5433 docker compose up -d` with
+# DATABASE_URL=postgresql://doppel:doppel@localhost:5433/doppel.
+#
+# Migrations are applied as an EXPLICIT step, never a service entrypoint:
+#   uv run python -m doppel.db.migrate up
+# The FastAPI app + ARQ worker services arrive in Day 6 (no app image yet); a one-shot
+# `migrate` service will land alongside them.
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: doppel
+      POSTGRES_PASSWORD: doppel
+      POSTGRES_DB: doppel
+    ports:
+      - "${DOPPEL_DB_PORT:-5432}:5432"
+    volumes:
+      - doppel_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U doppel -d doppel"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    profiles: ["worker"]  # opt-in until Day-6 ARQ uses it: `docker compose --profile worker up -d`
+    ports:
+      - "${DOPPEL_REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  doppel_pgdata:
