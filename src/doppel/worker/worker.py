@@ -1,0 +1,101 @@
+"""ARQ worker — the COLD path. Runs ``run_pipeline(execution_mode="job")`` off the Redis queue.
+
+``recommend_job`` is enqueued by the API (Gate-1-COLD) or by ``run_pipeline`` inline (Gate-2-COLD),
+under ARQ ``_job_id = "rec-<query_logs.id>"``. It re-runs the whole pipeline against the DB cache —
+already-resolved candidates and cached embeddings are cheap hits the second time — and finalizes the
+pre-created ``query_logs`` row by id.
+
+**Finding 3 (Codex review): the pollable row never stalls.** The job marks the row ``running`` at the
+start and, on any uncaught error, writes ``status='failed'`` + a sanitized message + ``completed_at``
+before re-raising — so a COLD poll always sees a terminal state instead of a forever-``queued`` /
+``running`` row. ARQ records the failure too; the durable, user-facing status lives in Postgres.
+
+Run it with: ``arq doppel.worker.worker.WorkerSettings`` (Redis must be up — ``docker compose`` serves
+it under the ``worker`` profile). Migrations are applied as a separate deploy step, never here.
+"""
+from __future__ import annotations
+
+import asyncio
+import contextlib
+from typing import Any
+
+from arq.connections import RedisSettings
+
+from doppel import db
+from doppel.config import REDIS_URL
+from doppel.db import QueryLogFields
+from doppel.pipeline.deps import build_deps, close_deps
+from doppel.pipeline.recommend import pool_from_payload, run_pipeline
+
+
+def _sanitized_error(exc: Exception) -> str:
+    """A short, single-line ``type: message`` summary for the API-visible ``error`` — no tracebacks."""
+    message = next((line for line in str(exc).strip().splitlines() if line), "")
+    summary = f"{type(exc).__name__}: {message}" if message else type(exc).__name__
+    return summary[:500]
+
+
+async def recommend_job(
+    ctx: dict[str, Any], query_log_id: int, seed_title: str, seed_artist: str,
+    vibe: str | None, pool_payload: list[dict],
+) -> int:
+    """Finalize a COLD recommendation: mark running, run the pipeline (job mode), persist; on error
+    or cancellation mark the row failed and re-raise. Returns the ``query_logs.id`` (the poll row)."""
+    deps = ctx["deps"]
+    pool = pool_from_payload(pool_payload)
+    await _set_status(deps, query_log_id, seed_title, seed_artist, status="running")
+    try:
+        await run_pipeline(
+            deps, seed_title, seed_artist, vibe, pool,
+            execution_mode="job", query_log_id=query_log_id,
+        )
+    except (Exception, asyncio.CancelledError) as exc:
+        # CancelledError (ARQ job_timeout / worker shutdown) is a BaseException, so a bare
+        # `except Exception` would skip this write and leave the row stuck `running` — polling 202
+        # forever and dedup-wedging future identical requests onto the stuck handle. asyncio.shield
+        # lets the failure write finish despite the cancellation tearing this task down; best-effort
+        # on a hard loop shutdown (a Day-7 stale-active-row reaper backstops that, and SIGKILL/OOM).
+        with contextlib.suppress(Exception):
+            await asyncio.shield(_set_status(
+                deps, query_log_id, seed_title, seed_artist,
+                status="failed", error=_sanitized_error(exc),
+            ))
+        raise
+    return query_log_id
+
+
+async def _set_status(
+    deps, query_log_id: int, seed_title: str, seed_artist: str, *,
+    status: str, error: str | None = None,
+) -> None:
+    """Write a lifecycle status (+ optional sanitized error) to the COLD row by id."""
+    async with deps.pool.acquire() as conn:
+        await db.update_query_log(
+            conn, query_log_id,
+            QueryLogFields(seed_title=seed_title, seed_artist=seed_artist, status=status, error=error),
+        )
+
+
+async def startup(ctx: dict[str, Any]) -> None:
+    ctx["deps"] = await build_deps(enqueue_job=None)  # the worker's gates never enqueue
+
+
+async def shutdown(ctx: dict[str, Any]) -> None:
+    deps = ctx.get("deps")
+    if deps is not None:
+        await close_deps(deps)
+
+
+class WorkerSettings:
+    """ARQ entrypoint: ``arq doppel.worker.worker.WorkerSettings``."""
+
+    functions = [recommend_job]
+    redis_settings = RedisSettings.from_dsn(REDIS_URL)
+    on_startup = startup
+    on_shutdown = shutdown
+    # ARQ is liveness/dedup only — the durable result is in Postgres, and the poll reads it from
+    # there, so a short Redis result TTL is fine. max_jobs caps embedding concurrency on a modest
+    # VPS; job_timeout is generous because a large uncached pool waits on MusicBrainz (~1 req/s).
+    keep_result = 3600
+    max_jobs = 4
+    job_timeout = 600
