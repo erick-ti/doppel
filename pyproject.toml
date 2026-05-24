@@ -9,8 +9,10 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "aiolimiter>=1.2.1",
+    "asyncpg>=0.31.0",
     "httpx[http2]>=0.28.1",
     "numpy>=2.4.6",
+    "pgvector>=0.4.2",
     "python-dotenv>=1.2.2",
     "rapidfuzz>=3.14.5",
 ]
@@ -37,4 +39,5 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 markers = [
     "integration: hits live Deezer/MusicBrainz APIs; run with --run-integration",
+    "db: needs a live Postgres + pgvector; run with --run-db",
 ]

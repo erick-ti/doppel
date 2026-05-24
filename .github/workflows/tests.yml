@@ -25,5 +25,50 @@ jobs:
       # Core + dev groups only. NOT --group clap (torch/transformers are GBs, and the
       # offline suite imports CLAP lazily). NOT --run-integration (the live Deezer / MB /
       # ListenBrainz / Last.fm tests self-skip via conftest — keep CI offline and hermetic).
+      # NOT --run-db either (the db-marked tests need Postgres — see the db-tests job below).
       - name: run offline pytest
         run: uv run --frozen --group dev pytest
+
+  db-tests:
+    name: db test suite (Postgres + pgvector)
+    runs-on: ubuntu-latest
+    # Spin up the same image docker-compose uses, so migrations + schema constraints are
+    # exercised against a real pgvector Postgres on every push. The runner is clean, so the
+    # standard 5432 is free and DATABASE_URL points straight at the service container.
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: doppel
+          POSTGRES_PASSWORD: doppel
+          POSTGRES_DB: doppel
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U doppel -d doppel"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://doppel:doppel@localhost:5432/doppel
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: install uv + Python 3.12
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          python-version: "3.12"
+
+      # Migrations run as an explicit step BEFORE anything opens the codec-registering pool: the
+      # migrate CLI uses a raw asyncpg connection (no pgvector codec), so it works on the fresh
+      # service container where `CREATE EXTENSION vector` hasn't run yet. (Opening the pool first
+      # would fail with `unknown type: public.vector`.)
+      - name: apply migrations
+        run: uv run --frozen python -m doppel.db.migrate up
+
+      # Only the db-marked tests (the migration runner + schema round-trips); the offline job
+      # already covers everything else. --group clap is still not needed — these are pure SQL.
+      - name: run db pytest
+        run: uv run --frozen --group dev pytest --run-db -m db

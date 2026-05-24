@@ -171,3 +171,29 @@ CLAP_TEXT_MAX_TOKENS = 512
 # vibe string can't burn CPU/memory tokenizing before the token cap applies. Generous (~40× a
 # real description); the token cap above does the semantic limiting.
 MAX_VIBE_TEXT_CHARS = 8192
+
+# --- Database (Postgres 16 + pgvector) --------------------------------------- #
+
+# Connection DSN. The default matches docker-compose.yml's dev Postgres; production injects a
+# real DATABASE_URL (env wins over .env). asyncpg parses this URL form directly.
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://doppel:doppel@localhost:5432/doppel")
+# asyncpg pool bounds. One shared pool serves the app; min keeps a warm connection, max caps
+# concurrency against a single-worker VPS Postgres. Both env-overridable for prod tuning.
+DB_POOL_MIN_SIZE = int(os.getenv("DB_POOL_MIN_SIZE", "1"))
+DB_POOL_MAX_SIZE = int(os.getenv("DB_POOL_MAX_SIZE", "10"))
+
+# embeddings.model_version key. It must capture *everything* that changes the stored vector —
+# the checkpoint AND the pooling strategy — so flipping CLAP_EMBED_POOLING during Day-7 eval
+# stores under a distinct key instead of silently mixing incompatible vectors in one corpus.
+# Derived (not a hand-minted alias) precisely so it can't be forgotten on a contract change.
+CLAP_MODEL_VERSION = f"{CLAP_MODEL_ID}+{CLAP_EMBED_POOLING}"
+
+# Re-embedding policy (BRAINDUMP): an embedding is eligible for refresh when a newly matched
+# asset's confidence exceeds the embedded asset's by at least this much — so the corpus upgrades
+# off a "good enough" preview when a clearly better one appears, without churning on noise.
+REEMBED_CONFIDENCE_DELTA = 0.15
+
+# Stamp written onto every canonical_lookups row. Bump it whenever the matcher / canonicalization
+# / normalization logic changes: get_canonical_lookup filters on it, so entries cached under the
+# old logic read as a cache miss and get re-resolved, instead of staying sticky forever.
+RESOLVER_VERSION = "1"
