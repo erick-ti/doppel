@@ -68,7 +68,8 @@ jobs:
       - name: apply migrations
         run: uv run --frozen python -m doppel.db.migrate up
 
-      # Only the db-marked tests (the migration runner + schema round-trips); the offline job
-      # already covers everything else. --group clap is still not needed — these are pure SQL.
+      # The db-marked tests: the migration runner + schema round-trips (Day 5), plus the Day-6
+      # pipeline / worker / API integration (real Postgres + fake sources / Deezer / MusicBrainz /
+      # CLAP / LLM). --group clap is still not needed — the model is faked, never loaded.
       - name: run db pytest
         run: uv run --frozen --group dev pytest --run-db -m db

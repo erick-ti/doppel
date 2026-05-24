@@ -1,0 +1,22 @@
+# Keep the build context (and image) lean: ship src/ + pyproject.toml + uv.lock + README.md only.
+.git
+.github
+.venv
+**/__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+.env
+tests
+scripts
+# Context / workflow files (not needed at runtime)
+CLAUDE.md
+SESSION_NOTES.md
+DECISIONS.md
+DECISIONS_ARCHIVE.md
+ROADMAP.md
+BRAINDUMP.md
+RESUME.md
+Dockerfile
+.dockerignore
+docker-compose.yml
