@@ -16,7 +16,8 @@ from __future__ import annotations
 
 import json
 import uuid
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass
 from typing import Any
 
 import asyncpg
@@ -91,6 +92,40 @@ async def upsert_canonical_lookup(
         _as_uuid(mbid) if mbid is not None else None,
         match_confidence,
         RESOLVER_VERSION,
+    )
+
+
+async def count_uncached_candidates(
+    conn: asyncpg.Connection,
+    pairs: Sequence[tuple[str, str]],
+    *,
+    resolver_version: str = RESOLVER_VERSION,
+) -> int:
+    """How many of ``pairs`` (candidate ``(title, artist)``) are NOT cached at the current resolver
+    version — Gate-1's *uncached count*, the lookups that would actually hit MusicBrainz (~1 req/s).
+
+    One round trip: each pair is normalized exactly as the cache stores it (:func:`normalized_key`)
+    and counted via a version-filtered ``NOT EXISTS`` — mirroring :func:`get_canonical_lookup`'s
+    own ``resolver_version`` filter, so a stale-version row counts as uncached (it will re-resolve).
+    Assumes ``pairs`` is already deduped (the aggregator's pool is), so each is one distinct key.
+    """
+    if not pairs:
+        return 0
+    norm = [normalized_key(title, artist) for title, artist in pairs]
+    return await conn.fetchval(
+        """
+        SELECT count(*)
+        FROM unnest($1::text[], $2::text[]) AS k(norm_title, norm_artist)
+        WHERE NOT EXISTS (
+            SELECT 1 FROM canonical_lookups cl
+            WHERE cl.norm_title = k.norm_title
+              AND cl.norm_artist = k.norm_artist
+              AND cl.resolver_version = $3
+        )
+        """,
+        [n[0] for n in norm],
+        [n[1] for n in norm],
+        resolver_version,
     )
 
 
@@ -201,6 +236,31 @@ async def persist_resolved_match(
         )
         # FOUND-only: a REJECTED asset is evidence, not embeddable — withhold its id (see docstring).
         return asset_id if resolved.status is ResolveStatus.FOUND else None
+
+
+async def get_servable_track(conn: asyncpg.Connection, mbid: str | uuid.UUID) -> asyncpg.Record | None:
+    """Track identity + its best FOUND asset for an MBID — the cache-hit path's read.
+
+    When a candidate is a ``canonical_lookups`` hit (already resolved FOUND), the resolve loop has no
+    :class:`ResolvedMatch` in hand, so it reads the persisted evidence here: the display
+    ``title``/``artist`` (from ``tracks``) plus the ``preview_url`` + ``asset_id`` needed to re-embed a
+    missing/stale vector and the ``provider_track_id`` that builds the Deezer link. Joined found-only
+    (highest ``match_confidence`` wins if several assets exist), so a FOUND lookup whose asset has
+    since flipped to rejected returns ``None`` — the candidate degrades to cultural rather than
+    serving a vector from a preview the matcher no longer trusts.
+    """
+    return await conn.fetchrow(
+        """
+        SELECT t.mbid, t.title, t.artist, t.duration_ms,
+               a.id AS asset_id, a.preview_url, a.provider_track_id, a.match_confidence
+        FROM tracks t
+        JOIN audio_assets a ON a.mbid = t.mbid
+        WHERE t.mbid = $1 AND a.asset_status = 'found'
+        ORDER BY a.match_confidence DESC
+        LIMIT 1
+        """,
+        _as_uuid(mbid),
+    )
 
 
 # --- embeddings (the cached corpus) ------------------------------------------ #
@@ -320,37 +380,220 @@ async def knn(
     )
 
 
-# --- query_logs (request telemetry; Day-6 enriches the shape) ---------------- #
+# --- query_logs + query_log_results (request telemetry + the durable result snapshot) ------- #
+#
+# Day 6 turns Day 5's request log into the system's empirical feedback loop: every /recommend request
+# — WARM (inline) and COLD (worker) alike — writes one query_logs row plus one query_log_results row
+# per returned track. A COLD request inserts a ``queued`` row at enqueue (so the poll finds it
+# immediately), which the worker finalizes; a WARM request inserts a terminal row in one shot. The
+# result rows are the durable record the COLD poll reconstructs from and Day-7 eval reads — a child
+# table, not a JSONB blob, so per-result analytics are plain SQL (see DECISIONS.md / migration 0002).
+
+_TERMINAL_STATUSES = frozenset({"succeeded", "failed"})
 
 
-async def insert_query_log(
-    conn: asyncpg.Connection,
-    *,
-    seed_title: str,
-    seed_artist: str,
-    vibe_text: str | None = None,
-    seed_mbid: str | uuid.UUID | None = None,
-    candidate_count: int | None = None,
-    degraded: bool = False,
-    failed_sources: Mapping[str, str] | None = None,
-    latency_ms: int | None = None,
-) -> int:
+@dataclass(frozen=True)
+class QueryLogFields:
+    """The full query_logs telemetry, one attribute per column.
+
+    Most fields are optional because a COLD row is written in two phases: the API inserts what it
+    knows (request + the gate decision that deferred it) as ``queued``, and the worker fills the
+    downstream counts on completion. WARM writes everything at once. In :func:`update_query_log` a
+    ``None`` field means *leave the stored value unchanged*, so the worker's finalize can never null
+    the gate fields the API set at create time.
+    """
+
+    seed_title: str
+    seed_artist: str
+    status: str = "succeeded"  # queued | running | succeeded | failed
+    request_key: str | None = None  # deterministic seed+vibe key, for in-flight dedup (NOT the row id)
+    vibe_text: str | None = None
+    seed_mbid: str | uuid.UUID | None = None
+    candidate_count: int | None = None
+    degraded: bool | None = None
+    failed_sources: Mapping[str, str] | None = None
+    latency_ms: int | None = None
+    error: str | None = None
+    gate1: str | None = None  # warm | cold
+    gate2: str | None = None
+    gate1_threshold: int | None = None
+    gate2_threshold: int | None = None
+    uncached_count: int | None = None
+    missing_embeddings_count: int | None = None
+    resolved_found: int | None = None
+    resolved_rejected: int | None = None
+    resolved_not_found: int | None = None
+    embeddings_computed: int | None = None
+    embeddings_cache_hits: int | None = None
+    audio_scored_count: int | None = None
+    backfill_count: int | None = None
+    seed_audio_scored: bool | None = None
+    rationales_available: bool | None = None
+
+
+# Telemetry columns in table order; drives both insert and update so they can't drift apart.
+_QUERY_LOG_COLUMNS = (
+    "seed_title", "seed_artist", "status", "request_key", "vibe_text", "seed_mbid",
+    "candidate_count", "degraded", "failed_sources", "latency_ms", "error",
+    "gate1", "gate2", "gate1_threshold", "gate2_threshold", "uncached_count",
+    "missing_embeddings_count", "resolved_found", "resolved_rejected", "resolved_not_found",
+    "embeddings_computed", "embeddings_cache_hits", "audio_scored_count", "backfill_count",
+    "seed_audio_scored", "rationales_available",
+)
+
+
+def _query_log_cell(fields: QueryLogFields, column: str) -> Any:
+    """One column's bind value — coercing the MBID to UUID and the failed-sources map to JSON."""
+    if column == "seed_mbid":
+        return _as_uuid(fields.seed_mbid) if fields.seed_mbid is not None else None
+    if column == "failed_sources":
+        return None if fields.failed_sources is None else json.dumps(dict(fields.failed_sources))
+    return getattr(fields, column)
+
+
+def _present_columns(fields: QueryLogFields) -> tuple[list[str], list[Any]]:
+    """``(columns, bind values)`` for the telemetry fields that are set.
+
+    A ``None`` field is omitted, which means *apply the DB default* on INSERT (so the Day-5 NOT NULL
+    columns ``degraded`` / ``failed_sources`` take their defaults) and *leave the stored value
+    unchanged* on UPDATE (so the worker's finalize can't null the API's create-time gate fields).
+    ``status`` is always included.
+    """
+    cols: list[str] = []
+    values: list[Any] = []
+    for column in _QUERY_LOG_COLUMNS:
+        if column == "status" or getattr(fields, column) is not None:
+            cols.append(column)
+            values.append(_query_log_cell(fields, column))
+    return cols, values
+
+
+async def insert_query_log(conn: asyncpg.Connection, fields: QueryLogFields) -> int:
+    """Insert a query_logs row and return its id.
+
+    WARM passes a terminal status with the full telemetry; COLD passes ``queued`` plus only what the
+    API knows at enqueue, and :func:`update_query_log` finalizes it. ``completed_at`` is stamped when
+    ``status`` is terminal.
+    """
+    cols, values = _present_columns(fields)
+    placeholders = ", ".join(f"${i}" for i in range(1, len(values) + 1))
+    completed_at = "now()" if fields.status in _TERMINAL_STATUSES else "NULL"
     row = await conn.fetchrow(
-        """
-        INSERT INTO query_logs (
-            seed_title, seed_artist, vibe_text, seed_mbid,
-            candidate_count, degraded, failed_sources, latency_ms
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        RETURNING id
-        """,
-        seed_title,
-        seed_artist,
-        vibe_text,
-        _as_uuid(seed_mbid) if seed_mbid is not None else None,
-        candidate_count,
-        degraded,
-        json.dumps(dict(failed_sources or {})),
-        latency_ms,
+        f"INSERT INTO query_logs ({', '.join(cols)}, completed_at) "
+        f"VALUES ({placeholders}, {completed_at}) RETURNING id",
+        *values,
     )
     return row["id"]
+
+
+async def update_query_log(
+    conn: asyncpg.Connection, query_log_id: int, fields: QueryLogFields
+) -> None:
+    """Finalize the row identified by ``query_log_id`` with the worker's downstream telemetry.
+
+    Only the set fields are written (``None`` = leave unchanged), so the worker can't clobber the
+    gate fields the API recorded at create time. ``status`` is always written; ``completed_at`` is
+    stamped when the new status is terminal. (``seed_title`` / ``seed_artist`` are stable, so
+    re-writing them is a harmless no-op.)
+    """
+    cols, values = _present_columns(fields)
+    sets = [f"{col} = ${i}" for i, col in enumerate(cols, start=1)]
+    if fields.status in _TERMINAL_STATUSES:
+        sets.append("completed_at = now()")
+    values.append(query_log_id)
+    await conn.execute(
+        f"UPDATE query_logs SET {', '.join(sets)} WHERE id = ${len(values)}", *values
+    )
+
+
+@dataclass(frozen=True)
+class QueryLogResultRow:
+    """One returned track, denormalized for the durable snapshot so it renders without a join.
+
+    ``mbid`` is ``None`` for an unresolved cultural-backfill track; the cosines / ``combined_score``
+    are ``None`` for a non-audio-scored (backfill) row, while ``cultural_score`` (RRF) is always
+    present (every result came from the cultural pool). ``provider_track_id`` builds the Deezer
+    track-*page* link in the response — never the ephemeral preview-audio URL (invariant #2).
+    """
+
+    position: int
+    title: str
+    artist: str
+    cultural_score: float
+    was_audio_scored: bool
+    mbid: str | uuid.UUID | None = None
+    provider_track_id: str | None = None
+    audio_score: float | None = None
+    vibe_text_score: float | None = None
+    combined_score: float | None = None
+    sources: Sequence[str] = ()
+    rationale: str | None = None
+
+
+async def insert_query_log_results(
+    conn: asyncpg.Connection, query_log_id: int, rows: Sequence[QueryLogResultRow]
+) -> None:
+    """Bulk-insert the per-track result snapshot for a query_logs row (no-op on an empty list)."""
+    if not rows:
+        return
+    await conn.executemany(
+        """
+        INSERT INTO query_log_results (
+            query_log_id, position, mbid, title, artist, provider_track_id,
+            audio_score, vibe_text_score, combined_score, cultural_score,
+            was_audio_scored, sources, rationale
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        """,
+        [
+            (
+                query_log_id, r.position,
+                _as_uuid(r.mbid) if r.mbid is not None else None,
+                r.title, r.artist, r.provider_track_id,
+                r.audio_score, r.vibe_text_score, r.combined_score, r.cultural_score,
+                r.was_audio_scored, list(r.sources), r.rationale,
+            )
+            for r in rows
+        ],
+    )
+
+
+async def get_query_log(conn: asyncpg.Connection, query_log_id: int) -> asyncpg.Record | None:
+    """The query_logs row by id — the COLD poll's status + telemetry, or ``None`` if unknown."""
+    return await conn.fetchrow("SELECT * FROM query_logs WHERE id = $1", query_log_id)
+
+
+async def get_active_query_log(
+    conn: asyncpg.Connection, request_key: str
+) -> asyncpg.Record | None:
+    """The in-flight (queued/running) row for ``request_key``, or ``None`` — for in-flight dedup.
+
+    Backs the enqueue path: when inserting a queued row conflicts on the active-request_key partial
+    unique index, an identical request is already running, so the caller returns *its* handle rather
+    than starting a second job. A terminal row never matches, so a repeat after completion gets a
+    fresh row + run.
+    """
+    return await conn.fetchrow(
+        "SELECT * FROM query_logs WHERE request_key = $1 AND status IN ('queued', 'running')",
+        request_key,
+    )
+
+
+async def delete_query_log(conn: asyncpg.Connection, query_log_id: int) -> None:
+    """Remove a query_logs row by id (CASCADE drops its results).
+
+    Used to clean up a just-created ``queued`` row whose job-enqueue then failed — otherwise the row
+    stays non-terminal with no worker behind it, polls ``202`` forever, and (via the active
+    ``request_key`` index) wedges every future identical request onto the same stuck handle.
+    """
+    await conn.execute("DELETE FROM query_logs WHERE id = $1", query_log_id)
+
+
+async def get_query_log_results(
+    conn: asyncpg.Connection, query_log_id: int
+) -> list[asyncpg.Record]:
+    """The ordered per-track result snapshot for a query_logs row (the poll's payload on success)."""
+    return await conn.fetch(
+        "SELECT * FROM query_log_results WHERE query_log_id = $1 ORDER BY position",
+        query_log_id,
+    )
