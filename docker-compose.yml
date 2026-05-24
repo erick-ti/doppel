@@ -1,17 +1,14 @@
-# Local dev services for Doppel — Postgres + pgvector (Day 5) and Redis (Day-6 ARQ queue).
-# OrbStack provides the Docker daemon: `orb start`, then `docker compose up -d` (Postgres only).
+# Services for Doppel. Two ways to run:
+#   * Dev loop (default):  `docker compose up -d`  → Postgres only; run the app/worker via `uv run`.
+#   * Full stack:          `docker compose --profile app up`  → Postgres + Redis + a one-shot
+#     `migrate` + the FastAPI app + the ARQ worker (the app image installs the heavy `clap` group).
+# OrbStack provides the Docker daemon: `orb start` first.
 #
-# Redis is defined now but gated behind the `worker` profile, so it doesn't start by default
-# (nothing uses it until Day 6): bring it up with `docker compose --profile worker up -d`.
+# Already running Postgres/Redis on the standard ports? Override the HOST port and point DATABASE_URL
+# at it: `DOPPEL_DB_PORT=5433 docker compose up -d` with DATABASE_URL=...@localhost:5433/doppel.
+# (Inter-service traffic uses the Docker network on :5432/:6379 regardless of the host-port override.)
 #
-# Already running Postgres/Redis on the standard ports? Override the HOST port (and point
-# DATABASE_URL at it): e.g. `DOPPEL_DB_PORT=5433 docker compose up -d` with
-# DATABASE_URL=postgresql://doppel:doppel@localhost:5433/doppel.
-#
-# Migrations are applied as an EXPLICIT step, never a service entrypoint:
-#   uv run python -m doppel.db.migrate up
-# The FastAPI app + ARQ worker services arrive in Day 6 (no app image yet); a one-shot
-# `migrate` service will land alongside them.
+# Secrets come from the host environment / a gitignored .env (ANTHROPIC_API_KEY, LASTFM_API_KEY).
 
 services:
   postgres:
@@ -32,7 +29,8 @@ services:
 
   redis:
     image: redis:7
-    profiles: ["worker"]  # opt-in until Day-6 ARQ uses it: `docker compose --profile worker up -d`
+    # Up with the full stack (`--profile app`) or alone for a local `uv run` worker (`--profile worker`).
+    profiles: ["app", "worker"]
     ports:
       - "${DOPPEL_REDIS_PORT:-6379}:6379"
     healthcheck:
@@ -40,6 +38,57 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  # One-shot schema migration — an EXPLICIT step before app/worker start, never their entrypoint
+  # (Invariant #3). Exits 0 when up to date; app/worker depend on its success.
+  migrate:
+    build: .
+    profiles: ["app"]
+    command: ["python", "-m", "doppel.db.migrate", "up"]
+    environment:
+      DATABASE_URL: postgresql://doppel:doppel@postgres:5432/doppel
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    build: .
+    profiles: ["app"]
+    command: ["uvicorn", "doppel.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "${DOPPEL_APP_PORT:-8000}:8000"
+    environment:
+      DATABASE_URL: postgresql://doppel:doppel@postgres:5432/doppel
+      REDIS_URL: redis://redis:6379
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      LASTFM_API_KEY: ${LASTFM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-claude-sonnet-4-6}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    build: .
+    profiles: ["app"]
+    command: ["arq", "doppel.worker.worker.WorkerSettings"]
+    environment:
+      DATABASE_URL: postgresql://doppel:doppel@postgres:5432/doppel
+      REDIS_URL: redis://redis:6379
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      LASTFM_API_KEY: ${LASTFM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-claude-sonnet-4-6}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
   doppel_pgdata:

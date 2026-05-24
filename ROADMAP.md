@@ -46,7 +46,13 @@ _Day 0 (external dependency validation) — **complete, verdict GO** (2026-05-21
 
 ## Upcoming Milestones
 
-- **Day 7**: Deploy to VPS, first evaluation round against benchmark seeds
+- **Day 7**: Deploy to VPS, first evaluation round against benchmark seeds. Deploy-hardening items
+  carried from the Day-6 adversarial reviews (rationale in DECISIONS.md):
+  - Build + run the app/worker Docker image end-to-end (the multi-GB `clap`/torch build is unvalidated locally).
+  - Non-enumerable `/recommend` poll handles (random `public_id` token resolved to the row id) + API auth before any public/multi-user exposure.
+  - Stale-active-row reaper for COLD jobs killed without running their cleanup (SIGKILL/OOM); align ARQ retry/`job_timeout` with the Postgres status lifecycle.
+  - Scope asyncpg connections to short reads/writes (release during the MB-paced resolve loop) once real concurrency warrants it.
+  - Calibrate the provisional knobs on real score distributions: `GATE1/GATE2_ASYNC_THRESHOLD`, `AUDIO_SIM_WEIGHT`/`VIBE_TEXT_WEIGHT`, `CLAP_EMBED_POOLING`.
 
 ## Non-Goals
 

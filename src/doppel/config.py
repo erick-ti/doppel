@@ -197,3 +197,39 @@ REEMBED_CONFIDENCE_DELTA = 0.15
 # / normalization logic changes: get_canonical_lookup filters on it, so entries cached under the
 # old logic read as a cache miss and get re-resolved, instead of staying sticky forever.
 RESOLVER_VERSION = "1"
+
+# --- API / worker / LLM (Day 6) ---------------------------------------------- #
+
+# Redis DSN for the ARQ job queue (the COLD path) + ARQ's job-lifecycle state. docker-compose serves
+# Redis under the `worker` profile; production injects a real value. ARQ is the *execution queue
+# only* — durable recommendation results live in Postgres (query_logs / query_log_results), so the
+# /recommend poll survives a Redis eviction/restart and Day-7 eval has one read interface.
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+
+# Anthropic (Claude) — the LLM explainer. It writes per-result rationales and NEVER ranks (ranking
+# is CLAP's job — BRAINDUMP "the LLM explains, it does not rank"). Absent key / API error / timeout
+# ⇒ results are returned without rationales (graceful degradation), so a recommendation never
+# depends on the LLM. Sonnet 4.6 by default; override LLM_MODEL to swap checkpoints.
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+LLM_MODEL = os.getenv("LLM_MODEL", "claude-sonnet-4-6")
+LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "2048"))
+LLM_TIMEOUT_S = float(os.getenv("LLM_TIMEOUT_S", "30"))
+
+# Gate 2 (ROADMAP "two-gate async model"): at or above this many FOUND candidates that lack a
+# servable embedding, defer the embedding work to the async path instead of embedding inline (CLAP
+# is ~230 ms/clip, so a large miss set would stall a warm request). Provisional like Gate 1's
+# threshold; calibrate against real pools in Day 7. Both thresholds AND the measured counts they're
+# compared against are written to query_logs every request, so the calibration data exists.
+GATE2_ASYNC_THRESHOLD = int(os.getenv("GATE2_ASYNC_THRESHOLD", "10"))
+
+# How many results /recommend returns and the LLM explains — and the audio-scored floor that
+# triggers cultural backfill: if fewer than this many candidates were audio-scored, top up from the
+# cultural RRF order so a sparse-preview query still returns a full list (degraded, and flagged in
+# the response's `degradation` block + query_logs).
+RECOMMENDATION_LIMIT = int(os.getenv("RECOMMENDATION_LIMIT", "10"))
+
+# How many preview cache-misses the pipeline embeds concurrently. Each in-flight embed buffers up to
+# MAX_PREVIEW_BYTES and runs CLAP in a worker thread, so this bounds peak memory + thread pressure on
+# the COLD path (which can face hundreds of misses). Small by default for a modest single-worker VPS;
+# raise it if the box has headroom. Resolve (MusicBrainz ~1 req/s) stays sequential regardless.
+EMBED_CONCURRENCY = int(os.getenv("EMBED_CONCURRENCY", "4"))

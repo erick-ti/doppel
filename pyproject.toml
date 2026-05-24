@@ -9,12 +9,16 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "aiolimiter>=1.2.1",
+    "anthropic>=0.104.1",
+    "arq>=0.28.0",
     "asyncpg>=0.31.0",
+    "fastapi>=0.136.3",
     "httpx[http2]>=0.28.1",
     "numpy>=2.4.6",
     "pgvector>=0.4.2",
     "python-dotenv>=1.2.2",
     "rapidfuzz>=3.14.5",
+    "uvicorn[standard]>=0.47.0",
 ]
 
 [build-system]
