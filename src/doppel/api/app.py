@@ -30,7 +30,7 @@ from doppel.api.schemas import (
     ResultItem,
     SeedInfo,
 )
-from doppel.config import GATE1_ASYNC_THRESHOLD, REDIS_URL
+from doppel.config import GATE1_ASYNC_THRESHOLD, REDIS_URL, RESOLVE_CANDIDATE_LIMIT
 from doppel.db import QueryLogFields
 from doppel.pipeline.deps import build_deps, close_deps
 from doppel.pipeline.recommend import (
@@ -81,9 +81,12 @@ def create_app(*, lifespan=_production_lifespan) -> FastAPI:
     async def recommend(req: RecommendRequest, request: Request, response: Response):
         deps = request.app.state.deps
         result = await aggregate(request.app.state.sources, req.seed_title, req.seed_artist)
+        # Only the top-N candidates by cultural rank are resolved (RESOLVE_CANDIDATE_LIMIT — the MB
+        # ~1 req/s bound), so Gate 1 counts the uncached lookups among *those*, matching the real
+        # MusicBrainz work. candidate_count below stays the full pool (the cultural-recall yield).
         async with deps.pool.acquire() as conn:
             uncached = await db.count_uncached_candidates(
-                conn, [(c.title, c.artist) for c in result.candidates]
+                conn, [(c.title, c.artist) for c in result.candidates[:RESOLVE_CANDIDATE_LIMIT]]
             )
         # Gate 1 is now the *uncached* count (the lookups that would actually hit MusicBrainz).
         if gate_for(uncached, threshold=GATE1_ASYNC_THRESHOLD) is Gate.COLD:

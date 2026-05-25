@@ -40,19 +40,20 @@ Graceful degradation:
 
 ## Current Milestone
 
-**Day 6**: LLM explainer + FastAPI `/recommend` — drive the resolve loop over the aggregator's candidate pool through both async gates + ARQ, persisting/reading via the Day-5 `db/` layer, embedding cache misses, scoring, and generating LLM rationales (explanation, not ranking) for the top results.
+**Day 7**: Deploy to VPS, first evaluation round against benchmark seeds. Deploy-hardening items
+carried from the Day-6 adversarial reviews (rationale in DECISIONS.md):
+- Build + run the app/worker Docker image end-to-end (the multi-GB `clap`/torch build is unvalidated locally).
+- Non-enumerable `/recommend` poll handles (random `public_id` token resolved to the row id) + API auth before any public/multi-user exposure.
+- Stale-active-row reaper for COLD jobs killed without running their cleanup (SIGKILL/OOM); align ARQ retry/`job_timeout` with the Postgres status lifecycle.
+- Scope asyncpg connections to short reads/writes (release during the MB-paced resolve loop) once real concurrency warrants it.
+- Calibrate the provisional knobs on real score distributions: `GATE1/GATE2_ASYNC_THRESHOLD`, `AUDIO_SIM_WEIGHT`/`VIBE_TEXT_WEIGHT`, `CLAP_EMBED_POOLING`.
 
-_Day 0 (external dependency validation) — **complete, verdict GO** (2026-05-21). Day 1-2 (matcher/resolver) — **complete, merged 2026-05-21** (PR #2): match verification, provider-informed canonicalization, and cover/ISRC/artist-MBID hardening. Day 3 (candidate aggregator) — **complete, merged 2026-05-22** (PR #3): Last.fm + ListenBrainz sources, conservative dedupe, RRF (k=60), Gate-1, per-source isolation/observability. Day 4 (CLAP embedder + similarity scoring) — **complete, merged 2026-05-23** (PR #4): in-memory PyAV decode, deterministic duration-weighted window pooling, audio (+ optional vibe-text) cosine with within-batch min-max + α/β fusion, and hardened preview/text input guards. Day 5 (full database schema + asyncpg access layer) — **complete 2026-05-23**: Postgres 16 + pgvector (`tracks`/`audio_assets`/`canonical_lookups`/`embeddings`/`query_logs`), a checksum-guarded raw-SQL migration runner, and the cache/corpus access layer. See SESSION_NOTES.md / DECISIONS.md._
+_Day 0 (external dependency validation) — **complete, verdict GO** (2026-05-21). Day 1-2 (matcher/resolver) — **complete, merged 2026-05-21** (PR #2): match verification, provider-informed canonicalization, and cover/ISRC/artist-MBID hardening. Day 3 (candidate aggregator) — **complete, merged 2026-05-22** (PR #3): Last.fm + ListenBrainz sources, conservative dedupe, RRF (k=60), Gate-1, per-source isolation/observability. Day 4 (CLAP embedder + similarity scoring) — **complete, merged 2026-05-23** (PR #4): in-memory PyAV decode, deterministic duration-weighted window pooling, audio (+ optional vibe-text) cosine with within-batch min-max + α/β fusion, and hardened preview/text input guards. Day 5 (full database schema + asyncpg access layer) — **complete 2026-05-23** (PR #5): Postgres 16 + pgvector (`tracks`/`audio_assets`/`canonical_lookups`/`embeddings`/`query_logs`), a checksum-guarded raw-SQL migration runner, and the cache/corpus access layer. Day 6 (LLM explainer + FastAPI `/recommend`) — **complete, merged 2026-05-24** (PR #6 → `7ac120b`): the shared inline/worker `run_pipeline` (two async gates, cache-first resolve, ephemeral embed, scoring + cultural backfill), a degradable Claude explainer, the ARQ worker, FastAPI `/recommend` + poll, migration 0002 (telemetry + result snapshot), hardened across three adversarial-review rounds. See SESSION_NOTES.md / DECISIONS.md._
 
 ## Upcoming Milestones
 
-- **Day 7**: Deploy to VPS, first evaluation round against benchmark seeds. Deploy-hardening items
-  carried from the Day-6 adversarial reviews (rationale in DECISIONS.md):
-  - Build + run the app/worker Docker image end-to-end (the multi-GB `clap`/torch build is unvalidated locally).
-  - Non-enumerable `/recommend` poll handles (random `public_id` token resolved to the row id) + API auth before any public/multi-user exposure.
-  - Stale-active-row reaper for COLD jobs killed without running their cleanup (SIGKILL/OOM); align ARQ retry/`job_timeout` with the Postgres status lifecycle.
-  - Scope asyncpg connections to short reads/writes (release during the MB-paced resolve loop) once real concurrency warrants it.
-  - Calibrate the provisional knobs on real score distributions: `GATE1/GATE2_ASYNC_THRESHOLD`, `AUDIO_SIM_WEIGHT`/`VIBE_TEXT_WEIGHT`, `CLAP_EMBED_POOLING`.
+Day 7 is the last planned v1 milestone. Post-v1 improvements (corpus densification, the HNSW retrieval
+lane, LLM-reranking A/B, vibe-to-acoustic translation) are deferred — see BRAINDUMP.md "Future Improvements (Deferred)".
 
 ## Non-Goals
 

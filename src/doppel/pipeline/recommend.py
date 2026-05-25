@@ -41,6 +41,7 @@ from doppel.config import (
     EMBED_CONCURRENCY,
     GATE2_ASYNC_THRESHOLD,
     RECOMMENDATION_LIMIT,
+    RESOLVE_CANDIDATE_LIMIT,
 )
 from doppel.db import QueryLogFields, QueryLogResultRow
 from doppel.embedding.embedder import ClapEmbedder, EmbeddingError
@@ -260,8 +261,9 @@ async def _embed_vibe(deps: PipelineDeps, vibe: str | None) -> np.ndarray | None
 async def _resolve_pool(
     deps: PipelineDeps, conn: asyncpg.Connection, pool: Sequence[RankedCandidate]
 ) -> tuple[list[_Resolved], _ResolveCounts]:
-    """Resolve each candidate cache-first; sequential, since MusicBrainz is ~1 req/s (and the count
-    is bounded by Gate 1). A cache hit reads the persisted asset; a miss resolves + persists."""
+    """Resolve each candidate cache-first; sequential, since MusicBrainz is ~1 req/s (the caller caps
+    the pool length at RESOLVE_CANDIDATE_LIMIT so this can't run unbounded). A cache hit reads the
+    persisted asset; a miss resolves + persists."""
     resolved: list[_Resolved] = []
     counts = _ResolveCounts()
     for cand in pool:
@@ -342,21 +344,34 @@ def _build_results(
     seed_vector: np.ndarray | None,
     vibe_vector: np.ndarray | None,
     pool: Sequence[RankedCandidate],
+    *,
+    seed_mbid: str | None = None,
 ) -> list[RecommendationResult]:
     """Audio-rank the embedded candidates, then backfill cultural (RRF) order up to the limit.
 
     Audio-scored results (ordered by fused score) always precede cultural backfill — CLAP reranks,
     backfill only tops up to :data:`RECOMMENDATION_LIMIT`. Handles cultural-only (no seed vector /
-    nothing embedded) by producing pure backfill.
+    nothing embedded) by producing pure backfill. Dedups on the verified resolver MBID (and drops
+    ``seed_mbid``) so two credits for one recording don't both appear and the seed can't recommend
+    itself — string ``(title, artist)`` alone misses these (Codex review).
     """
     scorable = [item for item in resolved if item.mbid in vectors]
     ordered: list[RecommendationResult] = []
+    # Identity dedup is on the VERIFIED resolver MBID, not the (title, artist) string: two cultural
+    # candidates with different credits can resolve to the SAME recording (live Day-7: "My Little
+    # Brown Book" ×2), and the seed itself can re-enter under an alias ("Take Five"). Seeding the
+    # seed's MBID drops it from its own results; tracking each placed MBID collapses duplicates across
+    # the audio-scored and backfill phases alike.
+    used_mbids: set[str] = {seed_mbid} if seed_mbid else set()
     if scorable and seed_vector is not None:
         scored = score_candidates(
             seed_vector, [vectors[item.mbid] for item in scorable], vibe_text=vibe_vector
         )
         for sc in scored:
             item = scorable[sc.index]
+            if item.mbid in used_mbids:  # the seed alias, or a recording already placed
+                continue
+            used_mbids.add(item.mbid)
             ordered.append(RecommendationResult(
                 position=0, title=item.ranked.title, artist=item.ranked.artist, mbid=item.mbid,
                 provider_track_id=item.provider_track_id, cultural_score=item.ranked.cultural_score,
@@ -375,11 +390,16 @@ def _build_results(
             break
         if (cand.title, cand.artist) in used:
             continue
-        used.add((cand.title, cand.artist))
         found = resolved_by_key.get((cand.title, cand.artist))
+        mbid = found.mbid if found else None
+        if mbid is not None and mbid in used_mbids:
+            continue  # a verified duplicate of an already-placed recording (or the seed) — drop it
+        used.add((cand.title, cand.artist))
+        if mbid is not None:
+            used_mbids.add(mbid)
         ordered.append(RecommendationResult(
             position=0, title=cand.title, artist=cand.artist,
-            mbid=found.mbid if found else None,
+            mbid=mbid,
             provider_track_id=found.provider_track_id if found else None,
             cultural_score=cand.cultural_score, was_audio_scored=False, sources=cand.sources,
         ))
@@ -536,9 +556,11 @@ async def run_pipeline(
     gate2 = Gate.WARM
 
     if seed_vector is not None:
-        # 2. Resolve the cultural pool (cache-first, sequential).
+        # 2. Resolve the top-N cultural candidates (cache-first, sequential). Capped at
+        #    RESOLVE_CANDIDATE_LIMIT because MusicBrainz's ~1 req/s makes resolving a full 100-200
+        #    pool overrun the job timeout; the rest of `pool` still reaches cultural backfill below.
         async with deps.pool.acquire() as conn:
-            resolved, counts = await _resolve_pool(deps, conn, pool)
+            resolved, counts = await _resolve_pool(deps, conn, pool[:RESOLVE_CANDIDATE_LIMIT])
 
         # 3. Gate 2 — how many FOUND candidates still lack a servable vector?
         async with deps.pool.acquire() as conn:
@@ -568,7 +590,7 @@ async def run_pipeline(
         vectors.update(await _embed_missing(deps, missing))
 
     # 5. Score + cultural backfill.
-    results = _build_results(resolved, vectors, seed_vector, vibe_vector, pool)
+    results = _build_results(resolved, vectors, seed_vector, vibe_vector, pool, seed_mbid=seed_mbid)
     audio_scored = sum(1 for r in results if r.was_audio_scored)
 
     # 6. Explain (rationale only; degradable).

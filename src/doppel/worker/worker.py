@@ -22,7 +22,7 @@ from typing import Any
 from arq.connections import RedisSettings
 
 from doppel import db
-from doppel.config import REDIS_URL
+from doppel.config import JOB_TIMEOUT_S, REDIS_URL, WORKER_MAX_JOBS
 from doppel.db import QueryLogFields
 from doppel.pipeline.deps import build_deps, close_deps
 from doppel.pipeline.recommend import pool_from_payload, run_pipeline
@@ -94,8 +94,10 @@ class WorkerSettings:
     on_startup = startup
     on_shutdown = shutdown
     # ARQ is liveness/dedup only — the durable result is in Postgres, and the poll reads it from
-    # there, so a short Redis result TTL is fine. max_jobs caps embedding concurrency on a modest
-    # VPS; job_timeout is generous because a large uncached pool waits on MusicBrainz (~1 req/s).
+    # there, so a short Redis result TTL is fine. WORKER_MAX_JOBS=1 (cold work is MB-bound; all jobs
+    # share one ~1 req/s limiter, so concurrency only multiplies latency + embed memory, never MB
+    # throughput). job_timeout (JOB_TIMEOUT_S) covers a COLD run whose top-N resolve waits on
+    # MusicBrainz; RESOLVE_CANDIDATE_LIMIT bounds that work so the run finishes well inside it.
     keep_result = 3600
-    max_jobs = 4
-    job_timeout = 600
+    max_jobs = WORKER_MAX_JOBS
+    job_timeout = JOB_TIMEOUT_S
