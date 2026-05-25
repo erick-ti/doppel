@@ -94,10 +94,13 @@ LASTFM_SIMILAR_LIMIT = 100
 # ranked by *both* sources) outweighs a single source's #1.
 RRF_K = 60
 
-# Gate 1: at or above this many deduped candidates, push MusicBrainz canonicalization
-# to the async path instead of resolving inline (MB is ~1 req/sec, so a large pool
-# would stall a warm request). See ROADMAP "two-gate async model".
-GATE1_ASYNC_THRESHOLD = 15
+# Gate 1: at or above this many *uncached* candidate lookups (the ones that will actually hit
+# MusicBrainz at ~1 req/s, ~7 s each — Day-7 measurement), resolve on the async/COLD path instead of
+# inline in the request. Sized to a ~35 s inline budget (5 × ~7 s) and kept <= GATE2_ASYNC_THRESHOLD
+# (enforced by _validate_tuning below) so a request that *would* defer at Gate 2 defers up front,
+# instead of burning the resolve inline and then deferring anyway (the old 15 > 10 dead band the Codex
+# review surfaced). Provisional; calibrate in Day-7 eval. See ROADMAP "two-gate async model".
+GATE1_ASYNC_THRESHOLD = int(os.getenv("GATE1_ASYNC_THRESHOLD", "5"))
 
 # Per-source wall-clock budget for the aggregator's fan-out. Past this, a slow/hung
 # source is recorded as degraded (failed_sources) so its latency can't hold the warm
@@ -233,3 +236,71 @@ RECOMMENDATION_LIMIT = int(os.getenv("RECOMMENDATION_LIMIT", "10"))
 # the COLD path (which can face hundreds of misses). Small by default for a modest single-worker VPS;
 # raise it if the box has headroom. Resolve (MusicBrainz ~1 req/s) stays sequential regardless.
 EMBED_CONCURRENCY = int(os.getenv("EMBED_CONCURRENCY", "4"))
+
+# Cap on how many cultural candidates a single run resolves + embeds, taken top-down by cultural RRF
+# rank. MusicBrainz's ~1 req/s limit (×~3 paced calls/candidate ⇒ ~7 s each) makes resolving a full
+# 100-200 pool infeasible in one run — a 194-candidate seed overran job_timeout at 85 resolved — so
+# only the top-N most culturally-relevant candidates are audio-scored and the rest fall to cultural
+# backfill. Bounds COLD latency to ~N×7 s; the lazy corpus still grows across queries. How far the
+# audio reranker reaches into the pool (i.e. N) is a Day-7 eval calibration knob. Applied identically
+# to run_pipeline's resolve loop and the API's Gate-1 uncached count.
+RESOLVE_CANDIDATE_LIMIT = int(os.getenv("RESOLVE_CANDIDATE_LIMIT", "75"))
+
+# ARQ job_timeout (seconds) for the COLD recommend_job. A COLD run's top-N resolve still waits on
+# MusicBrainz (~1 req/s), so this is generous; RESOLVE_CANDIDATE_LIMIT bounds the work so ~N×7 s +
+# seed/embed/explain finishes well inside it. A reaper for a hard kill (SIGKILL/OOM) that outruns
+# even this is a separate Day-7 hardening item.
+JOB_TIMEOUT_S = int(os.getenv("JOB_TIMEOUT_S", "900"))
+
+# How many COLD jobs the ARQ worker runs concurrently. Default 1 because cold work is
+# MusicBrainz-bound and all jobs in a worker share ONE ~1 req/s limiter — so >1 buys no MB throughput
+# (the same budget split N ways), only multiplies each job's wall time (risking job_timeout) and
+# embedding memory (up to WORKER_MAX_JOBS × EMBED_CONCURRENCY concurrent CLAP inferences). Per-job
+# embed parallelism stays bounded by EMBED_CONCURRENCY regardless. Raise only alongside JOB_TIMEOUT_S
+# (the validation below couples them). (Codex adversarial review, 2nd round.)
+WORKER_MAX_JOBS = int(os.getenv("WORKER_MAX_JOBS", "1"))
+
+# Measured cold-resolve cost (Day-7: ~85 candidates resolved in the 600 s before a timeout ≈ 7 s
+# each, from ~3 paced MusicBrainz calls/candidate at ~1 req/s). Used only to sanity-check that the
+# resolve cap fits the COLD job_timeout — not a runtime pacing knob.
+COLD_RESOLVE_SECONDS_PER_CANDIDATE = 7
+
+
+def _validate_tuning(*, resolve_limit: int, job_timeout: int, gate1: int, gate2: int,
+                     resolve_cost: int, max_jobs: int) -> None:
+    """Fail fast on incoherent tuning rather than silently defeating the cap or the gates.
+
+    These are deploy/eval knobs (compose passes them through), so a fat-fingered value must be loud,
+    not a silent production regression (Codex adversarial review). A non-positive resolve cap makes
+    ``pool[:N]`` resolve nearly everything (``N=-1`` → ``pool[:-1]``) or nothing (``N=0`` → no
+    candidate audio scoring); a cap that can't finish inside ``job_timeout`` reintroduces the very
+    timeout the cap removes; and ``GATE1 > GATE2`` recreates the "resolve inline, then defer at Gate 2
+    anyway" dead band. The timeout budget is sized against *concurrent* cold jobs — all ``max_jobs``
+    share one ~1 req/s MusicBrainz limiter, so the worst case is ``max_jobs × N × cost``; sizing for a
+    single job (the original check) lets concurrent jobs time out despite passing (Codex 2nd round).
+    """
+    if resolve_limit < 1:
+        raise ValueError(f"RESOLVE_CANDIDATE_LIMIT must be >= 1, got {resolve_limit}")
+    if job_timeout < 1:
+        raise ValueError(f"JOB_TIMEOUT_S must be >= 1, got {job_timeout}")
+    if max_jobs < 1:
+        raise ValueError(f"WORKER_MAX_JOBS must be >= 1, got {max_jobs}")
+    worst_case = max_jobs * resolve_limit * resolve_cost
+    if worst_case > job_timeout:
+        raise ValueError(
+            f"WORKER_MAX_JOBS={max_jobs} × RESOLVE_CANDIDATE_LIMIT={resolve_limit} × ~{resolve_cost}s "
+            f"cold resolve (~{worst_case}s worst case, all jobs sharing one MB limiter) exceeds "
+            f"JOB_TIMEOUT_S={job_timeout}; raise JOB_TIMEOUT_S, lower the cap, or lower WORKER_MAX_JOBS."
+        )
+    if gate1 > gate2:
+        raise ValueError(
+            f"GATE1_ASYNC_THRESHOLD={gate1} must be <= GATE2_ASYNC_THRESHOLD={gate2}, else a request "
+            f"with gate1..gate2 uncached candidates resolves inline and then defers at Gate 2 anyway."
+        )
+
+
+_validate_tuning(
+    resolve_limit=RESOLVE_CANDIDATE_LIMIT, job_timeout=JOB_TIMEOUT_S,
+    gate1=GATE1_ASYNC_THRESHOLD, gate2=GATE2_ASYNC_THRESHOLD,
+    resolve_cost=COLD_RESOLVE_SECONDS_PER_CANDIDATE, max_jobs=WORKER_MAX_JOBS,
+)

@@ -64,6 +64,9 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       LASTFM_API_KEY: ${LASTFM_API_KEY:-}
       LLM_MODEL: ${LLM_MODEL:-claude-sonnet-4-6}
+      RESOLVE_CANDIDATE_LIMIT: ${RESOLVE_CANDIDATE_LIMIT:-75}
+      JOB_TIMEOUT_S: ${JOB_TIMEOUT_S:-900}
+      WORKER_MAX_JOBS: ${WORKER_MAX_JOBS:-1}
     depends_on:
       postgres:
         condition: service_healthy
@@ -82,6 +85,9 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       LASTFM_API_KEY: ${LASTFM_API_KEY:-}
       LLM_MODEL: ${LLM_MODEL:-claude-sonnet-4-6}
+      RESOLVE_CANDIDATE_LIMIT: ${RESOLVE_CANDIDATE_LIMIT:-75}
+      JOB_TIMEOUT_S: ${JOB_TIMEOUT_S:-900}
+      WORKER_MAX_JOBS: ${WORKER_MAX_JOBS:-1}
     depends_on:
       postgres:
         condition: service_healthy
