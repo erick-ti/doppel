@@ -146,6 +146,39 @@ async def test_warm_path_scores_embeds_and_persists(pool):
         assert len(rows) == 2 and rows[0]["combined_score"] is not None
 
 
+class _CountingFinder(FakeFinder):
+    """FakeFinder that records which titles it was asked to resolve (to assert the top-N cap)."""
+
+    def __init__(self, found_titles):
+        super().__init__(found_titles)
+        self.calls: set[str] = set()
+
+    async def find_track(self, title, artist):
+        self.calls.add(title)
+        return await super().find_track(title, artist)
+
+
+async def test_resolve_pool_capped_to_top_n_rest_backfills(pool, monkeypatch):
+    """Cold-run bound (T12): only the top-N candidates by cultural rank are resolved + audio-scored;
+    the rest of the pool falls to cultural backfill, so MusicBrainz's ~1 req/s can't make a big pool
+    overrun the job timeout. Here N=3 over a 6-candidate pool."""
+    monkeypatch.setattr("doppel.pipeline.recommend.RESOLVE_CANDIDATE_LIMIT", 3)
+    cands = [_cand(f"S{i}", i + 1, 0.06 - i * 0.001) for i in range(6)]  # descending cultural score
+    finder = _CountingFinder(["Seed"] + [f"S{i}" for i in range(6)])  # would find ALL of them
+    rec = await run_pipeline(_deps(pool, finder=finder), "Seed", "Artist", None, cands,
+                             _warm_gate1(6), execution_mode="inline")
+
+    assert isinstance(rec, Recommendation)
+    # Only the seed + the top-3 candidates were resolve-attempted — not all 6.
+    assert finder.calls == {"Seed", "S0", "S1", "S2"}
+    by_title = {r.title: r for r in rec.results}
+    assert all(by_title[f"S{i}"].was_audio_scored for i in range(3))        # top-N audio-scored
+    assert all(not by_title[f"S{i}"].was_audio_scored for i in range(3, 6))  # tail → cultural backfill
+    async with pool.acquire() as conn:
+        log = await db.get_query_log(conn, rec.query_log_id)
+        assert log["resolved_found"] == 3  # the cap held — not 6
+
+
 async def test_seed_preview_http_error_degrades_to_cultural_only(pool):
     """Finding 2 (seed): an httpx error fetching the seed preview ⇒ cultural-only, not a 500."""
     cands = [_cand("SongA", 1, 0.05)]

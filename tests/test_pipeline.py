@@ -46,3 +46,34 @@ def test_audio_scored_row_keeps_verified_identity():
                              np.array([1.0, 0.0]), None, [a])
     assert len(results) == 1 and results[0].was_audio_scored is True
     assert results[0].mbid == "verified-A" and results[0].provider_track_id == "deezer-A"
+
+
+def test_dedup_collapses_results_sharing_a_verified_mbid():
+    # Two cultural candidates with different credits resolve to the SAME recording (one mbid, one
+    # vector) — the live rec-3 "My Little Brown Book" ×2 case. Only one row should survive.
+    a = _cand("Song (feat. X)", 1, 0.05)
+    b = _cand("Song", 2, 0.04)
+    ra = _Resolved(ranked=a, mbid="dup-mbid", asset_id=1, preview_url="x",
+                   provider_track_id="d1", match_confidence=0.9)
+    rb = _Resolved(ranked=b, mbid="dup-mbid", asset_id=2, preview_url="y",
+                   provider_track_id="d2", match_confidence=0.9)
+    results = _build_results([ra, rb], {"dup-mbid": np.array([0.9, 0.1])},
+                             np.array([1.0, 0.0]), None, [a, b])
+    assert len(results) == 1 and results[0].mbid == "dup-mbid"
+
+
+def test_seed_mbid_is_excluded_from_results():
+    # The seed re-appears as a candidate under a different credit (live rec-3 "Take Five" alias); its
+    # verified mbid equals the seed's, so it must be dropped, not recommended back to the user.
+    seed_alias = _cand("Take Five", 1, 0.05)
+    other = _cand("Other", 2, 0.04)
+    r_seed = _Resolved(ranked=seed_alias, mbid="seed-mbid", asset_id=1, preview_url="x",
+                       provider_track_id="d1", match_confidence=0.9)
+    r_other = _Resolved(ranked=other, mbid="other-mbid", asset_id=2, preview_url="y",
+                        provider_track_id="d2", match_confidence=0.9)
+    results = _build_results(
+        [r_seed, r_other], {"seed-mbid": np.array([0.9, 0.1]), "other-mbid": np.array([0.5, 0.5])},
+        np.array([1.0, 0.0]), None, [seed_alias, other], seed_mbid="seed-mbid",
+    )
+    assert all(r.mbid != "seed-mbid" for r in results)
+    assert "Take Five" not in [r.title for r in results] and "Other" in [r.title for r in results]
