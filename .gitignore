@@ -217,3 +217,8 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+# Doppel — Postgres backups (scripts/backup_db.sh defaults to a dir outside the repo, but guard
+# against an in-repo BACKUP_DIR; dumps can contain real data and must never be committed).
+*.dump
+/backups/
+

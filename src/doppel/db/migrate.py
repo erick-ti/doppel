@@ -22,7 +22,7 @@ from pathlib import Path
 
 import asyncpg
 
-from doppel.config import DATABASE_URL
+from doppel.config import DATABASE_URL, DB_PASSWORD
 
 MIGRATIONS_DIR = Path(__file__).parent / "migrations"
 # Stable 64-bit key so only one migrator holds the advisory lock at a time (ASCII "dopplmig").
@@ -127,7 +127,7 @@ async def status(conn: asyncpg.Connection) -> tuple[list[str], list[str]]:
 
 async def _main(argv: list[str]) -> int:
     cmd = argv[1] if len(argv) > 1 else "up"
-    conn = await asyncpg.connect(DATABASE_URL)
+    conn = await asyncpg.connect(DATABASE_URL, password=DB_PASSWORD)
     try:
         if cmd == "up":
             applied = await up(conn)

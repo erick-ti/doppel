@@ -1,0 +1,72 @@
+# Production overlay for the single-user VPS deploy (Day 7). Always layered on the base file, with
+# the `app` profile. See DEPLOY.md for the full runbook. Quick reference:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile app up -d
+#
+# Migrations stay an explicit one-shot — run them before `up`, never as an app/worker entrypoint
+# (Invariant #3):
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm migrate
+#
+# What this overlay changes vs the dev base:
+#   * Postgres/Redis publish NO host ports. They stay reachable on the compose network
+#     (`postgres:5432` / `redis:6379`), so nothing DB/queue is exposed on the VPS's public
+#     interfaces. `!reset` clears the base's host-port mapping (compose merges port lists by
+#     appending, so omitting it is not enough — it must be explicitly reset).
+#   * The API binds to 127.0.0.1 only — reach it over an SSH tunnel
+#     (`ssh -L 8000:localhost:8000 <vps>`), never the public internet. `!override` replaces the
+#     base's 0.0.0.0 binding instead of appending a second one. v1 has no auth/TLS (Non-Goals); a
+#     public, authenticated edge is the separate Phase-C hardening review.
+#   * The Postgres password comes from `POSTGRES_PASSWORD` (host `.env`), not the base's `doppel`
+#     dev default. `:?` makes compose fail fast if it's unset, so prod can't silently ship the weak
+#     password. The DB role stays `doppel` (a role name, not a secret); app/worker/migrate receive
+#     the password via `DB_PASSWORD` and hand it to asyncpg as a discrete connection argument — it is
+#     NOT interpolated into `DATABASE_URL`, so an arbitrary secret (even one containing `/`, `@`, `?`)
+#     connects safely. Redis stays unauthenticated — no public port is its boundary at v1 scale (auth
+#     is a Phase-C item alongside the public edge).
+#   * Long-lived services restart unless explicitly stopped, so the stack survives a VPS reboot or
+#     crash. `migrate` keeps the base's `restart: "no"` (a one-shot must stay exited 0) — its only
+#     change here is the DATABASE_URL password.
+#
+# Requires Compose v2.24+ for the `!reset` / `!override` merge tags. Secrets (POSTGRES_PASSWORD,
+# ANTHROPIC_API_KEY, LASTFM_API_KEY) come from the gitignored host `.env`, never committed.
+
+services:
+  postgres:
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required for the prod overlay; set it in .env}
+    ports: !reset []
+    restart: unless-stopped
+
+  redis:
+    # Persist the ARQ queue (AOF) across restarts so a redis bounce/OOM — which the restart policy
+    # auto-recovers — doesn't silently drop queued COLD jobs and orphan their query_logs rows. The
+    # stale-row reaper still backstops a truly-lost job; this avoids losing it in the first place.
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - doppel_redisdata:/data
+    ports: !reset []
+    restart: unless-stopped
+
+  migrate:
+    environment:
+      DATABASE_URL: postgresql://doppel@postgres:5432/doppel
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?required for the prod overlay; set it in .env}
+
+  app:
+    environment:
+      DATABASE_URL: postgresql://doppel@postgres:5432/doppel
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?required for the prod overlay; set it in .env}
+    ports: !override
+      - "127.0.0.1:${DOPPEL_APP_PORT:-8000}:8000"
+    restart: unless-stopped
+
+  worker:
+    environment:
+      DATABASE_URL: postgresql://doppel@postgres:5432/doppel
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?required for the prod overlay; set it in .env}
+    restart: unless-stopped
+
+# Named volume for the persisted Redis AOF (merges with the base file's doppel_pgdata).
+volumes:
+  doppel_redisdata:

@@ -14,7 +14,7 @@ import asyncio
 import asyncpg
 from pgvector.asyncpg import register_vector
 
-from doppel.config import DATABASE_URL, DB_POOL_MAX_SIZE, DB_POOL_MIN_SIZE
+from doppel.config import DATABASE_URL, DB_PASSWORD, DB_POOL_MAX_SIZE, DB_POOL_MIN_SIZE
 
 _pool: asyncpg.Pool | None = None
 _pool_lock = asyncio.Lock()
@@ -28,12 +28,17 @@ async def _init_connection(conn: asyncpg.Connection) -> None:
 async def create_pool(
     dsn: str = DATABASE_URL,
     *,
+    password: str | None = DB_PASSWORD,
     min_size: int = DB_POOL_MIN_SIZE,
     max_size: int = DB_POOL_MAX_SIZE,
 ) -> asyncpg.Pool:
-    """Create a *new* pool (independent of the singleton); the caller owns closing it."""
+    """Create a *new* pool (independent of the singleton); the caller owns closing it.
+
+    ``password`` is passed as a discrete asyncpg argument rather than embedded in ``dsn`` so an
+    arbitrary secret connects safely; ``None`` (dev/tests) falls back to the DSN's own password.
+    """
     return await asyncpg.create_pool(
-        dsn, min_size=min_size, max_size=max_size, init=_init_connection
+        dsn, password=password, min_size=min_size, max_size=max_size, init=_init_connection
     )
 
 

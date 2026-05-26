@@ -19,10 +19,11 @@ import asyncio
 import contextlib
 from typing import Any
 
+from arq import cron
 from arq.connections import RedisSettings
 
 from doppel import db
-from doppel.config import JOB_TIMEOUT_S, REDIS_URL, WORKER_MAX_JOBS
+from doppel.config import JOB_TIMEOUT_S, REDIS_URL, STALE_JOB_RECLAIM_S, WORKER_MAX_JOBS
 from doppel.db import QueryLogFields
 from doppel.pipeline.deps import build_deps, close_deps
 from doppel.pipeline.recommend import pool_from_payload, run_pipeline
@@ -54,7 +55,8 @@ async def recommend_job(
         # `except Exception` would skip this write and leave the row stuck `running` — polling 202
         # forever and dedup-wedging future identical requests onto the stuck handle. asyncio.shield
         # lets the failure write finish despite the cancellation tearing this task down; best-effort
-        # on a hard loop shutdown (a Day-7 stale-active-row reaper backstops that, and SIGKILL/OOM).
+        # on a hard loop shutdown — the stale-running-row reaper (reap_stale_jobs, below) backstops that
+        # and the SIGKILL/OOM/reboot case where no in-process handler runs at all.
         with contextlib.suppress(Exception):
             await asyncio.shield(_set_status(
                 deps, query_log_id, seed_title, seed_artist,
@@ -86,10 +88,26 @@ async def shutdown(ctx: dict[str, Any]) -> None:
         await close_deps(deps)
 
 
+async def reap_stale_jobs(ctx: dict[str, Any]) -> int:
+    """Recover query_logs rows orphaned when recommend_job's in-process failure handler never ran — a
+    worker SIGKILL/OOM or VPS reboot mid-job. Marks stale 'running' rows (last transition older than
+    ``STALE_JOB_RECLAIM_S``) failed, clearing the in-flight dedup so the seed/vibe stops wedging and the
+    poll terminates. ('queued' rows are left to their ARQ job — see reap_stale_active_query_logs.)
+    Registered to run at worker startup AND on a cron, so an orphan is reclaimed promptly on restart and
+    bounded even while the worker stays up. Returns the count (ARQ logs it)."""
+    deps = ctx["deps"]
+    async with deps.pool.acquire() as conn:
+        return await db.reap_stale_active_query_logs(conn, STALE_JOB_RECLAIM_S)
+
+
 class WorkerSettings:
     """ARQ entrypoint: ``arq doppel.worker.worker.WorkerSettings``."""
 
     functions = [recommend_job]
+    # Reap stale 'running' rows at startup (covers a crash/OOM/reboot restart) and every 5 minutes
+    # (bounds a 'running' orphan whose failure-write was lost while the worker stayed up). See
+    # reap_stale_jobs; STALE_JOB_RECLAIM_S > JOB_TIMEOUT_S guarantees a live job is never reclaimed.
+    cron_jobs = [cron(reap_stale_jobs, minute=set(range(0, 60, 5)), run_at_startup=True)]
     redis_settings = RedisSettings.from_dsn(REDIS_URL)
     on_startup = startup
     on_shutdown = shutdown

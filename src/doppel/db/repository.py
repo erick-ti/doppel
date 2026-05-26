@@ -589,6 +589,43 @@ async def delete_query_log(conn: asyncpg.Connection, query_log_id: int) -> None:
     await conn.execute("DELETE FROM query_logs WHERE id = $1", query_log_id)
 
 
+async def reap_stale_active_query_logs(conn: asyncpg.Connection, older_than_s: int) -> int:
+    """Mark **running** rows whose last transition is older than ``older_than_s`` as ``failed`` —
+    recovering rows orphaned when a worker died mid-job (SIGKILL/OOM/reboot) without its in-process
+    handler running. Returns the number reaped.
+
+    Only ``running`` rows are reaped, deliberately NOT ``queued``: a ``queued`` row's ``updated_at`` is
+    its enqueue time, so age alone can't distinguish a genuine orphan from a job merely waiting behind a
+    backlog (queue wait scales with depth under ``WORKER_MAX_JOBS``), and its ARQ job will still run (in
+    prod, Redis AOF persists the queue across restarts). Age-reaping queued rows would falsely fail
+    valid work and clear its dedup. A ``running`` row older than ``older_than_s`` (> ``JOB_TIMEOUT_S``,
+    enforced by ``config._validate_tuning``) instead outlived ARQ's ``job_timeout`` cancellation without
+    reaching a terminal status — a hard kill — so its job is dead and reaping cannot resurrect it.
+
+    Flipping ``status`` to ``failed`` clears the partial unique index ``query_logs_active_request_key``,
+    so the seed/vibe stops dedup-wedging future requests (``get_active_query_log`` then misses) and the
+    poll reaches a terminal state instead of a forever-202. (A ``queued`` orphan — its ARQ job lost
+    *after* a successful enqueue, e.g. the sub-second AOF-fsync window on a hard Redis crash or a
+    volume loss — is NOT reaped here; reconciling queued rows against ARQ job existence is a deferred
+    v1 residual, tracked in ROADMAP.)
+    """
+    reaped = await conn.fetch(
+        """
+        UPDATE query_logs
+           SET status = 'failed',
+               error = $2,
+               completed_at = now()
+         WHERE status = 'running'
+           AND updated_at < now() - ($1::int * interval '1 second')
+        RETURNING id
+        """,
+        older_than_s,
+        f"reclaimed by stale-job reaper: running row had no terminal status within {older_than_s}s "
+        "(worker crash/OOM/reboot mid-job)",
+    )
+    return len(reaped)
+
+
 async def get_query_log_results(
     conn: asyncpg.Connection, query_log_id: int
 ) -> list[asyncpg.Record]:

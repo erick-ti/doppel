@@ -7,6 +7,10 @@
 .pytest_cache
 .ruff_cache
 .env
+# DB backups (default outside the repo, but mirror .gitignore so a misconfigured in-repo BACKUP_DIR
+# can't leak dumps into the build context / image layers).
+*.dump
+backups/
 tests
 scripts
 # Context / workflow files (not needed at runtime)
