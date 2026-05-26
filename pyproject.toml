@@ -37,6 +37,19 @@ dev = [
     "pytest-asyncio>=0.24.0",
 ]
 
+# Pin torch to the CPU-only wheel index. The default PyPI/torch resolution pulls
+# the CUDA build (2.x+cuNNN + the full nvidia_* libs), which bloated the image to
+# ~10.6 GB on a CPU-only VPS target. `explicit = true` keeps this index scoped to
+# torch alone (everything else stays on PyPI). macOS is CPU-only upstream, so the
+# index serves local dev unchanged; the Linux VPS build picks the +cpu wheel.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
 [tool.pytest.ini_options]
 pythonpath = ["scripts"]
 testpaths = ["tests"]
