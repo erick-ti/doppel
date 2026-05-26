@@ -36,3 +36,8 @@ uv run --group dev pytest                    # offline suite (fast, hermetic)
 uv run --group dev pytest --run-db           # + tests against the running Postgres
 uv run --group dev pytest --run-integration  # + live Deezer / MusicBrainz / ListenBrainz / Last.fm
 ```
+
+## Production deploy
+
+Single-user VPS deploy (Docker Compose, SSH-tunnel access, no public ports) — see
+[DEPLOY.md](DEPLOY.md) for the full runbook.

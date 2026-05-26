@@ -42,9 +42,10 @@ Graceful degradation:
 
 **Day 7**: Deploy to VPS, first evaluation round against benchmark seeds. Deploy-hardening items
 carried from the Day-6 adversarial reviews (rationale in DECISIONS.md):
-- Build + run the app/worker Docker image end-to-end (the multi-GB `clap`/torch build is unvalidated locally).
+- ✓ Built + ran the app/worker Docker image end-to-end (PR #7): `/health` + a real cold `/recommend` confirmed in-container. (Image is 10.6 GB on the CUDA torch build — shrinking via a CPU-torch pin is the next step.)
+- ✓ Cold-run resolve cap + tuning hardening (PR #7): top-N resolve cap (`RESOLVE_CANDIDATE_LIMIT`), `GATE1`=5 ≤ `GATE2`, `WORKER_MAX_JOBS`=1, `_validate_tuning`, verified-MBID result dedup — bounds cold latency against MusicBrainz's ~1 req/s (a 194-candidate seed had overrun the timeout at 85 resolved).
 - Non-enumerable `/recommend` poll handles (random `public_id` token resolved to the row id) + API auth before any public/multi-user exposure.
-- Stale-active-row reaper for COLD jobs killed without running their cleanup (SIGKILL/OOM); align ARQ retry/`job_timeout` with the Postgres status lifecycle.
+- Stale-row reaper (running rows) — done in `day7-deploy-prep` (pending commit): a worker startup + 5-min-cron pass fails `running` rows stuck past `STALE_JOB_RECLAIM_S` (> `JOB_TIMEOUT_S`), freeing the in-flight dedup; Redis AOF (prod overlay) keeps `queued` jobs durable across restarts. **Deferred residual**: reconcile `queued` rows against ARQ job existence (covers a job lost *after* enqueue — the AOF-fsync window on a hard crash, or volume loss); a narrow single-user-v1 edge.
 - Scope asyncpg connections to short reads/writes (release during the MB-paced resolve loop) once real concurrency warrants it.
 - Calibrate the provisional knobs on real score distributions: `GATE1/GATE2_ASYNC_THRESHOLD`, `AUDIO_SIM_WEIGHT`/`VIBE_TEXT_WEIGHT`, `CLAP_EMBED_POOLING`.
 

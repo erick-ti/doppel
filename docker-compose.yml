@@ -18,7 +18,10 @@ services:
       POSTGRES_PASSWORD: doppel
       POSTGRES_DB: doppel
     ports:
-      - "${DOPPEL_DB_PORT:-5432}:5432"
+      # Bind host ports to loopback (not 0.0.0.0): the dev DB/Redis/API never leave this machine, and a
+      # base-only run on a server can't accidentally expose them — Docker bypasses ufw for published
+      # ports. Production layers docker-compose.prod.yml (compose-network only); see DEPLOY.md.
+      - "127.0.0.1:${DOPPEL_DB_PORT:-5432}:5432"
     volumes:
       - doppel_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -32,7 +35,7 @@ services:
     # Up with the full stack (`--profile app`) or alone for a local `uv run` worker (`--profile worker`).
     profiles: ["app", "worker"]
     ports:
-      - "${DOPPEL_REDIS_PORT:-6379}:6379"
+      - "127.0.0.1:${DOPPEL_REDIS_PORT:-6379}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -57,7 +60,7 @@ services:
     profiles: ["app"]
     command: ["uvicorn", "doppel.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
     ports:
-      - "${DOPPEL_APP_PORT:-8000}:8000"
+      - "127.0.0.1:${DOPPEL_APP_PORT:-8000}:8000"
     environment:
       DATABASE_URL: postgresql://doppel:doppel@postgres:5432/doppel
       REDIS_URL: redis://redis:6379
