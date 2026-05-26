@@ -13,7 +13,8 @@ import pytest
 from doppel.config import _validate_tuning
 
 # A coherent baseline (mirrors the shipped defaults); individual cases override one field.
-_OK = dict(resolve_limit=75, job_timeout=900, gate1=5, gate2=10, resolve_cost=7, max_jobs=1)
+_OK = dict(resolve_limit=75, job_timeout=900, gate1=5, gate2=10, resolve_cost=7, max_jobs=1,
+           stale_reclaim=1800)
 
 
 def test_valid_defaults_pass():
@@ -59,3 +60,15 @@ def test_concurrency_exceeding_timeout_raises():
 def test_nonpositive_max_jobs_raises(max_jobs):
     with pytest.raises(ValueError, match="WORKER_MAX_JOBS must be"):
         _validate_tuning(**{**_OK, "max_jobs": max_jobs})
+
+
+@pytest.mark.parametrize("stale_reclaim", [900, 899, 0, -1])
+def test_stale_reclaim_not_above_timeout_raises(stale_reclaim):
+    # Must STRICTLY exceed job_timeout (900), else the reaper could reclaim a COLD job still inside its
+    # allowed runtime (equal is not enough — a job may run right up to job_timeout before cancellation).
+    with pytest.raises(ValueError, match="STALE_JOB_RECLAIM_S"):
+        _validate_tuning(**{**_OK, "stale_reclaim": stale_reclaim})
+
+
+def test_stale_reclaim_just_above_timeout_ok():
+    _validate_tuning(**{**_OK, "stale_reclaim": 901})  # boundary: strictly greater is allowed

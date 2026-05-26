@@ -350,3 +350,50 @@ async def test_pool_requires_extension_so_migrations_run_first(fresh_db_dsn):
             assert await c.fetchval("SELECT count(*) FROM tracks") == 0
     finally:
         await pool.close()
+
+
+async def test_reap_stale_active_query_logs(conn):
+    # A stale RUNNING row (worker died mid-job) is reclaimed to `failed`; a stale QUEUED row is left
+    # alone — age alone can't tell a genuine orphan from a job waiting behind a backlog, and its ARQ
+    # job is still pending — and fresh/terminal rows are untouched. Insert the aged rows raw so
+    # updated_at is genuinely in the past: the BEFORE-UPDATE trigger resets updated_at=now() on any
+    # UPDATE, but INSERT doesn't fire it.
+    stale_running_id = await conn.fetchval(
+        "INSERT INTO query_logs (seed_title, seed_artist, status, request_key, updated_at) "
+        "VALUES ('StaleRun', 'A', 'running', 'stale-run-key', now() - interval '1 hour') RETURNING id"
+    )
+    stale_queued_id = await conn.fetchval(
+        "INSERT INTO query_logs (seed_title, seed_artist, status, request_key, updated_at) "
+        "VALUES ('StaleQ', 'A', 'queued', 'stale-queue-key', now() - interval '1 hour') RETURNING id"
+    )
+    done_id = await conn.fetchval(
+        "INSERT INTO query_logs (seed_title, seed_artist, status, request_key, updated_at) "
+        "VALUES ('Done', 'A', 'succeeded', 'done-key', now() - interval '1 hour') RETURNING id"
+    )
+    fresh_id = await repo.insert_query_log(
+        conn, repo.QueryLogFields(seed_title="Fresh", seed_artist="A", status="running",
+                                  request_key="fresh-key"))
+
+    reaped = await repo.reap_stale_active_query_logs(conn, older_than_s=60)
+    assert reaped == 1  # ONLY the stale running row
+
+    stale_run = await repo.get_query_log(conn, stale_running_id)
+    assert stale_run["status"] == "failed"
+    assert stale_run["completed_at"] is not None
+    assert "reclaim" in (stale_run["error"] or "")
+
+    # A stale QUEUED row is NOT age-reaped (its ARQ job is still valid/pending behind the queue).
+    stale_q = await repo.get_query_log(conn, stale_queued_id)
+    assert stale_q["status"] == "queued"
+    assert stale_q["completed_at"] is None
+    # A terminal row is never touched (the WHERE excludes succeeded/failed), even if old.
+    assert (await repo.get_query_log(conn, done_id))["status"] == "succeeded"
+    # A fresh running row keeps running.
+    fresh = await repo.get_query_log(conn, fresh_id)
+    assert fresh["status"] == "running"
+    assert fresh["completed_at"] is None
+
+    # Reaping frees the dedup for the reclaimed running row; the queued + fresh keys stay active.
+    assert await repo.get_active_query_log(conn, "stale-run-key") is None
+    assert await repo.get_active_query_log(conn, "stale-queue-key") is not None
+    assert await repo.get_active_query_log(conn, "fresh-key") is not None

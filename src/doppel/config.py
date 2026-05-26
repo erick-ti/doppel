@@ -180,6 +180,13 @@ MAX_VIBE_TEXT_CHARS = 8192
 # Connection DSN. The default matches docker-compose.yml's dev Postgres; production injects a
 # real DATABASE_URL (env wins over .env). asyncpg parses this URL form directly.
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://doppel:doppel@localhost:5432/doppel")
+# Optional discrete DB password. When set, it's passed to asyncpg as a connection *argument* that
+# overrides any password in DATABASE_URL — never interpolated into the DSN — so an arbitrary secret
+# (which may contain `/`, `@`, `?` etc. that would corrupt URL userinfo) connects safely. Prod sets
+# this from POSTGRES_PASSWORD and keeps the password out of the DSN; dev/tests leave it unset and use
+# the password embedded in the DSN (asyncpg falls back to the DSN password when this is None, so an
+# unset value is a true no-op).
+DB_PASSWORD = os.getenv("DB_PASSWORD") or None
 # asyncpg pool bounds. One shared pool serves the app; min keeps a warm connection, max caps
 # concurrency against a single-worker VPS Postgres. Both env-overridable for prod tuning.
 DB_POOL_MIN_SIZE = int(os.getenv("DB_POOL_MIN_SIZE", "1"))
@@ -260,6 +267,16 @@ JOB_TIMEOUT_S = int(os.getenv("JOB_TIMEOUT_S", "900"))
 # (the validation below couples them). (Codex adversarial review, 2nd round.)
 WORKER_MAX_JOBS = int(os.getenv("WORKER_MAX_JOBS", "1"))
 
+# Stale-running-row reaper threshold (seconds). A COLD recommend_job marks its query_logs row terminal
+# only from its own in-process handler; a worker SIGKILL/OOM or VPS reboot *mid-job* leaves the row
+# stuck 'running' — polling 202 forever and (via the active request_key index) dedup-wedging future
+# identical requests. The worker reaps 'running' rows whose last transition is older than this, marking
+# them 'failed' and freeing the dedup. Must exceed JOB_TIMEOUT_S (enforced below) so a job still inside
+# its allowed runtime is never reclaimed — a 'running' row older than that outlived ARQ's job_timeout
+# cancellation, i.e. a hard kill. ('queued' rows are deliberately NOT age-reaped: their wait scales
+# with backlog depth and their ARQ job survives via Redis AOF — see reap_stale_active_query_logs.)
+STALE_JOB_RECLAIM_S = int(os.getenv("STALE_JOB_RECLAIM_S", str(JOB_TIMEOUT_S * 2)))
+
 # Measured cold-resolve cost (Day-7: ~85 candidates resolved in the 600 s before a timeout ≈ 7 s
 # each, from ~3 paced MusicBrainz calls/candidate at ~1 req/s). Used only to sanity-check that the
 # resolve cap fits the COLD job_timeout — not a runtime pacing knob.
@@ -267,7 +284,7 @@ COLD_RESOLVE_SECONDS_PER_CANDIDATE = 7
 
 
 def _validate_tuning(*, resolve_limit: int, job_timeout: int, gate1: int, gate2: int,
-                     resolve_cost: int, max_jobs: int) -> None:
+                     resolve_cost: int, max_jobs: int, stale_reclaim: int) -> None:
     """Fail fast on incoherent tuning rather than silently defeating the cap or the gates.
 
     These are deploy/eval knobs (compose passes them through), so a fat-fingered value must be loud,
@@ -278,6 +295,8 @@ def _validate_tuning(*, resolve_limit: int, job_timeout: int, gate1: int, gate2:
     anyway" dead band. The timeout budget is sized against *concurrent* cold jobs — all ``max_jobs``
     share one ~1 req/s MusicBrainz limiter, so the worst case is ``max_jobs × N × cost``; sizing for a
     single job (the original check) lets concurrent jobs time out despite passing (Codex 2nd round).
+    Finally ``STALE_JOB_RECLAIM_S`` must exceed ``job_timeout`` so the stale-row reaper can never
+    reclaim a COLD job that is still inside its allowed runtime.
     """
     if resolve_limit < 1:
         raise ValueError(f"RESOLVE_CANDIDATE_LIMIT must be >= 1, got {resolve_limit}")
@@ -297,10 +316,16 @@ def _validate_tuning(*, resolve_limit: int, job_timeout: int, gate1: int, gate2:
             f"GATE1_ASYNC_THRESHOLD={gate1} must be <= GATE2_ASYNC_THRESHOLD={gate2}, else a request "
             f"with gate1..gate2 uncached candidates resolves inline and then defers at Gate 2 anyway."
         )
+    if stale_reclaim <= job_timeout:
+        raise ValueError(
+            f"STALE_JOB_RECLAIM_S={stale_reclaim} must be > JOB_TIMEOUT_S={job_timeout}, else the "
+            f"reaper could reclaim a COLD job that is still legitimately running."
+        )
 
 
 _validate_tuning(
     resolve_limit=RESOLVE_CANDIDATE_LIMIT, job_timeout=JOB_TIMEOUT_S,
     gate1=GATE1_ASYNC_THRESHOLD, gate2=GATE2_ASYNC_THRESHOLD,
     resolve_cost=COLD_RESOLVE_SECONDS_PER_CANDIDATE, max_jobs=WORKER_MAX_JOBS,
+    stale_reclaim=STALE_JOB_RECLAIM_S,
 )
