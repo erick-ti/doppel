@@ -136,3 +136,32 @@ def test_seed_provider_track_id_suppresses_same_track_alias():
     titles = [r.title for r in results]
     assert "Take Five (Remastered)" not in titles and "Other" in titles
     assert all(r.provider_track_id != "seed-ptid" for r in results)
+
+
+def test_seed_equivalence_drops_near_identical_master_of_the_seed():
+    # The seed re-appears as a DIFFERENT master (distinct MBID + Deezer track, so identity dedup can't
+    # catch it) at near-identical audio — the live Take Five → "Take Five — Dave Brubeck" (0.988) case.
+    # The audio≥0.98 + seed-title-match heuristic drops it. Two near-misses MUST be kept: a high-audio
+    # but differently-titled track, and a same-title LIVE version (lower audio) — the heuristic must not
+    # drop legitimate versions (Day-7 eval follow-up).
+    equiv = _cand("Take Five", 1, 0.05)                 # same title as seed, near-identical audio
+    other = _cand("Different Song", 2, 0.04)            # high audio, different title → keep
+    live = _cand("Take Five (Live Acoustic)", 3, 0.03)  # same title family, lower audio → keep
+    r_equiv = _Resolved(ranked=equiv, mbid="tf-alt-mbid", asset_id=1, preview_url="x",
+                        provider_track_id="tf-alt-ptid", match_confidence=0.9)
+    r_other = _Resolved(ranked=other, mbid="other-mbid", asset_id=2, preview_url="y",
+                        provider_track_id="other-ptid", match_confidence=0.9)
+    r_live = _Resolved(ranked=live, mbid="live-mbid", asset_id=3, preview_url="z",
+                       provider_track_id="live-ptid", match_confidence=0.9)
+    results = _build_results(
+        [r_equiv, r_other, r_live],
+        {"tf-alt-mbid": np.array([1.0, 0.0]),   # cosine 1.0 vs seed → ≥ 0.98
+         "other-mbid": np.array([1.0, 0.0]),    # cosine 1.0 vs seed → ≥ 0.98
+         "live-mbid": np.array([0.6, 0.8])},    # cosine 0.6 vs seed → < 0.98
+        np.array([1.0, 0.0]), None, [equiv, other, live],
+        seed_mbid="seed-mbid", seed_provider_track_id="seed-ptid", seed_title="Take Five",
+    )
+    titles = [r.title for r in results]
+    assert "Take Five" not in titles              # the seed's own master — suppressed (audio + title)
+    assert "Different Song" in titles             # high audio but different title — kept
+    assert "Take Five (Live Acoustic)" in titles  # same title family, lower audio — preserved

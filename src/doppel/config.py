@@ -165,6 +165,16 @@ ALLOWED_PREVIEW_HOST_SUFFIXES = ("dzcdn.net", "deezer.com")
 AUDIO_SIM_WEIGHT = 0.7  # α
 VIBE_TEXT_WEIGHT = 0.3  # β
 
+# Seed-equivalence suppression (Day-7 eval follow-up): drop a result that is the *seed itself* under a
+# different master — a near-identical audio match (raw cosine ≥ SEED_EQUIVALENCE_AUDIO_MIN) whose title
+# closely matches the seed's (token_set_ratio ≥ SEED_EQUIVALENCE_TITLE_MIN, both in [0,1]). Identity
+# dedup (mbid/ptid) misses these: a re-release carries a distinct MBID + Deezer track (live Day-7: Take
+# Five → "Take Five — Dave Brubeck" at 0.988). The audio floor sits above genuine matches (~0.95 in the
+# eval), so a live/acoustic *version* — same title family but lower audio similarity — is preserved;
+# only a near-identical master is dropped. Env-overridable for eval calibration.
+SEED_EQUIVALENCE_AUDIO_MIN = float(os.getenv("SEED_EQUIVALENCE_AUDIO_MIN", "0.98"))
+SEED_EQUIVALENCE_TITLE_MIN = float(os.getenv("SEED_EQUIVALENCE_TITLE_MIN", "0.90"))
+
 # The vibe description is user-supplied (the /recommend text leg). CLAP's RoBERTa text
 # encoder hard-caps at this many tokens and *raises* (position-embedding overflow) on longer
 # input — the tokenizer does not truncate by default — so embed_text token-truncates to it
