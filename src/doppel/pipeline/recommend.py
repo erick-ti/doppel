@@ -31,6 +31,8 @@ from typing import Literal, Protocol
 import asyncpg
 import httpx
 import numpy as np
+from rapidfuzz import fuzz
+from rapidfuzz.utils import default_process
 
 from doppel import db
 from doppel.aggregation.aggregator import Gate, gate_for
@@ -42,6 +44,8 @@ from doppel.config import (
     GATE2_ASYNC_THRESHOLD,
     RECOMMENDATION_LIMIT,
     RESOLVE_CANDIDATE_LIMIT,
+    SEED_EQUIVALENCE_AUDIO_MIN,
+    SEED_EQUIVALENCE_TITLE_MIN,
 )
 from doppel.db import QueryLogFields, QueryLogResultRow
 from doppel.embedding.embedder import ClapEmbedder, EmbeddingError
@@ -346,6 +350,17 @@ async def _embed_missing(deps: PipelineDeps, missing: Sequence[_Resolved]) -> di
     return vectors
 
 
+def _is_seed_equivalent(title: str, audio_score: float, seed_title: str | None) -> bool:
+    """True when a result is the SEED itself under a *different master*: near-identical audio AND a
+    close seed-title match. Neither identity key (mbid/ptid) catches it — a re-release carries its own
+    MBID + Deezer track (live Day-7: Take Five → "Take Five — Dave Brubeck", 0.988). The high audio
+    floor keeps a live/acoustic *version* (same title family, lower audio similarity) out of scope, so
+    the product still surfaces those (BRAINDUMP: each recording is first-class, never collapsed)."""
+    if not seed_title or audio_score < SEED_EQUIVALENCE_AUDIO_MIN:
+        return False
+    return fuzz.token_set_ratio(title, seed_title, processor=default_process) / 100.0 >= SEED_EQUIVALENCE_TITLE_MIN
+
+
 def _build_results(
     resolved: Sequence[_Resolved],
     vectors: Mapping[str, np.ndarray],
@@ -355,6 +370,7 @@ def _build_results(
     *,
     seed_mbid: str | None = None,
     seed_provider_track_id: str | None = None,
+    seed_title: str | None = None,
 ) -> list[RecommendationResult]:
     """Audio-rank the embedded candidates, then backfill cultural (RRF) order up to the limit.
 
@@ -365,7 +381,10 @@ def _build_results(
     itself — string ``(title, artist)`` alone misses these (adversarial review). Also dedups on
     ``provider_track_id`` (seeded with the seed's own, so the seed can't return under a different
     MBID + the same Deezer track): two distinct MBIDs can map to one Deezer track (same audio), which
-    the MBID key misses (live Day-7: "Three to Get Ready" ×2 under one ``/track/69122368``).
+    the MBID key misses (live Day-7: "Three to Get Ready" ×2 under one ``/track/69122368``). Finally,
+    on the audio path it drops a result that IS the seed under a *different master* — near-identical
+    audio + a seed-title match (:func:`_is_seed_equivalent`) — which neither identity key catches (a
+    re-release has its own MBID + track); a live/acoustic version scores lower audio and survives.
     """
     scorable = [item for item in resolved if item.mbid in vectors]
     ordered: list[RecommendationResult] = []
@@ -395,6 +414,9 @@ def _build_results(
             used_mbids.add(item.mbid)
             if item.provider_track_id is not None:
                 used_ptids.add(item.provider_track_id)
+            if _is_seed_equivalent(item.ranked.title, sc.audio_similarity, seed_title):
+                continue  # the seed itself under a different master (distinct MBID + track); keys are
+                # recorded above so backfill can't re-add it — never recommend the seed back.
             ordered.append(RecommendationResult(
                 position=0, title=item.ranked.title, artist=item.ranked.artist, mbid=item.mbid,
                 provider_track_id=item.provider_track_id, cultural_score=item.ranked.cultural_score,
@@ -622,7 +644,7 @@ async def run_pipeline(
     # 5. Score + cultural backfill.
     results = _build_results(
         resolved, vectors, seed_vector, vibe_vector, pool,
-        seed_mbid=seed_mbid, seed_provider_track_id=seed_ptid,
+        seed_mbid=seed_mbid, seed_provider_track_id=seed_ptid, seed_title=seed_title,
     )
     audio_scored = sum(1 for r in results if r.was_audio_scored)
 
