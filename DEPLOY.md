@@ -155,11 +155,16 @@ ssh -L 8000:localhost:8000 deploy@<vps-ip>      # leave this open
 curl -s localhost:8000/health                   # {"status":"ok",...}
 curl -s -X POST localhost:8000/recommend \
   -H 'content-type: application/json' \
-  -d '{"title":"Take Five","artist":"The Dave Brubeck Quartet"}'
+  -d '{"seed_title":"Take Five","seed_artist":"The Dave Brubeck Quartet"}'
 ```
 
-A cold seed returns `202` + a poll handle; poll `GET /recommend/{handle}` until terminal. (The first
-real query is cold and MB-bound — expect up to ~N×7 s where N is `RESOLVE_CANDIDATE_LIMIT`.)
+A cold seed returns `202` + a `job_id`; poll it until terminal — `succeeded` with results, or
+`failed`. Quote the URL so the shell doesn't glob the handle:
+```bash
+curl -s "localhost:8000/recommend/<job_id>"
+```
+(The first cold query is MB-bound — expect up to ~N×7 s where N is `RESOLVE_CANDIDATE_LIMIT`; the
+corpus is then seeded, so a repeat of the same/overlapping seed returns warm in seconds.)
 
 ## 9. Daily backups (pg_dump cron)
 
