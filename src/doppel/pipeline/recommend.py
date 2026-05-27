@@ -203,49 +203,57 @@ class _ResolveCounts:
 
 async def _resolve_and_embed_seed(
     deps: PipelineDeps, conn: asyncpg.Connection, title: str, artist: str
-) -> tuple[str | None, np.ndarray | None]:
+) -> tuple[str | None, str | None, np.ndarray | None]:
     """Resolve the seed (cache-first) and embed its preview → the query vector.
 
-    Returns ``(mbid, vector)``; ``vector`` is ``None`` when the seed has no usable preview (→
-    cultural-only results) and ``mbid`` is whatever identity we have (possibly ``None``). Persists
-    the seed like any candidate, so its embedding joins the corpus.
+    Returns ``(mbid, provider_track_id, vector)``; ``vector`` is ``None`` when the seed has no usable
+    preview (→ cultural-only results) and ``mbid`` is whatever identity we have (possibly ``None``).
+    ``provider_track_id`` is the seed's own Deezer track when it resolved FOUND (``None`` otherwise),
+    which :func:`_build_results` seeds into the ptid dedup so a candidate that IS the seed under a
+    different MBID + the same track can't be recommended back. That bites on the audio path only: with
+    no seed vector (cultural-only) run_pipeline skips candidate resolution, so backfill rows carry no
+    ptid/mbid to match and a seed alias can still slip through there — a pre-existing gap shared with
+    ``seed_mbid``, not closed here. Persists the seed like any candidate, so its embedding joins the corpus.
     """
     hit = await db.get_canonical_lookup(conn, title, artist)
     if hit is not None:
         if hit["status"] != "found":
-            return (str(hit["mbid"]) if hit["mbid"] else None, None)
+            return (str(hit["mbid"]) if hit["mbid"] else None, None, None)
         track = await db.get_servable_track(conn, hit["mbid"])
         if track is None:
-            return (str(hit["mbid"]), None)
+            return (str(hit["mbid"]), None, None)
         mbid, asset_id = str(track["mbid"]), track["asset_id"]
         preview_url, confidence = track["preview_url"], track["match_confidence"]
+        provider_track_id = track["provider_track_id"]
     else:
         try:
             match = await resolve(deps.finder, deps.canonicalizer, title, artist)
         except httpx.HTTPError:
-            return (None, None)  # transient Deezer/MusicBrainz failure on the seed → cultural-only
+            return (None, None, None)  # transient Deezer/MusicBrainz failure on the seed → cultural-only
         asset_id = await db.persist_resolved_match(conn, title, artist, match)
         if match.status is not ResolveStatus.FOUND or asset_id is None:
-            return (match.mbid, None)
+            return (match.mbid, None, None)
         assert match.seed is not None and match.candidate is not None and match.match is not None
         mbid, preview_url = match.seed.mbid, match.candidate.preview_url
         confidence = match.match.confidence
+        ptid = match.candidate.provider_track_id
+        provider_track_id = None if ptid is None else str(ptid)
 
     cached = await db.get_embedding(conn, mbid, CLAP_MODEL_VERSION)
     if cached is not None:
-        return (mbid, np.asarray(cached["embedding"]))
+        return (mbid, provider_track_id, np.asarray(cached["embedding"]))
     try:
         vector = await deps.embedder.embed_preview(preview_url, deps.http)
     except (EmbeddingError, httpx.HTTPError):
         # embed_preview raises EmbeddingError (undecodable/capped/rejected host) AND propagates raw
         # httpx errors (an expired Deezer URL → 404, a CDN 5xx/timeout). Both degrade the seed to
         # cultural-only rather than sinking the request (invariant: one bad input never sinks the run).
-        return (mbid, None)
+        return (mbid, provider_track_id, None)
     await db.upsert_embedding(
         conn, mbid=mbid, model_version=CLAP_MODEL_VERSION, embedding=vector,
         source_confidence=confidence, asset_id=asset_id,
     )
-    return (mbid, vector)
+    return (mbid, provider_track_id, vector)
 
 
 async def _embed_vibe(deps: PipelineDeps, vibe: str | None) -> np.ndarray | None:
@@ -346,6 +354,7 @@ def _build_results(
     pool: Sequence[RankedCandidate],
     *,
     seed_mbid: str | None = None,
+    seed_provider_track_id: str | None = None,
 ) -> list[RecommendationResult]:
     """Audio-rank the embedded candidates, then backfill cultural (RRF) order up to the limit.
 
@@ -353,16 +362,26 @@ def _build_results(
     backfill only tops up to :data:`RECOMMENDATION_LIMIT`. Handles cultural-only (no seed vector /
     nothing embedded) by producing pure backfill. Dedups on the verified resolver MBID (and drops
     ``seed_mbid``) so two credits for one recording don't both appear and the seed can't recommend
-    itself — string ``(title, artist)`` alone misses these (Codex review).
+    itself — string ``(title, artist)`` alone misses these (adversarial review). Also dedups on
+    ``provider_track_id`` (seeded with the seed's own, so the seed can't return under a different
+    MBID + the same Deezer track): two distinct MBIDs can map to one Deezer track (same audio), which
+    the MBID key misses (live Day-7: "Three to Get Ready" ×2 under one ``/track/69122368``).
     """
     scorable = [item for item in resolved if item.mbid in vectors]
     ordered: list[RecommendationResult] = []
-    # Identity dedup is on the VERIFIED resolver MBID, not the (title, artist) string: two cultural
-    # candidates with different credits can resolve to the SAME recording (live Day-7: "My Little
-    # Brown Book" ×2), and the seed itself can re-enter under an alias ("Take Five"). Seeding the
-    # seed's MBID drops it from its own results; tracking each placed MBID collapses duplicates across
-    # the audio-scored and backfill phases alike.
+    # Identity dedup runs on two keys, because neither alone is sufficient:
+    #   - the VERIFIED resolver MBID (not the (title, artist) string): two cultural candidates with
+    #     different credits can resolve to the SAME recording (live Day-7: "My Little Brown Book" ×2),
+    #     and the seed itself can re-enter under an alias ("Take Five"); seeding the seed's MBID drops
+    #     it from its own results.
+    #   - the provider_track_id: two DISTINCT MBIDs can map to one Deezer track — same audio, so an
+    #     identical score — which the MBID key misses (live Day-7: "Three to Get Ready" ×2, both
+    #     /track/69122368). Seeding the seed's OWN ptid (mirroring seed_mbid) also drops a candidate
+    #     that IS the seed under a different MBID + the same track, which would otherwise score ~1.0
+    #     against itself. A None ptid is "no track", not a collision, so it is never deduped on.
+    # Tracking each placed key collapses duplicates across the audio-scored and backfill phases alike.
     used_mbids: set[str] = {seed_mbid} if seed_mbid else set()
+    used_ptids: set[str] = {seed_provider_track_id} if seed_provider_track_id else set()
     if scorable and seed_vector is not None:
         scored = score_candidates(
             seed_vector, [vectors[item.mbid] for item in scorable], vibe_text=vibe_vector
@@ -371,7 +390,11 @@ def _build_results(
             item = scorable[sc.index]
             if item.mbid in used_mbids:  # the seed alias, or a recording already placed
                 continue
+            if item.provider_track_id is not None and item.provider_track_id in used_ptids:
+                continue  # a different MBID for the same Deezer track (same audio) — already placed
             used_mbids.add(item.mbid)
+            if item.provider_track_id is not None:
+                used_ptids.add(item.provider_track_id)
             ordered.append(RecommendationResult(
                 position=0, title=item.ranked.title, artist=item.ranked.artist, mbid=item.mbid,
                 provider_track_id=item.provider_track_id, cultural_score=item.ranked.cultural_score,
@@ -382,7 +405,7 @@ def _build_results(
     used = {(r.title, r.artist) for r in ordered}
     # A backfill row's identity comes from the VERIFIED resolver match when the candidate resolved
     # FOUND — including one that resolved but failed to embed (so we keep its mbid + Deezer link) —
-    # NEVER the unverified, possibly-conflicting source MBID carried on the cultural candidate (Codex
+    # NEVER the unverified, possibly-conflicting source MBID carried on the cultural candidate (adversarial
     # review). An unresolved cultural-only row gets mbid=None: we never verified its identity.
     resolved_by_key = {(item.ranked.title, item.ranked.artist): item for item in resolved}
     for cand in pool:
@@ -394,13 +417,18 @@ def _build_results(
         mbid = found.mbid if found else None
         if mbid is not None and mbid in used_mbids:
             continue  # a verified duplicate of an already-placed recording (or the seed) — drop it
+        ptid = found.provider_track_id if found else None
+        if ptid is not None and ptid in used_ptids:
+            continue  # same Deezer track as an already-placed result under a different MBID — drop it
         used.add((cand.title, cand.artist))
         if mbid is not None:
             used_mbids.add(mbid)
+        if ptid is not None:
+            used_ptids.add(ptid)
         ordered.append(RecommendationResult(
             position=0, title=cand.title, artist=cand.artist,
             mbid=mbid,
-            provider_track_id=found.provider_track_id if found else None,
+            provider_track_id=ptid,
             cultural_score=cand.cultural_score, was_audio_scored=False, sources=cand.sources,
         ))
 
@@ -545,7 +573,9 @@ async def run_pipeline(
 
     # 1. Seed → query vector (cache-first). No preview ⇒ cultural-only (skip resolve/embed/score).
     async with deps.pool.acquire() as conn:
-        seed_mbid, seed_vector = await _resolve_and_embed_seed(deps, conn, seed_title, seed_artist)
+        seed_mbid, seed_ptid, seed_vector = await _resolve_and_embed_seed(
+            deps, conn, seed_title, seed_artist
+        )
     vibe_vector = await _embed_vibe(deps, vibe)
 
     resolved: list[_Resolved] = []
@@ -590,7 +620,10 @@ async def run_pipeline(
         vectors.update(await _embed_missing(deps, missing))
 
     # 5. Score + cultural backfill.
-    results = _build_results(resolved, vectors, seed_vector, vibe_vector, pool, seed_mbid=seed_mbid)
+    results = _build_results(
+        resolved, vectors, seed_vector, vibe_vector, pool,
+        seed_mbid=seed_mbid, seed_provider_track_id=seed_ptid,
+    )
     audio_scored = sum(1 for r in results if r.was_audio_scored)
 
     # 6. Explain (rationale only; degradable).
