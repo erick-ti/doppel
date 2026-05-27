@@ -4,7 +4,7 @@ Drives ``run_pipeline`` / ``enqueue_recommendation`` against real Postgres with 
 sources (Deezer / MusicBrainz / CLAP / LLM), so the orchestration, the two-gate handoff, the
 in-flight-dedup lifecycle, and the degraded paths are tested without live APIs or the heavy model.
 
-Locks in the two Codex adversarial-review fixes:
+Locks in the two adversarial-review fixes:
   * **Finding 1** — a *terminal* query_logs row never blocks a fresh identical request (the dedup
     key is decoupled from the per-request id), while two *concurrent* identical requests still share
     one in-flight job.
@@ -312,7 +312,10 @@ class _HttpFailingFinder:
             raise httpx.ConnectError("provider down")
         if title not in self._found:
             return None
-        return ProviderTrack(title, artist, 180000, f"ISRC{title}", _preview(title), 1234)
+        # Distinct per-title provider_track_id (like FakeFinder) — real Deezer tracks have distinct
+        # ids, and _build_results now suppresses a candidate that shares the seed's provider track.
+        return ProviderTrack(title, artist, 180000, f"ISRC{title}", _preview(title),
+                             abs(hash(title)) % 10**9)
 
 
 async def test_enqueue_failure_does_not_wedge_future_requests(pool):

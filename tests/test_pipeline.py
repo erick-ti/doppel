@@ -1,6 +1,6 @@
 """Offline unit tests for pipeline result-building (no DB / model).
 
-Locks in the Codex round-2 finding-3 fix: a cultural-backfill row's identity comes from the VERIFIED
+Locks in the round-2 finding-3 fix: a cultural-backfill row's identity comes from the VERIFIED
 resolver match (when the candidate resolved FOUND, even if its preview later failed to embed) or is
 ``None`` — never the unverified, possibly-conflicting source MBID carried on the candidate.
 """
@@ -77,3 +77,62 @@ def test_seed_mbid_is_excluded_from_results():
     )
     assert all(r.mbid != "seed-mbid" for r in results)
     assert "Take Five" not in [r.title for r in results] and "Other" in [r.title for r in results]
+
+
+def test_dedup_collapses_results_sharing_a_provider_track_id():
+    # Two candidates with DIFFERENT credits and DIFFERENT verified MBIDs resolve to the SAME Deezer
+    # track (one provider_track_id, hence identical audio + score) — the live "Three to Get Ready" ×2
+    # / /track/69122368 case. The MBID dedup can't catch it (MBIDs differ); provider_track_id must,
+    # and across BOTH phases: the second copy is dropped in the audio loop, then must NOT re-enter as
+    # a cultural-backfill row. Only one row survives.
+    a = _cand("Three to Get Ready", 1, 0.05)
+    b = _cand("Three to Get Ready (alt take)", 2, 0.04)
+    ra = _Resolved(ranked=a, mbid="mbid-A", asset_id=1, preview_url="x",
+                   provider_track_id="69122368", match_confidence=0.9)
+    rb = _Resolved(ranked=b, mbid="mbid-B", asset_id=2, preview_url="y",
+                   provider_track_id="69122368", match_confidence=0.9)
+    vec = np.array([0.9, 0.1])  # same audio → same embedding for both MBIDs
+    results = _build_results([ra, rb], {"mbid-A": vec, "mbid-B": vec},
+                             np.array([1.0, 0.0]), None, [a, b])
+    assert len(results) == 1
+    assert results[0].provider_track_id == "69122368" and results[0].was_audio_scored is True
+
+
+def test_distinct_results_without_provider_track_id_are_kept():
+    # A None provider_track_id means "no Deezer track", not a collision: two distinct recordings that
+    # both lack one must both survive (a naive `ptid in used_ptids` that swallowed None would wrongly
+    # collapse them to one).
+    a = _cand("A", 1, 0.05)
+    b = _cand("B", 2, 0.04)
+    ra = _Resolved(ranked=a, mbid="mbid-A", asset_id=1, preview_url="x",
+                   provider_track_id=None, match_confidence=0.9)
+    rb = _Resolved(ranked=b, mbid="mbid-B", asset_id=2, preview_url="y",
+                   provider_track_id=None, match_confidence=0.9)
+    results = _build_results(
+        [ra, rb], {"mbid-A": np.array([0.9, 0.1]), "mbid-B": np.array([0.4, 0.6])},
+        np.array([1.0, 0.0]), None, [a, b],
+    )
+    assert {r.mbid for r in results} == {"mbid-A", "mbid-B"}
+
+
+def test_seed_provider_track_id_suppresses_same_track_alias():
+    # The seed re-enters as a candidate under a DIFFERENT MBID but the SAME Deezer track (a multi-MBID
+    # / one-provider-track alias of the seed). seed_mbid can't catch it (the MBID differs); seeding
+    # used_ptids with the seed's own provider_track_id must — otherwise the seed is recommended back as
+    # its own ~1.0-scoring top result. Exercises both phases: the alias is dropped from the audio loop
+    # AND must not re-enter as backfill (adversarial review).
+    alias = _cand("Take Five (Remastered)", 1, 0.05)
+    other = _cand("Other", 2, 0.04)
+    r_alias = _Resolved(ranked=alias, mbid="alias-mbid", asset_id=1, preview_url="x",
+                        provider_track_id="seed-ptid", match_confidence=0.9)
+    r_other = _Resolved(ranked=other, mbid="other-mbid", asset_id=2, preview_url="y",
+                        provider_track_id="other-ptid", match_confidence=0.9)
+    results = _build_results(
+        [r_alias, r_other],
+        {"alias-mbid": np.array([1.0, 0.0]), "other-mbid": np.array([0.5, 0.5])},
+        np.array([1.0, 0.0]), None, [alias, other],
+        seed_mbid="seed-mbid", seed_provider_track_id="seed-ptid",
+    )
+    titles = [r.title for r in results]
+    assert "Take Five (Remastered)" not in titles and "Other" in titles
+    assert all(r.provider_track_id != "seed-ptid" for r in results)
