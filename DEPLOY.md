@@ -194,14 +194,31 @@ and prunes off-box copies past `OFFSITE_KEEP_DAYS` (default 30). The script is p
 egress — the restore path costs nothing — ~$0.015/GB/mo storage) with **client-side encryption**
 via rclone's `crypt` wrapper, so the provider sees only ciphertext.
 
-**1. Install rclone on the VPS.**
+**1. Install rclone on the VPS — use the official install script, not apt.**
 
 ```bash
-sudo apt-get install -y rclone           # the apt build (≥ v1.55) is plenty for our use
-rclone version                           # sanity check
+sudo apt-get remove -y rclone 2>/dev/null || true   # detach any dpkg-tracked binary first
+curl https://rclone.org/install.sh | sudo bash
+rclone version                                       # expect ≥ v1.65
+dpkg -S "$(command -v rclone)" 2>/dev/null \
+    && echo "WARN: rclone is dpkg-tracked, apt could clobber it" \
+    || echo "OK: rclone is not dpkg-tracked"
 ```
 
-Cron's default PATH (`/usr/bin:/bin`) finds the apt install without further config.
+Ubuntu 24.04's apt ships rclone v1.60 (late 2022), which predates two R2-specific fixes
+in v1.65+: older rclone sends `X-Amz-Acl: private` headers R2 doesn't implement (501),
+and HEADs uploaded objects with `?versionId=` queries R2 also doesn't implement (501).
+The `apt-get remove` first matters even if rclone wasn't apt-installed yet (it's a no-op
+when the package isn't present): `install.sh` overwrites `/usr/bin/rclone` but does NOT
+touch the dpkg registration, so a previously-apt-installed `rclone` would silently get
+downgraded back to v1.60 by any future `apt upgrade` or `unattended-upgrades` pass —
+breaking off-box backups. The final `dpkg -S` check verifies the binary isn't
+dpkg-tracked (expect the OK line). Cron's default PATH (`/usr/bin:/bin`) finds the new
+binary without further config.
+
+A third R2 quirk — rclone's S3 default of checking/creating the bucket before each write,
+which an Object R&W token can't do — is **not** fixed by the upgrade and needs explicit
+config (step 4 below).
 
 **2. Create the R2 bucket + bucket-scoped API token.** In the Cloudflare dashboard → **R2**:
 - Create a bucket, e.g. `doppel-backups`.
@@ -223,14 +240,34 @@ password manager *now*, separate from the VPS** — losing it loses the backups 
 point of client-side encryption). Skip the salt or set one; either is fine, just keep it with the
 passphrase.
 
-**4. Lock the rclone config.** It holds the obscured-but-recoverable crypt passphrase, plus the R2
+**4. Set `no_check_bucket = true` on `r2-base`.** rclone's S3 backend defaults to checking the
+bucket exists (and creating it if not) before each write. An Object R&W token can't run that
+pre-check — it lacks bucket-management permission — so writes fail with 403 regardless of rclone
+version unless you flip this flag. Cloudflare's own R2 + rclone documentation calls this out for
+object-scoped tokens.
+
+```bash
+sed -i '/^\[r2-base\]$/a no_check_bucket = true' ~/.config/rclone/rclone.conf
+```
+
+Verify it landed (the awk masks the access key + secret so the output is safe to glance at):
+
+```bash
+awk '/^\[/{p=0} /^\[r2-base\]/{p=1} p && !/access_key_id|secret_access_key/' \
+  ~/.config/rclone/rclone.conf
+```
+
+You should see `no_check_bucket = true` directly under `[r2-base]`, and `[r2-crypt]` should NOT
+appear in the output — that confirms the line landed in the correct section.
+
+**5. Lock the rclone config.** It holds the obscured-but-recoverable crypt passphrase, plus the R2
 secret key:
 
 ```bash
 chmod 600 ~/.config/rclone/rclone.conf
 ```
 
-**5. Smoke-test before wiring cron.**
+**6. Smoke-test before wiring cron.**
 
 ```bash
 BACKUP_REMOTE=r2-crypt: bash ~/doppel/scripts/backup_db.sh
@@ -240,7 +277,7 @@ rclone ls r2-crypt:                      # the just-uploaded doppel-*.dump, decr
 The remote stores opaque mangled blobs; `rclone ls r2-crypt:` shows the original filenames. Expect
 the upload to finish in seconds early on — these dumps are small.
 
-**6. Tell cron about `BACKUP_REMOTE`.** Crontab doesn't inherit interactive-shell env, so set it
+**7. Tell cron about `BACKUP_REMOTE`.** Crontab doesn't inherit interactive-shell env, so set it
 inside the crontab itself (env lines at the top apply to every entry below):
 
 ```bash
