@@ -180,9 +180,85 @@ mkdir -p ~/doppel-backups
 ```
 
 Test it once immediately: `bash ~/doppel/scripts/backup_db.sh` (writes to `~/doppel-backups`). If
-cron can't find `docker`, prepend `PATH=/usr/local/bin:/usr/bin:/bin` to the crontab. **Copy archives
-off-box** (e.g. `scp`/`rclone` to object storage) for real disaster recovery — a backup that only
-lives on the VPS dies with the VPS.
+cron can't find `docker`, prepend `PATH=/usr/local/bin:/usr/bin:/bin` to the crontab.
+
+The local cron alone recovers from app-level corruption, but the archives live on the same VPS
+volume as the live DB — a volume loss, server seizure, or vendor incident takes both. The next
+sub-section wires an off-box mirror for real disaster recovery.
+
+### 9.1 Off-box mirror via rclone (recommended: Cloudflare R2)
+
+`scripts/backup_db.sh` mirrors each new archive to an rclone remote when `BACKUP_REMOTE` is set,
+and prunes off-box copies past `OFFSITE_KEEP_DAYS` (default 30). The script is provider-agnostic
+(any rclone backend works); the worked example below is **Cloudflare R2** (S3-compatible, free
+egress — the restore path costs nothing — ~$0.015/GB/mo storage) with **client-side encryption**
+via rclone's `crypt` wrapper, so the provider sees only ciphertext.
+
+**1. Install rclone on the VPS.**
+
+```bash
+sudo apt-get install -y rclone           # the apt build (≥ v1.55) is plenty for our use
+rclone version                           # sanity check
+```
+
+Cron's default PATH (`/usr/bin:/bin`) finds the apt install without further config.
+
+**2. Create the R2 bucket + bucket-scoped API token.** In the Cloudflare dashboard → **R2**:
+- Create a bucket, e.g. `doppel-backups`.
+- **Manage R2 API Tokens** → new token, permission **Object Read & Write**, scoped to that bucket
+  only (so a token leak can't touch other R2 buckets or the rest of your account).
+- Note the **Access Key ID**, **Secret Access Key**, and the **S3 API endpoint** for your account
+  (`https://<accountid>.r2.cloudflarestorage.com`).
+
+**3. Configure two rclone remotes** — `r2-base` (the raw R2 backend) wrapped by `r2-crypt`
+(client-side encryption). Run `rclone config` and step through `n` (new remote) twice:
+
+For **`r2-base`**: storage `s3`; provider `Cloudflare`; paste the access key ID + secret + the R2
+endpoint from step 2; leave region / location constraint blank; accept other defaults.
+
+For **`r2-crypt`**: storage `crypt`; remote `r2-base:doppel-backups/encrypted` (any sub-path inside
+the bucket); filename + directory name encryption **standard** (both encrypted); password — type a
+strong one (or `openssl rand -base64 32`) at the prompt. **Save the plaintext passphrase in your
+password manager *now*, separate from the VPS** — losing it loses the backups by design (the whole
+point of client-side encryption). Skip the salt or set one; either is fine, just keep it with the
+passphrase.
+
+**4. Lock the rclone config.** It holds the obscured-but-recoverable crypt passphrase, plus the R2
+secret key:
+
+```bash
+chmod 600 ~/.config/rclone/rclone.conf
+```
+
+**5. Smoke-test before wiring cron.**
+
+```bash
+BACKUP_REMOTE=r2-crypt: bash ~/doppel/scripts/backup_db.sh
+rclone ls r2-crypt:                      # the just-uploaded doppel-*.dump, decrypted view
+```
+
+The remote stores opaque mangled blobs; `rclone ls r2-crypt:` shows the original filenames. Expect
+the upload to finish in seconds early on — these dumps are small.
+
+**6. Tell cron about `BACKUP_REMOTE`.** Crontab doesn't inherit interactive-shell env, so set it
+inside the crontab itself (env lines at the top apply to every entry below):
+
+```bash
+( echo "BACKUP_REMOTE=r2-crypt:"; \
+  echo "OFFSITE_KEEP_DAYS=30"; \
+  crontab -l 2>/dev/null ) | crontab -
+```
+
+(Or paste those two lines via `crontab -e`.) On the next nightly run the script dumps locally,
+prunes local copies past `KEEP=7`, uploads the new dump to `r2-crypt:`, and deletes remote dumps
+older than `OFFSITE_KEEP_DAYS=30` (filtered to the `doppel-*.dump` naming pattern, so a
+misconfigured remote can't delete anything outside the backup set). An upload failure leaves the
+local dump intact and the script exits non-zero — `tail -F ~/doppel-backups/backup.log` to spot it
+(a healthcheck-style notifier is a fair next step when this graduates beyond single-user).
+
+**Restoring from off-box:** on a fresh box, install rclone, recreate the two remotes with the same
+endpoint + access keys + crypt passphrase, then `rclone copy
+r2-crypt:doppel-YYYYMMDD-HHMMSS.dump .` to fetch the archive, and follow the §10 Restore steps.
 
 ## 10. Operate
 
