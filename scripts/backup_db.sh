@@ -1,24 +1,29 @@
 #!/usr/bin/env bash
 # Daily Postgres backup for the Doppel VPS deploy (Day 7). Dumps the `postgres` compose service's
-# database to a timestamped, compressed pg_dump archive on the host, then prunes old archives.
-# Wire into cron — see DEPLOY.md ("Daily backups").
+# database to a timestamped, compressed pg_dump archive on the host, prunes old archives, then
+# (opt-in) uploads the new archive to an off-box rclone remote and prunes the remote by age.
+# Wire into cron — see DEPLOY.md ("Daily backups" + "Off-box backups").
 #
 # pg_dump runs *inside* the container (so the client version matches the server) using the
 # container's own POSTGRES_* env, so it needs no password on the host and works against both the dev
 # and prod stacks. The archive streams to the host filesystem in custom format (-Fc → restore with
-# pg_restore; see DEPLOY.md "Restore"). Keep BACKUP_DIR outside the repo and copy archives off-box
-# for real disaster recovery — a backup that only lives on the VPS dies with the VPS.
+# pg_restore; see DEPLOY.md "Restore"). Keep BACKUP_DIR outside the repo; set BACKUP_REMOTE for
+# real disaster recovery — a backup that only lives on the VPS dies with the VPS.
 #
 # Config via env (sane defaults):
-#   REPO_DIR    repo root with the compose files       (default: this script's parent directory)
-#   BACKUP_DIR  where archives are written              (default: $HOME/doppel-backups)
-#   KEEP        how many most-recent archives to keep   (default: 7)
+#   REPO_DIR           repo root with the compose files       (default: this script's parent directory)
+#   BACKUP_DIR         where archives are written              (default: $HOME/doppel-backups)
+#   KEEP               how many most-recent local archives    (default: 7)
+#   BACKUP_REMOTE      rclone remote to mirror to             (unset = local-only; the no-op default)
+#   OFFSITE_KEEP_DAYS  off-box retention in days              (default: 30)
 set -euo pipefail
 umask 077   # dumps are owner-only (600), and a freshly-created BACKUP_DIR is 700 — DB data isn't world-readable
 
 REPO_DIR="${REPO_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 BACKUP_DIR="${BACKUP_DIR:-$HOME/doppel-backups}"
 KEEP="${KEEP:-7}"
+BACKUP_REMOTE="${BACKUP_REMOTE:-}"
+OFFSITE_KEEP_DAYS="${OFFSITE_KEEP_DAYS:-30}"
 
 # Fail closed on a bad retention count BEFORE dumping or pruning. A 0 / negative / non-numeric KEEP
 # makes `tail -n +$((KEEP + 1))` resolve to `+1`, which selects EVERY archive (including the one just
@@ -62,3 +67,36 @@ ls -1t "$BACKUP_DIR"/doppel-*.dump 2>/dev/null | tail -n +"$((KEEP + 1))" | whil
     echo "backup_db: pruning $old"
     rm -f "$old"
 done || true
+
+# Off-box mirror (opt-in, gated on $BACKUP_REMOTE). All off-box validation lives in this block — NOT
+# as a pre-flight before the dump — so a misconfigured optional add-on (typo'd OFFSITE_KEEP_DAYS,
+# package drift hiding rclone) can never disable the core local backup. The local dump above is
+# already durable on disk + pruned and survives any failure here; the script still exits non-zero so
+# cron mail / backup.log surface the issue. (Contrast: the KEEP guard above stays in pre-flight
+# because KEEP governs the local prune — a bad value would `rm` local archives, so it must validate
+# before any state mutation. The off-box knobs govern only the remote phase, a different risk shape.)
+# We `copy` (not `sync`) the just-written file so off-box retention (OFFSITE_KEEP_DAYS) outlives the
+# local KEEP — the whole point of mirroring is that off-box durability is *longer*, not equal.
+# --no-traverse skips listing the destination; the timestamped basename can't collide. Remote prune
+# is filtered to our naming pattern, so a misconfigured remote (pointed at a directory with unrelated
+# files) cannot delete anything outside the backup set.
+if [[ -n "$BACKUP_REMOTE" ]]; then
+    if ! [[ "$OFFSITE_KEEP_DAYS" =~ ^[1-9][0-9]*$ ]]; then
+        echo "backup_db: OFFSITE_KEEP_DAYS must be a positive integer (got '$OFFSITE_KEEP_DAYS') — off-box mirror skipped, local dump retained at $out" >&2
+        exit 2
+    fi
+    if ! command -v rclone >/dev/null 2>&1; then
+        echo "backup_db: BACKUP_REMOTE is set but rclone is not installed — off-box mirror skipped, local dump retained at $out" >&2
+        exit 2
+    fi
+    echo "backup_db: uploading to $BACKUP_REMOTE"
+    if ! rclone copy --no-traverse "$out" "$BACKUP_REMOTE"; then
+        echo "backup_db: rclone copy to $BACKUP_REMOTE failed — local dump retained at $out" >&2
+        exit 1
+    fi
+    echo "backup_db: pruning remote archives older than ${OFFSITE_KEEP_DAYS}d on $BACKUP_REMOTE"
+    if ! rclone delete --min-age "${OFFSITE_KEEP_DAYS}d" --include "doppel-*.dump" "$BACKUP_REMOTE"; then
+        echo "backup_db: rclone remote prune on $BACKUP_REMOTE failed (upload succeeded)" >&2
+        exit 1
+    fi
+fi
