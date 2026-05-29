@@ -11,11 +11,12 @@
 # real disaster recovery — a backup that only lives on the VPS dies with the VPS.
 #
 # Config via env (sane defaults):
-#   REPO_DIR           repo root with the compose files       (default: this script's parent directory)
-#   BACKUP_DIR         where archives are written              (default: $HOME/doppel-backups)
-#   KEEP               how many most-recent local archives    (default: 7)
-#   BACKUP_REMOTE      rclone remote to mirror to             (unset = local-only; the no-op default)
-#   OFFSITE_KEEP_DAYS  off-box retention in days              (default: 30)
+#   REPO_DIR                repo root with the compose files       (default: this script's parent directory)
+#   BACKUP_DIR              where archives are written              (default: $HOME/doppel-backups)
+#   KEEP                    how many most-recent local archives    (default: 7)
+#   BACKUP_REMOTE           rclone remote to mirror to             (unset = local-only; the no-op default)
+#   OFFSITE_KEEP_DAYS       off-box retention in days              (default: 30)
+#   BACKUP_HEALTHCHECK_URL  healthchecks.io-style URL to ping      (unset = no pings; the no-op default)
 set -euo pipefail
 umask 077   # dumps are owner-only (600), and a freshly-created BACKUP_DIR is 700 — DB data isn't world-readable
 
@@ -24,6 +25,38 @@ BACKUP_DIR="${BACKUP_DIR:-$HOME/doppel-backups}"
 KEEP="${KEEP:-7}"
 BACKUP_REMOTE="${BACKUP_REMOTE:-}"
 OFFSITE_KEEP_DAYS="${OFFSITE_KEEP_DAYS:-30}"
+BACKUP_HEALTHCHECK_URL="${BACKUP_HEALTHCHECK_URL:-}"
+
+# Passive dead-man's-switch notifier: ping <URL>/start after pre-flight, <URL> on success, and
+# <URL>/fail on any non-zero exit (via the EXIT trap below). Default-off, so this is a no-op for
+# installs that haven't wired up a notifier; the URL itself is the credential and lives on the VPS
+# only (crontab top-of-file, alongside BACKUP_REMOTE — DEPLOY.md §9.2). The trap fires for both
+# pre-flight (KEEP/OFFSITE_KEEP_DAYS guards) and mid-script failures so a config typo alarms
+# immediately instead of waiting on the healthchecks.io grace timer. curl errors are intentionally
+# swallowed: a notifier outage must never fail an otherwise-good backup. (A failed *success* ping
+# leaves no signal at all, which healthchecks.io alerts on once the grace timer elapses — the
+# right shape; a wrong-but-loud signal would be worse than a delayed-but-correct one.) Logs never
+# echo the URL — it's a credential.
+_healthcheck_ping() {
+    local suffix="${1:-}"
+    if [[ -z "$BACKUP_HEALTHCHECK_URL" ]]; then
+        return 0
+    fi
+    if curl --silent --show-error --max-time 10 --retry 3 --retry-connrefused --fail \
+            "${BACKUP_HEALTHCHECK_URL}${suffix}" >/dev/null 2>&1; then
+        echo "backup_db: healthcheck ${suffix:-success} ping ok"
+    else
+        echo "backup_db: healthcheck ${suffix:-success} ping failed (non-fatal)" >&2
+    fi
+}
+_on_exit() {
+    local rc=$?
+    if [[ $rc -ne 0 ]]; then
+        _healthcheck_ping /fail
+    fi
+    exit "$rc"
+}
+trap _on_exit EXIT
 
 # Fail closed on a bad retention count BEFORE dumping or pruning. A 0 / negative / non-numeric KEEP
 # makes `tail -n +$((KEEP + 1))` resolve to `+1`, which selects EVERY archive (including the one just
@@ -32,6 +65,11 @@ if ! [[ "$KEEP" =~ ^[1-9][0-9]*$ ]]; then
     echo "backup_db: KEEP must be a positive integer (got '$KEEP')" >&2
     exit 2
 fi
+
+# Tell the notifier we're starting AFTER pre-flight passes — a pre-flight failure already pings
+# /fail via the EXIT trap, and we don't want a phantom "started but never finished" state from a
+# config typo. Healthchecks.io accepts /fail standalone (no prior /start required).
+_healthcheck_ping /start
 
 cd "$REPO_DIR"
 mkdir -p "$BACKUP_DIR"
@@ -100,3 +138,8 @@ if [[ -n "$BACKUP_REMOTE" ]]; then
         exit 1
     fi
 fi
+
+# Final success ping. Reaching this means: local dump landed + pruned, and (if BACKUP_REMOTE is
+# set) off-box mirror succeeded too. A failed success ping is non-fatal (the notifier outage path);
+# the trap below sees rc=0 and skips /fail, so healthchecks.io eventually alerts via grace-timer.
+_healthcheck_ping

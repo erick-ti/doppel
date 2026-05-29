@@ -290,12 +290,66 @@ inside the crontab itself (env lines at the top apply to every entry below):
 prunes local copies past `KEEP=7`, uploads the new dump to `r2-crypt:`, and deletes remote dumps
 older than `OFFSITE_KEEP_DAYS=30` (filtered to the `doppel-*.dump` naming pattern, so a
 misconfigured remote can't delete anything outside the backup set). An upload failure leaves the
-local dump intact and the script exits non-zero — `tail -F ~/doppel-backups/backup.log` to spot it
-(a healthcheck-style notifier is a fair next step when this graduates beyond single-user).
+local dump intact and the script exits non-zero — `tail -F ~/doppel-backups/backup.log` to spot it,
+or wire up the healthcheck notifier (§9.2 below) for active alerts instead of passive tailing.
 
 **Restoring from off-box:** on a fresh box, install rclone, recreate the two remotes with the same
 endpoint + access keys + crypt passphrase, then `rclone copy
 r2-crypt:doppel-YYYYMMDD-HHMMSS.dump .` to fetch the archive, and follow the §10 Restore steps.
+
+### 9.2 Backup failure notifications via healthchecks.io
+
+The local cron + off-box mirror are durable, but their failure modes are *silent* — a stuck docker
+daemon, a credentialed-out R2 token, a missed cron tick — they sit in `~/doppel-backups/backup.log`
+until tailed. `scripts/backup_db.sh` flips this to a passive **dead-man's switch** when
+`BACKUP_HEALTHCHECK_URL` is set: it pings `<URL>/start` after pre-flight, the bare `<URL>` on
+success (after off-box mirror, if any), and `<URL>/fail` on any non-zero exit via an EXIT trap.
+The service emails when a success ping doesn't arrive by the configured grace time — catching
+both code-level failures (the script pinged `/fail`) **and** total no-shows (cron didn't run, box
+is off, nothing pinged). Default-off and opt-in, like `BACKUP_REMOTE`.
+
+The script is provider-neutral — any service that accepts `/start` + bare-URL + `/fail` URL
+shapes (cronitor.io, a self-hosted check, etc.) works — but the worked example is
+**healthchecks.io** (free tier, no card; 20 checks + 100 email alerts/month, plenty for one
+nightly backup).
+
+**1. Create the check.** Sign up at healthchecks.io, then add a new check named e.g.
+`doppel-backups`:
+
+- **Schedule**: Simple, period 1 day.
+- **Grace time**: 2 hours (cron runs at 03:30; allow the dump + off-box upload to land before
+  alerting on slowness).
+- Copy the **ping URL** at the top of the check page — looks like `https://hc-ping.com/<uuid>`.
+  This URL is the credential — anyone with it can spoof success pings and silence real alerts.
+
+**2. Wire the URL into cron.** Add it to the crontab's top-of-file env (like `BACKUP_REMOTE`):
+
+```bash
+( echo "BACKUP_HEALTHCHECK_URL=https://hc-ping.com/<your-uuid>"; \
+  crontab -l 2>/dev/null ) | crontab -
+```
+
+(Or paste via `crontab -e`.) From the next nightly run on, the script pings `/start` before
+`pg_dump`, the bare URL on success at the very end (after the off-box mirror if `BACKUP_REMOTE`
+is set), and `/fail` on any non-zero exit. A failed ping (notifier outage, network blip) doesn't
+fail the backup — `backup.log` records "healthcheck … ping failed (non-fatal)" and the script
+continues; healthchecks.io still alerts via the grace timer if no success ping ever arrives.
+
+**3. Smoke-test before relying on it.**
+
+```bash
+BACKUP_HEALTHCHECK_URL=https://hc-ping.com/<your-uuid> bash ~/doppel/scripts/backup_db.sh
+```
+
+The healthchecks.io check page should flip green within seconds. To exercise the failure path
+without breaking the real backup, ping `/fail` by hand: `curl -fsS
+"https://hc-ping.com/<your-uuid>/fail"` — the dashboard goes red and the alert email arrives.
+
+**On the URL as credential.** The ping URL is unauthenticated; leaking it lets anyone spoof
+success pings (and thereby silence real alerts). The script never echoes the URL to logs — only
+the ping type — so `~/doppel-backups/backup.log` is safe to share. Keep the URL in the VPS
+crontab only (mode 600 by default), never in the repo, never in the rclone config, never in chat
+paste.
 
 ## 10. Operate
 
