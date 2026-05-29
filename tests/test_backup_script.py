@@ -241,3 +241,176 @@ def test_remote_copy_failure_exits_nonzero_and_preserves_local_dump(tmp_path):
     invocations = [line for line in log.read_text().splitlines() if line]
     assert len(invocations) == 1
     assert invocations[0].startswith("copy")
+
+
+# ---- Healthcheck notifier (passive dead-man's switch) ----------------------------------------
+# /start fires AFTER pre-flight (config-error → /fail without phantom /start); success fires AFTER
+# the off-box block (so BACKUP_REMOTE failures still alert); an EXIT trap pings /fail on any
+# non-zero exit. URL is the credential — never echoed. curl errors are intentionally swallowed: a
+# notifier outage must never fail an otherwise-good backup.
+
+
+def _make_curl_logging_stub(bindir: Path, log: Path, *, exit_code: int = 0) -> Path:
+    """Stub `curl` that records `$@` per-invocation to `log` and exits with `exit_code`."""
+    return _make_stub(
+        bindir,
+        "curl",
+        f'echo "$@" >> "{log}"\nexit {exit_code}\n',
+    )
+
+
+def test_no_healthcheck_url_skips_all_pings(tmp_path):
+    """BACKUP_HEALTHCHECK_URL unset is the no-op default — curl must never be called."""
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    _make_docker_dump_stub(bindir)
+    log = tmp_path / "curl.log"
+    # Stub curl loud: any invocation fails the test.
+    _make_stub(bindir, "curl", f'echo "$@" >> "{log}"\nexit 1\n')
+    backups = tmp_path / "backups"
+    backups.mkdir()
+
+    # Explicit empty string defeats any leaked host env (the script treats "" as unset via [[ -z ]]).
+    result = _run({"BACKUP_HEALTHCHECK_URL": ""}, repo_dir=tmp_path, backup_dir=backups, bindir=bindir)
+
+    assert result.returncode == 0, result.stderr
+    assert not log.exists() or log.read_text() == "", "curl must not be invoked when URL is unset"
+
+
+def test_healthcheck_happy_path_pings_start_then_success(tmp_path):
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    _make_docker_dump_stub(bindir)
+    log = tmp_path / "curl.log"
+    _make_curl_logging_stub(bindir, log)
+    backups = tmp_path / "backups"
+    backups.mkdir()
+    url = "https://hc-ping.example/abc-123"
+
+    result = _run({"BACKUP_HEALTHCHECK_URL": url}, repo_dir=tmp_path, backup_dir=backups, bindir=bindir)
+
+    assert result.returncode == 0, result.stderr
+    invocations = [line for line in log.read_text().splitlines() if line]
+    # Two pings: /start, then success (bare URL, no suffix).
+    assert len(invocations) == 2, f"expected /start + success, got: {invocations}"
+    start_args, success_args = invocations
+    assert f"{url}/start" in start_args
+    assert url in success_args
+    assert "/start" not in success_args and "/fail" not in success_args
+
+
+def test_healthcheck_pings_fail_on_pg_dump_failure(tmp_path):
+    """pg_dump failure pings /fail via the EXIT trap (after /start already fired)."""
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    # Failing docker stub — pg_dump appears to break.
+    _make_stub(bindir, "docker", 'echo "pg_dump simulated failure" >&2\nexit 1\n')
+    log = tmp_path / "curl.log"
+    _make_curl_logging_stub(bindir, log)
+    backups = tmp_path / "backups"
+    backups.mkdir()
+    url = "https://hc-ping.example/abc-123"
+
+    result = _run({"BACKUP_HEALTHCHECK_URL": url}, repo_dir=tmp_path, backup_dir=backups, bindir=bindir)
+
+    assert result.returncode != 0
+    invocations = [line for line in log.read_text().splitlines() if line]
+    # /start was sent (after pre-flight), then trap fired /fail.
+    assert len(invocations) == 2, f"expected /start + /fail, got: {invocations}"
+    assert f"{url}/start" in invocations[0]
+    assert f"{url}/fail" in invocations[1]
+
+
+def test_healthcheck_pings_fail_without_start_on_keep_guard_failure(tmp_path):
+    """KEEP guard fails BEFORE /start fires — only /fail is pinged, no phantom 'started' state."""
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    # docker/rclone must not be reached; if they are, the test catches the regression.
+    _make_stub(bindir, "docker", "exit 99\n")
+    _make_stub(bindir, "rclone", "exit 99\n")
+    log = tmp_path / "curl.log"
+    _make_curl_logging_stub(bindir, log)
+    backups = tmp_path / "backups"
+    backups.mkdir()
+    url = "https://hc-ping.example/abc-123"
+
+    result = _run(
+        {"BACKUP_HEALTHCHECK_URL": url, "KEEP": "0"},
+        repo_dir=tmp_path,
+        backup_dir=backups,
+        bindir=bindir,
+    )
+
+    assert result.returncode != 0
+    assert "KEEP" in result.stderr
+    invocations = [line for line in log.read_text().splitlines() if line]
+    assert len(invocations) == 1, f"expected /fail only (no /start), got: {invocations}"
+    assert f"{url}/fail" in invocations[0]
+    assert "/start" not in invocations[0]
+
+
+def test_healthcheck_pings_fail_on_rclone_copy_failure(tmp_path):
+    """Off-box failures still alert: rclone copy fails → trap pings /fail after /start."""
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    _make_docker_dump_stub(bindir)
+    _make_rclone_logging_stub(bindir, tmp_path / "rclone.log", copy_exit=7)
+    log = tmp_path / "curl.log"
+    _make_curl_logging_stub(bindir, log)
+    backups = tmp_path / "backups"
+    backups.mkdir()
+    url = "https://hc-ping.example/abc-123"
+
+    result = _run(
+        {"BACKUP_HEALTHCHECK_URL": url, "BACKUP_REMOTE": "r2-crypt:"},
+        repo_dir=tmp_path,
+        backup_dir=backups,
+        bindir=bindir,
+    )
+
+    assert result.returncode != 0
+    invocations = [line for line in log.read_text().splitlines() if line]
+    assert len(invocations) == 2, f"expected /start + /fail, got: {invocations}"
+    assert f"{url}/start" in invocations[0]
+    assert f"{url}/fail" in invocations[1]
+
+
+def test_healthcheck_curl_failure_does_not_fail_backup(tmp_path):
+    """A notifier outage (curl returns non-zero) must not fail an otherwise-good backup."""
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    _make_docker_dump_stub(bindir)
+    log = tmp_path / "curl.log"
+    _make_curl_logging_stub(bindir, log, exit_code=7)  # 7 = "Failed to connect to host"
+    backups = tmp_path / "backups"
+    backups.mkdir()
+    url = "https://hc-ping.example/abc-123"
+
+    result = _run({"BACKUP_HEALTHCHECK_URL": url}, repo_dir=tmp_path, backup_dir=backups, bindir=bindir)
+
+    assert result.returncode == 0, f"notifier outage must not fail backup; stderr: {result.stderr}"
+    dumps = list(backups.glob("doppel-*.dump"))
+    assert len(dumps) == 1, "local dump must land even when notifier is unreachable"
+    invocations = [line for line in log.read_text().splitlines() if line]
+    # Both /start and success were attempted, even though each curl call failed.
+    assert len(invocations) == 2
+
+
+def test_healthcheck_url_is_not_echoed_in_logs(tmp_path):
+    """The URL is the credential — log lines must refer to the ping type, not paste the URL."""
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    _make_docker_dump_stub(bindir)
+    _make_curl_logging_stub(bindir, tmp_path / "curl.log")
+    backups = tmp_path / "backups"
+    backups.mkdir()
+    # A unique marker that can't appear anywhere else by coincidence — low-entropy on purpose so
+    # the secret scanner doesn't mistake the fixture for a real credential.
+    unique_marker = "fake-ping-id-for-redaction-test"
+    url = f"https://hc-ping.example/{unique_marker}"
+
+    result = _run({"BACKUP_HEALTHCHECK_URL": url}, repo_dir=tmp_path, backup_dir=backups, bindir=bindir)
+
+    assert result.returncode == 0, result.stderr
+    assert unique_marker not in result.stdout, "URL token must not be echoed to stdout"
+    assert unique_marker not in result.stderr, "URL token must not be echoed to stderr"
