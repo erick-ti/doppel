@@ -1,0 +1,204 @@
+{
+  "status": "succeeded",
+  "query_id": 64,
+  "seed": {
+    "title": "Midnight City",
+    "artist": "M83",
+    "mbid": "e83bc6ba-eff9-412c-8c11-5153672f25e7"
+  },
+  "vibe": "melancholic, late-night driving",
+  "results": [
+    {
+      "position": 1,
+      "title": "Steve McQueen",
+      "artist": "M83",
+      "mbid": "77ab9e03-bcc4-47f3-b566-c793e9ced1ca",
+      "deezer_url": "https://www.deezer.com/track/75572726",
+      "was_audio_scored": true,
+      "audio_score": 0.88326,
+      "vibe_text_score": 0.176934,
+      "combined_score": 0.836796,
+      "cultural_score": 0.015625,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "As a fellow M83 track, Steve McQueen scores the highest audio similarity (0.883) of any candidate, making it the closest sonic match to Midnight City. LastFM listener data further confirms the cultural connection within M83's own catalog."
+    },
+    {
+      "position": 2,
+      "title": "Trying to Be Cool",
+      "artist": "Phoenix",
+      "mbid": "943b4939-c39f-4287-901c-ac47a06eed54",
+      "deezer_url": "https://www.deezer.com/track/3025925711",
+      "was_audio_scored": true,
+      "audio_score": 0.819818,
+      "vibe_text_score": 0.22928,
+      "combined_score": 0.811002,
+      "cultural_score": 0.011364,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Phoenix's Trying to Be Cool shows a strong audio similarity (0.82) to Midnight City and carries a notably higher vibe_text_similarity (0.229) than several higher-ranked picks, suggesting it fits the late-night, melancholic driving feel alongside its sonic closeness. LastFM listener overlap reinforces the cultural pairing."
+    },
+    {
+      "position": 3,
+      "title": "Houdini",
+      "artist": "Foster the People",
+      "mbid": "c373d6db-4340-4ec5-891a-8130b4440ded",
+      "deezer_url": "https://www.deezer.com/track/15546835",
+      "was_audio_scored": true,
+      "audio_score": 0.777669,
+      "vibe_text_score": 0.26766,
+      "combined_score": 0.79734,
+      "cultural_score": 0.011765,
+      "sources": [
+        "listenbrainz"
+      ],
+      "rationale": "Houdini by Foster the People is a solid audio match (0.778) and has the third-highest vibe_text_similarity (0.268) among candidates, meaning it aligns well with the melancholic late-night driving vibe you described. ListenBrainz listener data supports the cultural connection."
+    },
+    {
+      "position": 4,
+      "title": "Sweet Disposition",
+      "artist": "The Temper Trap",
+      "mbid": "9c57ad32-9688-4ef5-baa2-b79e4d2404ae",
+      "deezer_url": "https://www.deezer.com/track/3822464",
+      "was_audio_scored": true,
+      "audio_score": 0.777698,
+      "vibe_text_score": 0.253271,
+      "combined_score": 0.783493,
+      "cultural_score": 0.013514,
+      "sources": [
+        "listenbrainz"
+      ],
+      "rationale": "Sweet Disposition scores an identical audio similarity (0.778) to Houdini and a strong vibe_text_similarity (0.253), suggesting the track holds up both sonically and in terms of the requested late-night, melancholic atmosphere. ListenBrainz surfaced it as culturally adjacent to Midnight City."
+    },
+    {
+      "position": 5,
+      "title": "Tongue Tied",
+      "artist": "Grouplove",
+      "mbid": "00814269-b88d-4999-980c-31f735cc0e82",
+      "deezer_url": "https://www.deezer.com/track/13544758",
+      "was_audio_scored": true,
+      "audio_score": 0.807539,
+      "vibe_text_score": 0.207735,
+      "combined_score": 0.775449,
+      "cultural_score": 0.014085,
+      "sources": [
+        "listenbrainz"
+      ],
+      "rationale": "Tongue Tied by Grouplove posts a high audio similarity (0.808), placing it among the more sonically alike candidates, and ListenBrainz listener behavior links it to Midnight City's audience. Its vibe alignment is moderate, so the recommendation leans primarily on sonic closeness."
+    },
+    {
+      "position": 6,
+      "title": "1901",
+      "artist": "Phoenix",
+      "mbid": "8e20739e-0dcc-45b7-ad13-6b5548f0523a",
+      "deezer_url": "https://www.deezer.com/track/3026048721",
+      "was_audio_scored": true,
+      "audio_score": 0.730401,
+      "vibe_text_score": 0.286439,
+      "combined_score": 0.758613,
+      "cultural_score": 0.014925,
+      "sources": [
+        "listenbrainz"
+      ],
+      "rationale": "1901 by Phoenix has the highest vibe_text_similarity (0.286) of all candidates, meaning it aligns most strongly with the melancholic late-night driving description you provided, even though its audio similarity (0.73) is somewhat lower. ListenBrainz listener data backs the cultural connection."
+    },
+    {
+      "position": 7,
+      "title": "Kids",
+      "artist": "MGMT",
+      "mbid": "c741a7ef-dd33-4c79-a4d4-8745d9675620",
+      "deezer_url": "https://www.deezer.com/track/536485",
+      "was_audio_scored": true,
+      "audio_score": 0.785075,
+      "vibe_text_score": 0.185454,
+      "combined_score": 0.726937,
+      "cultural_score": 0.031514,
+      "sources": [
+        "lastfm",
+        "listenbrainz"
+      ],
+      "rationale": "Kids by MGMT is backed by both LastFM and ListenBrainz, the broadest cultural support of any candidate, indicating wide listener overlap with Midnight City fans. Its audio similarity (0.785) is solid, though vibe alignment is on the lower side."
+    },
+    {
+      "position": 8,
+      "title": "Into The Galaxy",
+      "artist": "Midnight Juggernauts",
+      "mbid": "2337e310-a0b1-4ff0-a970-217cfdc8703f",
+      "deezer_url": "https://www.deezer.com/track/2279569947",
+      "was_audio_scored": true,
+      "audio_score": 0.697281,
+      "vibe_text_score": 0.289652,
+      "combined_score": 0.721882,
+      "cultural_score": 0.010101,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Into The Galaxy by Midnight Juggernauts carries the second-highest vibe_text_similarity (0.29), suggesting it fits the late-night driving mood well, though its audio similarity (0.697) is the lowest among scored candidates. LastFM listener taste data is the primary cultural link here."
+    },
+    {
+      "position": 9,
+      "title": "Something Good Can Work",
+      "artist": "Two Door Cinema Club",
+      "mbid": "4c9f771c-289c-47a6-b58d-1cd302b47b3f",
+      "deezer_url": "https://www.deezer.com/track/3026050191",
+      "was_audio_scored": true,
+      "audio_score": 0.75672,
+      "vibe_text_score": 0.211211,
+      "combined_score": 0.717686,
+      "cultural_score": 0.011111,
+      "sources": [
+        "listenbrainz"
+      ],
+      "rationale": "Something Good Can Work shows a moderate audio similarity (0.757) and is supported by ListenBrainz listener overlap with Midnight City. Vibe alignment is middling, so the recommendation rests mainly on sonic and cultural signals together."
+    },
+    {
+      "position": 10,
+      "title": "Safe and Sound",
+      "artist": "Capital Cities",
+      "mbid": "759d5190-97a4-48b8-90d4-c298dab9c72e",
+      "deezer_url": "https://www.deezer.com/track/2976584651",
+      "was_audio_scored": true,
+      "audio_score": 0.802783,
+      "vibe_text_score": 0.150237,
+      "combined_score": 0.714256,
+      "cultural_score": 0.029206,
+      "sources": [
+        "lastfm",
+        "listenbrainz"
+      ],
+      "rationale": "Safe and Sound by Capital Cities earns support from both LastFM and ListenBrainz and has a respectable audio similarity (0.803), making it a culturally well-corroborated and sonically close pick. Its vibe_text_similarity is the lowest of the group, so the late-night melancholic mood fit is less certain."
+    }
+  ],
+  "degradation": {
+    "seed_audio_scored": true,
+    "cultural_backfill_count": 0,
+    "rationales_available": true,
+    "degraded_sources": {}
+  },
+  "coverage": {
+    "candidate_count": 180,
+    "resolve_attempted": 75,
+    "resolved_found": 75,
+    "resolved_rejected": 0,
+    "resolved_not_found": 0,
+    "found_ratio": 1.0,
+    "audio_scored": 10,
+    "backfill": 0,
+    "embeddings_cache_hits": 75,
+    "embeddings_computed": 0,
+    "latency_ms": 14734
+  },
+  "meta": {
+    "slug": "midnight-city-vibe-latenight",
+    "genre": "electronic",
+    "exported_at": "2026-05-29T07:20:29+00:00",
+    "git_sha": "f62b468",
+    "git_dirty": true,
+    "clap_model_version": "laion/larger_clap_music_and_speech+mean",
+    "alpha": 0.7,
+    "beta": 0.3,
+    "resolve_candidate_limit": 75
+  }
+}

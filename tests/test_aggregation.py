@@ -200,6 +200,18 @@ async def test_aggregate_records_malformed_source() -> None:
     assert "SourceResponseError" in res.failed_sources["lastfm"]            # malformed → observable
 
 
+async def test_aggregate_redacts_url_bearing_source_error() -> None:
+    # A non-timeout HTTP error must NOT leak the request URL: Last.fm carries api_key as a query
+    # param and httpx embeds the full URL in HTTPStatusError — the aggregator stores the status only.
+    req = httpx.Request("GET", "https://ws.audioscrobbler.com/2.0/?method=track.getsimilar&api_key=SECRETKEY123")
+    leaky = httpx.HTTPStatusError(f"Client error '403 Forbidden' for url '{req.url}'",
+                                  request=req, response=httpx.Response(403, request=req))
+    res = await aggregate([FakeSource(raises=leaky, source="lastfm")], "S", "T")
+    val = res.failed_sources["lastfm"]
+    assert "403" in val                                                    # status preserved
+    assert "SECRETKEY123" not in val and "api_key" not in val and "audioscrobbler" not in val
+
+
 async def test_aggregate_propagates_unexpected_errors() -> None:
     boom = FakeSource(raises=ValueError("a bug, not a degradable upstream failure"))
     with pytest.raises(ValueError):

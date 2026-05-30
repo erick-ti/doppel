@@ -1,0 +1,204 @@
+{
+  "status": "succeeded",
+  "query_id": 57,
+  "seed": {
+    "title": "HUMBLE.",
+    "artist": "Kendrick Lamar",
+    "mbid": "398bf241-7d57-4993-860b-1f9ef496c97f"
+  },
+  "vibe": null,
+  "results": [
+    {
+      "position": 1,
+      "title": "DNA.",
+      "artist": "Kendrick Lamar",
+      "mbid": "898059a0-753c-4943-9604-d3c0e2929d81",
+      "deezer_url": "https://www.deezer.com/track/350171251",
+      "was_audio_scored": true,
+      "audio_score": 0.929668,
+      "vibe_text_score": null,
+      "combined_score": 1.0,
+      "cultural_score": 0.016393,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "As another Kendrick Lamar track from the same DAMN. era, DNA. scores the highest audio similarity (0.93) and is confirmed by listener-taste data on Last.fm, making it the closest sonic and cultural match to HUMBLE."
+    },
+    {
+      "position": 2,
+      "title": "Magnolia",
+      "artist": "Playboi Carti",
+      "mbid": "75a38235-5db3-4545-bd4c-e4de9baee068",
+      "deezer_url": "https://www.deezer.com/track/347376721",
+      "was_audio_scored": true,
+      "audio_score": 0.890435,
+      "vibe_text_score": null,
+      "combined_score": 0.933596,
+      "cultural_score": 0.026671,
+      "sources": [
+        "lastfm",
+        "listenbrainz"
+      ],
+      "rationale": "Magnolia scores a strong audio similarity (0.89) to HUMBLE. and is surfaced by both Last.fm and ListenBrainz, suggesting it shares a comparable sonic profile and is frequently enjoyed by the same listener communities."
+    },
+    {
+      "position": 3,
+      "title": "Stir Fry",
+      "artist": "Migos",
+      "mbid": "6c9db818-9172-4693-8497-1549c5fca2c6",
+      "deezer_url": "https://www.deezer.com/track/453844322",
+      "was_audio_scored": true,
+      "audio_score": 0.888838,
+      "vibe_text_score": null,
+      "combined_score": 0.930892,
+      "cultural_score": 0.010309,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Stir Fry by Migos carries a high audio similarity (0.889) to HUMBLE. and is backed by Last.fm listener data, pointing to a sonically similar feel within the late-2010s rap landscape."
+    },
+    {
+      "position": 4,
+      "title": "Nonstop",
+      "artist": "Drake",
+      "mbid": "af2ba31e-5412-4274-81ae-65451f0e7054",
+      "deezer_url": "https://www.deezer.com/track/533609202",
+      "was_audio_scored": true,
+      "audio_score": 0.878103,
+      "vibe_text_score": null,
+      "combined_score": 0.912722,
+      "cultural_score": 0.012195,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Nonstop by Drake registers a strong audio similarity (0.878) alongside Last.fm cultural overlap, indicating it lands in a sonically adjacent space to HUMBLE. among shared listener bases."
+    },
+    {
+      "position": 5,
+      "title": "Plain Jane",
+      "artist": "A$AP Ferg",
+      "mbid": "7426bf3a-71cb-4cea-8abe-06fe6eb65234",
+      "deezer_url": "https://www.deezer.com/track/394080362",
+      "was_audio_scored": true,
+      "audio_score": 0.877707,
+      "vibe_text_score": null,
+      "combined_score": 0.912052,
+      "cultural_score": 0.017556,
+      "sources": [
+        "lastfm",
+        "listenbrainz"
+      ],
+      "rationale": "Plain Jane scores an audio similarity of 0.878 and is surfaced by both Last.fm and ListenBrainz, giving it both sonic and cultural credibility as a companion to HUMBLE."
+    },
+    {
+      "position": 6,
+      "title": "a lot",
+      "artist": "21 Savage",
+      "mbid": "4d4219b0-cd63-4d14-80df-cf0404fdb9a7",
+      "deezer_url": "https://www.deezer.com/track/607697962",
+      "was_audio_scored": true,
+      "audio_score": 0.875008,
+      "vibe_text_score": null,
+      "combined_score": 0.907484,
+      "cultural_score": 0.014706,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "a lot by 21 Savage achieves an audio similarity of 0.875 to HUMBLE. and appears in Last.fm listener data, suggesting meaningful sonic common ground between the two tracks."
+    },
+    {
+      "position": 7,
+      "title": "Birds & The Bees",
+      "artist": "Baby Keem",
+      "mbid": "b7afc90f-ab63-417d-8874-7c4bd40d1af8",
+      "deezer_url": "https://www.deezer.com/track/3855225981",
+      "was_audio_scored": true,
+      "audio_score": 0.869302,
+      "vibe_text_score": null,
+      "combined_score": 0.897826,
+      "cultural_score": 0.012987,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Birds & The Bees by Baby Keem — who has a close creative relationship with Kendrick Lamar — scores a solid audio similarity (0.869) and is supported by Last.fm taste data."
+    },
+    {
+      "position": 8,
+      "title": "Praise the Lord (Da Shine) (feat. Skepta)",
+      "artist": "A$AP Rocky",
+      "mbid": "78ee7ba2-400d-4a17-a4bf-142c44a30fb4",
+      "deezer_url": "https://www.deezer.com/track/503169162",
+      "was_audio_scored": true,
+      "audio_score": 0.86682,
+      "vibe_text_score": null,
+      "combined_score": 0.893625,
+      "cultural_score": 0.014286,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Praise the Lord (Da Shine) by A$AP Rocky ft. Skepta posts an audio similarity of 0.867 to HUMBLE. and is corroborated by Last.fm listener patterns, pointing to a shared sonic and cultural orbit."
+    },
+    {
+      "position": 9,
+      "title": "BOP",
+      "artist": "DaBaby",
+      "mbid": "652aaeaa-70dd-4870-9b1a-255d935445ab",
+      "deezer_url": "https://www.deezer.com/track/760488802",
+      "was_audio_scored": true,
+      "audio_score": 0.86274,
+      "vibe_text_score": null,
+      "combined_score": 0.88672,
+      "cultural_score": 0.011111,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "BOP by DaBaby earns an audio similarity of 0.863 to HUMBLE. and surfaces through Last.fm data, suggesting it resonates with listeners who gravitate toward HUMBLE.'s energy."
+    },
+    {
+      "position": 10,
+      "title": "The Box",
+      "artist": "Roddy Ricch",
+      "mbid": "3e0b00ff-275f-4472-91b3-df760c8be195",
+      "deezer_url": "https://www.deezer.com/track/825986992",
+      "was_audio_scored": true,
+      "audio_score": 0.858375,
+      "vibe_text_score": null,
+      "combined_score": 0.879331,
+      "cultural_score": 0.015873,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "The Box by Roddy Ricch has the lowest audio similarity in this set (0.858) but still shows a meaningful sonic closeness to HUMBLE. and is reinforced by Last.fm cultural data linking their audiences."
+    }
+  ],
+  "degradation": {
+    "seed_audio_scored": true,
+    "cultural_backfill_count": 0,
+    "rationales_available": true,
+    "degraded_sources": {}
+  },
+  "coverage": {
+    "candidate_count": 191,
+    "resolve_attempted": 75,
+    "resolved_found": 68,
+    "resolved_rejected": 0,
+    "resolved_not_found": 7,
+    "found_ratio": 0.907,
+    "audio_scored": 10,
+    "backfill": 0,
+    "embeddings_cache_hits": 67,
+    "embeddings_computed": 0,
+    "latency_ms": 12666
+  },
+  "meta": {
+    "slug": "humble",
+    "genre": "hip-hop",
+    "exported_at": "2026-05-29T07:16:56+00:00",
+    "git_sha": "f62b468",
+    "git_dirty": true,
+    "clap_model_version": "laion/larger_clap_music_and_speech+mean",
+    "alpha": 0.7,
+    "beta": 0.3,
+    "resolve_candidate_limit": 75
+  }
+}

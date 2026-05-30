@@ -1,0 +1,202 @@
+{
+  "status": "succeeded",
+  "query_id": 55,
+  "seed": {
+    "title": "Blinding Lights",
+    "artist": "The Weeknd",
+    "mbid": "1a67e215-a19e-40c9-9b12-732de134bf5f"
+  },
+  "vibe": null,
+  "results": [
+    {
+      "position": 1,
+      "title": "In Your Eyes",
+      "artist": "The Weeknd",
+      "mbid": "919a0015-31ce-41f1-9a45-898dfa728d1b",
+      "deezer_url": "https://www.deezer.com/track/908604622",
+      "was_audio_scored": true,
+      "audio_score": 0.919209,
+      "vibe_text_score": null,
+      "combined_score": 1.0,
+      "cultural_score": 0.016129,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "As another track by The Weeknd, it scores the highest audio similarity (0.919) of all candidates and is also surfaced by Last.fm listener data, making it the closest sonic match to Blinding Lights."
+    },
+    {
+      "position": 2,
+      "title": "Ghost",
+      "artist": "Justin Bieber",
+      "mbid": "78a3a527-c8cb-4cd7-98b1-00af2a0a9d0c",
+      "deezer_url": "https://www.deezer.com/track/1280165212",
+      "was_audio_scored": true,
+      "audio_score": 0.908096,
+      "vibe_text_score": null,
+      "combined_score": 0.980075,
+      "cultural_score": 0.010526,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Justin Bieber's Ghost achieves a strong audio similarity of 0.908 to Blinding Lights and is backed by Last.fm cultural data, suggesting listeners who enjoy Blinding Lights frequently gravitate toward this track as well."
+    },
+    {
+      "position": 3,
+      "title": "Adore You",
+      "artist": "Harry Styles",
+      "mbid": "acc4e9ce-f9cb-4a7c-8f65-a77cc586c81a",
+      "deezer_url": "https://www.deezer.com/track/830336932",
+      "was_audio_scored": true,
+      "audio_score": 0.895775,
+      "vibe_text_score": null,
+      "combined_score": 0.957982,
+      "cultural_score": 0.014925,
+      "sources": [
+        "listenbrainz"
+      ],
+      "rationale": "Adore You by Harry Styles shows a high audio similarity of 0.896 to Blinding Lights and was surfaced through Listenbrainz listener-taste data, indicating meaningful overlap in audience preferences."
+    },
+    {
+      "position": 4,
+      "title": "Save Your Tears",
+      "artist": "The Weeknd",
+      "mbid": "fa7de94b-d55c-40bf-9840-028b229b1f16",
+      "deezer_url": "https://www.deezer.com/track/908604632",
+      "was_audio_scored": true,
+      "audio_score": 0.889065,
+      "vibe_text_score": null,
+      "combined_score": 0.945951,
+      "cultural_score": 0.016393,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Save Your Tears is another Weeknd track with a strong audio similarity of 0.889 to Blinding Lights and is confirmed by Last.fm data, pointing to a close sonic and cultural relationship between the two songs."
+    },
+    {
+      "position": 5,
+      "title": "Circles",
+      "artist": "Post Malone",
+      "mbid": "9d0a9e5c-a765-40ab-837e-99b0bb197f6c",
+      "deezer_url": "https://www.deezer.com/track/747399352",
+      "was_audio_scored": true,
+      "audio_score": 0.888776,
+      "vibe_text_score": null,
+      "combined_score": 0.945434,
+      "cultural_score": 0.015385,
+      "sources": [
+        "listenbrainz"
+      ],
+      "rationale": "Circles by Post Malone matches Blinding Lights with an audio similarity of 0.889 and was surfaced via Listenbrainz, suggesting its sound profile aligns closely with the seed track."
+    },
+    {
+      "position": 6,
+      "title": "Sorry",
+      "artist": "Justin Bieber",
+      "mbid": "9da1335a-e601-4302-8d3c-ed2776dd6e77",
+      "deezer_url": "https://www.deezer.com/track/112662366",
+      "was_audio_scored": true,
+      "audio_score": 0.879854,
+      "vibe_text_score": null,
+      "combined_score": 0.929436,
+      "cultural_score": 0.011628,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Sorry by Justin Bieber carries a solid audio similarity of 0.880 and is supported by Last.fm cultural data, indicating both sonic closeness to Blinding Lights and shared listener audiences."
+    },
+    {
+      "position": 7,
+      "title": "The Color Violet",
+      "artist": "Tory Lanez",
+      "mbid": "52a0345e-497d-479e-99ca-f869f45dfefc",
+      "deezer_url": "https://www.deezer.com/track/1579438382",
+      "was_audio_scored": true,
+      "audio_score": 0.858901,
+      "vibe_text_score": null,
+      "combined_score": 0.891866,
+      "cultural_score": 0.010989,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "The Color Violet by Tory Lanez has an audio similarity of 0.859 to Blinding Lights and was surfaced by Last.fm, suggesting a reasonable sonic resemblance backed by listener co-occurrence data."
+    },
+    {
+      "position": 8,
+      "title": "Watermelon Sugar",
+      "artist": "Harry Styles",
+      "mbid": "1ab009f2-d713-4f85-b4a3-c383c344e24a",
+      "deezer_url": "https://www.deezer.com/track/830336922",
+      "was_audio_scored": true,
+      "audio_score": 0.843721,
+      "vibe_text_score": null,
+      "combined_score": 0.864649,
+      "cultural_score": 0.016129,
+      "sources": [
+        "listenbrainz"
+      ],
+      "rationale": "Watermelon Sugar by Harry Styles scores an audio similarity of 0.844 against Blinding Lights and was recommended via Listenbrainz listener patterns, pointing to a notable but somewhat more distant sonic relationship."
+    },
+    {
+      "position": 9,
+      "title": "Attention",
+      "artist": "Charlie Puth",
+      "mbid": "19b6d048-f981-40e9-8235-a5acf969e5df",
+      "deezer_url": "https://www.deezer.com/track/349385251",
+      "was_audio_scored": true,
+      "audio_score": 0.840578,
+      "vibe_text_score": null,
+      "combined_score": 0.859014,
+      "cultural_score": 0.012346,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Attention by Charlie Puth achieves an audio similarity of 0.841 to Blinding Lights and is supported by Last.fm data, indicating a degree of sonic overlap alongside shared listener taste."
+    },
+    {
+      "position": 10,
+      "title": "Stupid Love",
+      "artist": "Lady Gaga",
+      "mbid": "1e72e669-7d22-4e5d-b97e-16c2348a4e90",
+      "deezer_url": "https://www.deezer.com/track/973317052",
+      "was_audio_scored": true,
+      "audio_score": 0.834536,
+      "vibe_text_score": null,
+      "combined_score": 0.848181,
+      "cultural_score": 0.012987,
+      "sources": [
+        "listenbrainz"
+      ],
+      "rationale": "Stupid Love by Lady Gaga has an audio similarity of 0.835 to Blinding Lights and was surfaced through Listenbrainz, suggesting a moderate sonic likeness to the seed track based on audio embeddings."
+    }
+  ],
+  "degradation": {
+    "seed_audio_scored": true,
+    "cultural_backfill_count": 0,
+    "rationales_available": true,
+    "degraded_sources": {}
+  },
+  "coverage": {
+    "candidate_count": 194,
+    "resolve_attempted": 75,
+    "resolved_found": 74,
+    "resolved_rejected": 0,
+    "resolved_not_found": 1,
+    "found_ratio": 0.987,
+    "audio_scored": 10,
+    "backfill": 0,
+    "embeddings_cache_hits": 69,
+    "embeddings_computed": 0,
+    "latency_ms": 11704
+  },
+  "meta": {
+    "slug": "blinding-lights",
+    "genre": "pop",
+    "exported_at": "2026-05-29T07:16:29+00:00",
+    "git_sha": "f62b468",
+    "git_dirty": true,
+    "clap_model_version": "laion/larger_clap_music_and_speech+mean",
+    "alpha": 0.7,
+    "beta": 0.3,
+    "resolve_candidate_limit": 75
+  }
+}

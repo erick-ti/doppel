@@ -1,0 +1,202 @@
+{
+  "status": "succeeded",
+  "query_id": 60,
+  "seed": {
+    "title": "Take Five",
+    "artist": "The Dave Brubeck Quartet",
+    "mbid": "69db5ee7-2114-4dda-981d-d2aa8cba6f1f"
+  },
+  "vibe": null,
+  "results": [
+    {
+      "position": 1,
+      "title": "Alphanumeric",
+      "artist": "Lee Konitz",
+      "mbid": "187c3045-ac26-4837-b256-a34705934b51",
+      "deezer_url": "https://www.deezer.com/track/1176672",
+      "was_audio_scored": true,
+      "audio_score": 0.956137,
+      "vibe_text_score": null,
+      "combined_score": 0.94747,
+      "cultural_score": 0.009346,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Lee Konitz's 'Alphanumeric' registers the highest audio similarity (0.956) to 'Take Five,' suggesting a very close sonic match, and listener-taste data on Last.fm further confirms overlap with the Brubeck audience."
+    },
+    {
+      "position": 2,
+      "title": "Red Pepper Blues",
+      "artist": "Art Pepper",
+      "mbid": "f035c81c-25b7-49b7-bcc5-72b03a7d2607",
+      "deezer_url": "https://www.deezer.com/track/5646697",
+      "was_audio_scored": true,
+      "audio_score": 0.948905,
+      "vibe_text_score": null,
+      "combined_score": 0.935562,
+      "cultural_score": 0.010989,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Art Pepper's 'Red Pepper Blues' scores a strong 0.949 audio similarity to 'Take Five,' and Last.fm listeners who enjoy Brubeck's quartet have consistently gravitated toward Pepper's work."
+    },
+    {
+      "position": 3,
+      "title": "Three to Get Ready",
+      "artist": "Dave Brubeck",
+      "mbid": "6a85b0ab-495d-4ff4-9381-c1fb63f33a49",
+      "deezer_url": "https://www.deezer.com/track/3571290",
+      "was_audio_scored": true,
+      "audio_score": 0.947771,
+      "vibe_text_score": null,
+      "combined_score": 0.933694,
+      "cultural_score": 0.013158,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "'Three to Get Ready' is from Dave Brubeck himself, making it a near-certain stylistic companion; the 0.948 audio similarity and shared Last.fm audience reflect that direct artistic lineage."
+    },
+    {
+      "position": 4,
+      "title": "Freddie Freeloader",
+      "artist": "Miles Davis",
+      "mbid": "0bdecbca-403a-4f0b-9aa2-2396a6961083",
+      "deezer_url": "https://www.deezer.com/track/2711779",
+      "was_audio_scored": true,
+      "audio_score": 0.941967,
+      "vibe_text_score": null,
+      "combined_score": 0.924138,
+      "cultural_score": 0.014493,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "'Freddie Freeloader' by Miles Davis draws a solid 0.942 audio similarity to 'Take Five,' and the Last.fm overlap reflects the well-documented cultural kinship between Davis and Brubeck's late-1950s jazz circles."
+    },
+    {
+      "position": 5,
+      "title": "Wabash Blues",
+      "artist": "Duke Ellington & Johnny Hodges",
+      "mbid": "b2bd91c9-38bb-4696-b363-cfb9f43b7227",
+      "deezer_url": "https://www.deezer.com/track/2269188",
+      "was_audio_scored": true,
+      "audio_score": 0.929773,
+      "vibe_text_score": null,
+      "combined_score": 0.904059,
+      "cultural_score": 0.009524,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Duke Ellington and Johnny Hodges' 'Wabash Blues' earns a 0.930 audio similarity, and Last.fm data connects it to Brubeck listeners, suggesting shared tonal or textural qualities despite the different era and ensemble."
+    },
+    {
+      "position": 6,
+      "title": "So What",
+      "artist": "Miles Davis",
+      "mbid": "272dbf93-1501-4650-bbde-627ff0588a73",
+      "deezer_url": "https://www.deezer.com/track/2711778",
+      "was_audio_scored": true,
+      "audio_score": 0.929765,
+      "vibe_text_score": null,
+      "combined_score": 0.904046,
+      "cultural_score": 0.015625,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Miles Davis' iconic 'So What' matches 'Take Five' at 0.930 audio similarity and is a Last.fm staple among Brubeck fans, reflecting both sonic closeness and their shared place in the cool/modal jazz canon."
+    },
+    {
+      "position": 7,
+      "title": "Straight Life",
+      "artist": "Art Pepper",
+      "mbid": "a36aa252-3250-4f51-821d-dd94c1248499",
+      "deezer_url": "https://www.deezer.com/track/5646700",
+      "was_audio_scored": true,
+      "audio_score": 0.928435,
+      "vibe_text_score": null,
+      "combined_score": 0.901856,
+      "cultural_score": 0.010417,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Art Pepper's 'Straight Life' scores 0.928 in audio similarity and appears alongside 'Take Five' in Last.fm listener data, reinforcing Pepper's consistent presence in Brubeck-adjacent taste profiles."
+    },
+    {
+      "position": 8,
+      "title": "Blue Train",
+      "artist": "John Coltrane",
+      "mbid": "1f1fd94d-35f2-4ca4-8b29-01100caa2a19",
+      "deezer_url": "https://www.deezer.com/track/696955852",
+      "was_audio_scored": true,
+      "audio_score": 0.922682,
+      "vibe_text_score": null,
+      "combined_score": 0.892382,
+      "cultural_score": 0.014925,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "John Coltrane's 'Blue Train' achieves a 0.923 audio similarity and is frequently co-listened with Brubeck on Last.fm, pointing to a broad sonic and cultural overlap in classic hard-bop and cool jazz territory."
+    },
+    {
+      "position": 9,
+      "title": "Goodbye Pork Pie Hat",
+      "artist": "Charles Mingus",
+      "mbid": "cf05e83e-8f63-4196-9165-e43855467006",
+      "deezer_url": "https://www.deezer.com/track/3570930",
+      "was_audio_scored": true,
+      "audio_score": 0.921851,
+      "vibe_text_score": null,
+      "combined_score": 0.891014,
+      "cultural_score": 0.015385,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Charles Mingus' 'Goodbye Pork Pie Hat' scores 0.922 in audio similarity to 'Take Five' and surfaces through Last.fm listener overlap, suggesting it resonates with audiences drawn to the more contemplative, compositionally adventurous side of Brubeck."
+    },
+    {
+      "position": 10,
+      "title": "I'm an Old Cowhand",
+      "artist": "Sonny Rollins",
+      "mbid": "f23bb951-755e-4a87-855e-e6d3ce2bab6e",
+      "deezer_url": "https://www.deezer.com/track/5646706",
+      "was_audio_scored": true,
+      "audio_score": 0.920861,
+      "vibe_text_score": null,
+      "combined_score": 0.889385,
+      "cultural_score": 0.010526,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Sonny Rollins' 'I'm an Old Cowhand' registers a 0.921 audio similarity and is linked via Last.fm listener data, indicating that fans of 'Take Five' tend to also engage with Rollins' inventive approach to jazz standards."
+    }
+  ],
+  "degradation": {
+    "seed_audio_scored": true,
+    "cultural_backfill_count": 0,
+    "rationales_available": true,
+    "degraded_sources": {}
+  },
+  "coverage": {
+    "candidate_count": 100,
+    "resolve_attempted": 75,
+    "resolved_found": 68,
+    "resolved_rejected": 2,
+    "resolved_not_found": 5,
+    "found_ratio": 0.907,
+    "audio_scored": 10,
+    "backfill": 0,
+    "embeddings_cache_hits": 64,
+    "embeddings_computed": 0,
+    "latency_ms": 13738
+  },
+  "meta": {
+    "slug": "take-five",
+    "genre": "jazz",
+    "exported_at": "2026-05-29T07:19:29+00:00",
+    "git_sha": "f62b468",
+    "git_dirty": true,
+    "clap_model_version": "laion/larger_clap_music_and_speech+mean",
+    "alpha": 0.7,
+    "beta": 0.3,
+    "resolve_candidate_limit": 75
+  }
+}

@@ -1,0 +1,204 @@
+{
+  "status": "succeeded",
+  "query_id": 63,
+  "seed": {
+    "title": "HUMBLE.",
+    "artist": "Kendrick Lamar",
+    "mbid": "398bf241-7d57-4993-860b-1f9ef496c97f"
+  },
+  "vibe": "stripped back, acoustic, intimate",
+  "results": [
+    {
+      "position": 1,
+      "title": "Birds & The Bees",
+      "artist": "Baby Keem",
+      "mbid": "b7afc90f-ab63-417d-8874-7c4bd40d1af8",
+      "deezer_url": "https://www.deezer.com/track/3855225981",
+      "was_audio_scored": true,
+      "audio_score": 0.869302,
+      "vibe_text_score": 0.370527,
+      "combined_score": 0.927136,
+      "cultural_score": 0.012987,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Strong audio similarity (0.869) to HUMBLE. and surfaced by Last.fm listener data; Baby Keem's close creative ties to Kendrick Lamar reinforce the cultural connection, though the low vibe score (0.371) suggests it leans away from the stripped-back, intimate feel you requested."
+    },
+    {
+      "position": 2,
+      "title": "DNA.",
+      "artist": "Kendrick Lamar",
+      "mbid": "898059a0-753c-4943-9604-d3c0e2929d81",
+      "deezer_url": "https://www.deezer.com/track/350171251",
+      "was_audio_scored": true,
+      "audio_score": 0.929668,
+      "vibe_text_score": 0.280064,
+      "combined_score": 0.884743,
+      "cultural_score": 0.016393,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "The highest audio similarity of all candidates (0.930) makes this the closest sonic match to HUMBLE. — both tracks share the same artist and album era, explaining the near-identical audio profile, though the low vibe score (0.28) signals it's unlikely to feel acoustic or intimate."
+    },
+    {
+      "position": 3,
+      "title": "20 Min",
+      "artist": "Lil Uzi Vert",
+      "mbid": "f59bc7f4-bfd1-4b14-acb0-b8b6c58786c5",
+      "deezer_url": "https://www.deezer.com/track/428537532",
+      "was_audio_scored": true,
+      "audio_score": 0.830796,
+      "vibe_text_score": 0.371593,
+      "combined_score": 0.882857,
+      "cultural_score": 0.013889,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Solid audio similarity (0.831) and a slightly higher vibe alignment (0.372) than several other candidates, though Last.fm is the only cultural source linking it to the seed; the vibe fit is still modest, so don't expect a stripped-back feel."
+    },
+    {
+      "position": 4,
+      "title": "a lot",
+      "artist": "21 Savage",
+      "mbid": "4d4219b0-cd63-4d14-80df-cf0404fdb9a7",
+      "deezer_url": "https://www.deezer.com/track/607697962",
+      "was_audio_scored": true,
+      "audio_score": 0.875008,
+      "vibe_text_score": 0.325919,
+      "combined_score": 0.877725,
+      "cultural_score": 0.014706,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Strong audio similarity (0.875) and surfaced by Last.fm; '21 Savage's measured, low-key delivery on 'a lot' may edge it slightly closer to an understated mood than some peers, though the vibe score (0.326) remains moderate."
+    },
+    {
+      "position": 5,
+      "title": "The Box",
+      "artist": "Roddy Ricch",
+      "mbid": "3e0b00ff-275f-4472-91b3-df760c8be195",
+      "deezer_url": "https://www.deezer.com/track/825986992",
+      "was_audio_scored": true,
+      "audio_score": 0.858375,
+      "vibe_text_score": 0.329294,
+      "combined_score": 0.862267,
+      "cultural_score": 0.015873,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Audio similarity of 0.858 and Last.fm data connect this to HUMBLE.; the vibe score (0.329) is modest, suggesting 'The Box' shares sonic characteristics with the seed but won't deliver the acoustic intimacy you described."
+    },
+    {
+      "position": 6,
+      "title": "Stir Fry",
+      "artist": "Migos",
+      "mbid": "6c9db818-9172-4693-8497-1549c5fca2c6",
+      "deezer_url": "https://www.deezer.com/track/453844322",
+      "was_audio_scored": true,
+      "audio_score": 0.888838,
+      "vibe_text_score": 0.293374,
+      "combined_score": 0.853128,
+      "cultural_score": 0.010309,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "High audio similarity (0.889) places this among the closer sonic matches to HUMBLE., surfaced by Last.fm; however, the low vibe score (0.293) indicates it aligns poorly with the stripped-back, acoustic request."
+    },
+    {
+      "position": 7,
+      "title": "MIDDLE CHILD",
+      "artist": "J. Cole",
+      "mbid": "3f6861eb-7173-43e3-bd3b-242ab94fcde2",
+      "deezer_url": "https://www.deezer.com/track/622457832",
+      "was_audio_scored": true,
+      "audio_score": 0.811184,
+      "vibe_text_score": 0.358532,
+      "combined_score": 0.843173,
+      "cultural_score": 0.015385,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "The lowest audio similarity here (0.811), but J. Cole's introspective rap style gives 'MIDDLE CHILD' a slightly better vibe alignment (0.359) than several higher-similarity candidates, making it a moderate cultural fit for fans of HUMBLE."
+    },
+    {
+      "position": 8,
+      "title": "Plain Jane",
+      "artist": "A$AP Ferg",
+      "mbid": "7426bf3a-71cb-4cea-8abe-06fe6eb65234",
+      "deezer_url": "https://www.deezer.com/track/394080362",
+      "was_audio_scored": true,
+      "audio_score": 0.877707,
+      "vibe_text_score": 0.292249,
+      "combined_score": 0.838523,
+      "cultural_score": 0.017556,
+      "sources": [
+        "lastfm",
+        "listenbrainz"
+      ],
+      "rationale": "Backed by both Last.fm and ListenBrainz, 'Plain Jane' has strong cross-source cultural support alongside a high audio similarity (0.878); the low vibe score (0.292) means it matches the seed's sonic profile more than your intimate, acoustic request."
+    },
+    {
+      "position": 9,
+      "title": "Bounce Back",
+      "artist": "Big Sean",
+      "mbid": "a68d5237-f522-4426-a772-11133c9b307b",
+      "deezer_url": "https://www.deezer.com/track/141433451",
+      "was_audio_scored": true,
+      "audio_score": 0.842575,
+      "vibe_text_score": 0.323177,
+      "combined_score": 0.835844,
+      "cultural_score": 0.021917,
+      "sources": [
+        "lastfm",
+        "listenbrainz"
+      ],
+      "rationale": "Supported by both Last.fm and ListenBrainz with an audio similarity of 0.843; the dual-source cultural agreement is a solid signal of listener-taste overlap with HUMBLE., though the vibe score (0.323) suggests limited alignment with the stripped-back feel."
+    },
+    {
+      "position": 10,
+      "title": "BOP",
+      "artist": "DaBaby",
+      "mbid": "652aaeaa-70dd-4870-9b1a-255d935445ab",
+      "deezer_url": "https://www.deezer.com/track/760488802",
+      "was_audio_scored": true,
+      "audio_score": 0.86274,
+      "vibe_text_score": 0.292184,
+      "combined_score": 0.820709,
+      "cultural_score": 0.011111,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Audio similarity of 0.863 ties it sonically to HUMBLE. via Last.fm data, but DaBaby's energetic style and the lowest vibe score among candidates (0.292) make 'BOP' a poor match for the intimate, acoustic atmosphere you're after."
+    }
+  ],
+  "degradation": {
+    "seed_audio_scored": true,
+    "cultural_backfill_count": 0,
+    "rationales_available": true,
+    "degraded_sources": {}
+  },
+  "coverage": {
+    "candidate_count": 191,
+    "resolve_attempted": 75,
+    "resolved_found": 68,
+    "resolved_rejected": 0,
+    "resolved_not_found": 7,
+    "found_ratio": 0.907,
+    "audio_scored": 10,
+    "backfill": 0,
+    "embeddings_cache_hits": 67,
+    "embeddings_computed": 0,
+    "latency_ms": 16866
+  },
+  "meta": {
+    "slug": "humble-vibe-acoustic",
+    "genre": "hip-hop",
+    "exported_at": "2026-05-29T07:20:13+00:00",
+    "git_sha": "f62b468",
+    "git_dirty": true,
+    "clap_model_version": "laion/larger_clap_music_and_speech+mean",
+    "alpha": 0.7,
+    "beta": 0.3,
+    "resolve_candidate_limit": 75
+  }
+}

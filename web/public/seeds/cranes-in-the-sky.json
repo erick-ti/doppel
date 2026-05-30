@@ -1,0 +1,203 @@
+{
+  "status": "succeeded",
+  "query_id": 56,
+  "seed": {
+    "title": "Cranes in the Sky",
+    "artist": "Solange",
+    "mbid": "8c8047f3-0a64-4440-a8ea-03ca401cde5b"
+  },
+  "vibe": null,
+  "results": [
+    {
+      "position": 1,
+      "title": "Weary",
+      "artist": "Solange",
+      "mbid": "56d6845a-a6af-42c6-90d1-949f50394147",
+      "deezer_url": "https://www.deezer.com/track/133103632",
+      "was_audio_scored": true,
+      "audio_score": 0.870292,
+      "vibe_text_score": null,
+      "combined_score": 1.0,
+      "cultural_score": 0.016393,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "As another track from the same Solange album, 'Weary' has the highest audio similarity score (0.87) of all candidates and is also confirmed by Last.fm listener data, making it the closest sonic match to 'Cranes in the Sky.'"
+    },
+    {
+      "position": 2,
+      "title": "Spend It",
+      "artist": "Summer Walker",
+      "mbid": "62922537-e7b7-48f7-9c0a-298feb2c99cc",
+      "deezer_url": "https://www.deezer.com/track/3339425801",
+      "was_audio_scored": true,
+      "audio_score": 0.862008,
+      "vibe_text_score": null,
+      "combined_score": 0.988077,
+      "cultural_score": 0.010638,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Summer Walker's 'Spend It' scores a strong audio similarity of 0.862 to the seed and was surfaced by Last.fm listener taste data, suggesting a comparable sonic character to 'Cranes in the Sky.'"
+    },
+    {
+      "position": 3,
+      "title": "my hair",
+      "artist": "Ariana Grande",
+      "mbid": "a3e6d7eb-7b2d-4c88-986b-c1a26eaed7b8",
+      "deezer_url": "https://www.deezer.com/track/1126047112",
+      "was_audio_scored": true,
+      "audio_score": 0.854787,
+      "vibe_text_score": null,
+      "combined_score": 0.977682,
+      "cultural_score": 0.010309,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Ariana Grande's 'my hair' lands just below with an audio similarity of 0.855 and Last.fm cultural overlap, indicating listeners who enjoy 'Cranes in the Sky' also gravitate toward this track."
+    },
+    {
+      "position": 4,
+      "title": "A Long Walk",
+      "artist": "Jill Scott",
+      "mbid": "d8b2d919-b709-49ff-8b3d-1d8b28b4626e",
+      "deezer_url": "https://www.deezer.com/track/558529312",
+      "was_audio_scored": true,
+      "audio_score": 0.849318,
+      "vibe_text_score": null,
+      "combined_score": 0.96981,
+      "cultural_score": 0.012821,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Jill Scott's 'A Long Walk' earns a solid audio similarity of 0.849 to the seed and is backed by Last.fm co-listening data, pointing to a shared sonic and cultural space with 'Cranes in the Sky.'"
+    },
+    {
+      "position": 5,
+      "title": "Ex‐Factor",
+      "artist": "Lauryn Hill",
+      "mbid": "20ddc463-1ac9-47b0-a242-75a7d5c84c61",
+      "deezer_url": "https://www.deezer.com/track/400418882",
+      "was_audio_scored": true,
+      "audio_score": 0.847377,
+      "vibe_text_score": null,
+      "combined_score": 0.967016,
+      "cultural_score": 0.015026,
+      "sources": [
+        "lastfm",
+        "listenbrainz"
+      ],
+      "rationale": "Lauryn Hill's 'Ex-Factor' is the only candidate supported by both Last.fm and ListenBrainz cultural data, alongside a strong audio similarity of 0.847, suggesting both sonic and broad listener-community alignment with the seed."
+    },
+    {
+      "position": 6,
+      "title": "BMO",
+      "artist": "Ari Lennox",
+      "mbid": "f8a6e4ed-79a3-4ca5-9b13-1bbce76e6bd7",
+      "deezer_url": "https://www.deezer.com/track/675037412",
+      "was_audio_scored": true,
+      "audio_score": 0.846503,
+      "vibe_text_score": null,
+      "combined_score": 0.965758,
+      "cultural_score": 0.01087,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Ari Lennox's 'BMO' matches 'Ex-Factor' in audio similarity (0.847) and is confirmed by Last.fm data, pointing to a close sonic resemblance to 'Cranes in the Sky.'"
+    },
+    {
+      "position": 7,
+      "title": "Days",
+      "artist": "Ravyn Lenae",
+      "mbid": "61277fcd-ef57-43a4-b98d-e8634588df7c",
+      "deezer_url": "https://www.deezer.com/track/2936029141",
+      "was_audio_scored": true,
+      "audio_score": 0.846321,
+      "vibe_text_score": null,
+      "combined_score": 0.965496,
+      "cultural_score": 0.013333,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Ravyn Lenae's 'Days' scores an audio similarity of 0.846 and was surfaced via Last.fm, indicating listeners drawn to 'Cranes in the Sky' also connect with this track."
+    },
+    {
+      "position": 8,
+      "title": "He Loves Me (Lyzel In E Flat)",
+      "artist": "Jill Scott",
+      "mbid": "4e58e95e-661c-4eac-ad7d-d866f5ce8ca2",
+      "deezer_url": "https://www.deezer.com/track/558529252",
+      "was_audio_scored": true,
+      "audio_score": 0.838784,
+      "vibe_text_score": null,
+      "combined_score": 0.954647,
+      "cultural_score": 0.010753,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Jill Scott's 'He Loves Me (Lyzel In E Flat)' posts an audio similarity of 0.839 and Last.fm cultural support, suggesting it occupies a sonically adjacent space to the seed."
+    },
+    {
+      "position": 9,
+      "title": "Rise",
+      "artist": "Solange",
+      "mbid": "061987b7-853c-42f7-9402-709914eb6b80",
+      "deezer_url": "https://www.deezer.com/track/133103630",
+      "was_audio_scored": true,
+      "audio_score": 0.835389,
+      "vibe_text_score": null,
+      "combined_score": 0.949761,
+      "cultural_score": 0.016129,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "'Rise' is another Solange track with an audio similarity of 0.835 and Last.fm backing, making it a natural companion to 'Cranes in the Sky' within the same artist's catalog."
+    },
+    {
+      "position": 10,
+      "title": "Love Is Blind",
+      "artist": "Ravyn Lenae",
+      "mbid": "70f8f900-72f9-453f-9338-8504e260810c",
+      "deezer_url": "https://www.deezer.com/track/2755315701",
+      "was_audio_scored": true,
+      "audio_score": 0.821812,
+      "vibe_text_score": null,
+      "combined_score": 0.930219,
+      "cultural_score": 0.013514,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Ravyn Lenae's 'Love Is Blind' has the lowest audio similarity among candidates (0.822) but is still notably high, and Last.fm data confirms shared listener interest with 'Cranes in the Sky.'"
+    }
+  ],
+  "degradation": {
+    "seed_audio_scored": true,
+    "cultural_backfill_count": 0,
+    "rationales_available": true,
+    "degraded_sources": {}
+  },
+  "coverage": {
+    "candidate_count": 190,
+    "resolve_attempted": 75,
+    "resolved_found": 75,
+    "resolved_rejected": 0,
+    "resolved_not_found": 0,
+    "found_ratio": 1.0,
+    "audio_scored": 10,
+    "backfill": 0,
+    "embeddings_cache_hits": 74,
+    "embeddings_computed": 0,
+    "latency_ms": 11333
+  },
+  "meta": {
+    "slug": "cranes-in-the-sky",
+    "genre": "r&b",
+    "exported_at": "2026-05-29T07:16:42+00:00",
+    "git_sha": "f62b468",
+    "git_dirty": true,
+    "clap_model_version": "laion/larger_clap_music_and_speech+mean",
+    "alpha": 0.7,
+    "beta": 0.3,
+    "resolve_candidate_limit": 75
+  }
+}

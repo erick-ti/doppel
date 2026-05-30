@@ -225,3 +225,6 @@ __marimo__/
 # Doppel — eval harness output (the harness code in eval/ is committed; its reports are not).
 /eval/reports/
 
+# Doppel — local-only v1.1 planning doc (private working context; never committed to the public repo).
+/V1.1_SHOWCASE_PLAN.md
+
