@@ -24,6 +24,7 @@ ranked pool + the gate decision + the degraded-source report.
 from __future__ import annotations
 
 import asyncio
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import Enum
@@ -116,6 +117,23 @@ async def aggregate(
     return AggregateResult(ranked, gate_for(len(ranked), threshold=gate_threshold), failed_sources)
 
 
+_URL_RE = re.compile(r"https?://\S+")
+
+
+def _redact_error(exc: Exception) -> str:
+    """A safe one-line summary of a degradable source failure for ``failed_sources``.
+
+    Never include the request URL: a source may carry a credential as a query param (Last.fm's
+    ``api_key``), and httpx embeds the full request URL in ``HTTPStatusError`` messages — so a raw
+    ``str(exc)`` would leak the key into ``failed_sources``, which flows to the API degradation block,
+    the persisted ``query_logs`` row (and its backups), and the showcase export. HTTP-status errors
+    collapse to the status code; any other message has URLs scrubbed defensively.
+    """
+    if isinstance(exc, httpx.HTTPStatusError):
+        return f"HTTPStatusError: HTTP {exc.response.status_code}"
+    return f"{type(exc).__name__}: {_URL_RE.sub('<url>', str(exc))}"
+
+
 async def _safe(
     source: CandidateSource, title: str, artist: str, timeout_s: float
 ) -> tuple[str, list[Candidate], str | None]:
@@ -133,4 +151,4 @@ async def _safe(
     except TimeoutError:
         return source.source, [], f"timeout after {timeout_s:g}s"
     except (httpx.HTTPError, SourceError) as exc:
-        return source.source, [], f"{type(exc).__name__}: {exc}"
+        return source.source, [], _redact_error(exc)

@@ -98,7 +98,14 @@ class LastFmClient:
                 "limit": self._limit,
             },
         )
-        r.raise_for_status()
+        try:
+            r.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            # httpx embeds the full request URL — which carries our api_key query param — in this
+            # exception's message AND its chained cause. Re-raise a sanitized SourceError (status only)
+            # with `from None` so no traceback of it can surface the key via the exception chain
+            # (defense in depth alongside the aggregator's redaction).
+            raise SourceResponseError(f"Last.fm HTTP {exc.response.status_code}") from None
         try:
             body = r.json()
         except ValueError as exc:

@@ -7,6 +7,8 @@ sets, and unusable-row skipping.
 """
 from __future__ import annotations
 
+import traceback
+
 import httpx
 import pytest
 
@@ -105,9 +107,25 @@ async def test_skips_rows_missing_name_or_artist() -> None:
     assert [(c.title, c.rank) for c in cands] == [("Good Track", 1)]
 
 
-async def test_http_error_propagates() -> None:
-    with pytest.raises(httpx.HTTPStatusError):
+async def test_http_error_surfaces_sanitized_status_not_url() -> None:
+    # A non-2xx is re-raised as a degradable SourceError carrying only the status — never httpx's
+    # URL-bearing message, which embeds our api_key query param (it would leak via failed_sources).
+    with pytest.raises(SourceResponseError) as ei:
         await _lf(lambda r: httpx.Response(503)).similar_candidates("X", "Y")
+    msg = str(ei.value)
+    assert "503" in msg
+    assert "api_key" not in msg and "audioscrobbler" not in msg
+
+
+async def test_http_error_does_not_chain_the_url_bearing_cause() -> None:
+    # `from None` must drop the HTTPStatusError cause — otherwise a full traceback of the sanitized
+    # error would still print the api_key-bearing request URL via the exception chain.
+    with pytest.raises(SourceResponseError) as ei:
+        await _lf(lambda r: httpx.Response(403)).similar_candidates("X", "Y")
+    exc = ei.value
+    assert exc.__cause__ is None and exc.__suppress_context__ is True
+    tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+    assert "api_key" not in tb and "audioscrobbler" not in tb
 
 
 async def test_malformed_json_body_raises_source_error() -> None:
