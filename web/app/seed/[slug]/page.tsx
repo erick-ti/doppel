@@ -5,6 +5,7 @@ import { CoverageStrip } from "@/components/coverage-strip";
 import { ResultList } from "@/components/result-list";
 import { SeedHeader } from "@/components/seed-header";
 import { TransparencyPanel } from "@/components/transparency-panel";
+import { VibeSteer } from "@/components/vibe-steer";
 import {
   getAllSlugs,
   getBaseSeedFor,
@@ -35,33 +36,49 @@ export default async function SeedPage({ params }: Params) {
   const doc = await getSeedBySlug(slug);
   if (!doc) notFound();
 
-  // Cross-link the plain <-> vibe-steered pairing, whichever direction exists.
+  // Resolve the plain <-> vibe-steered pairing into a single {plain, vibe} when both sides exist.
+  // A doc is either plain or vibe, so at most one of these is non-null.
   const [base, variant] = await Promise.all([
     getBaseSeedFor(doc),
     getVibeVariantFor(doc),
   ]);
-  const pair = base
-    ? { slug: base.meta.slug, label: "Compare with the plain run" }
+  const steer = base
+    ? { plain: base, vibe: doc, initialMode: "vibe" as const } // navigated to the vibe slug
     : variant
-      ? { slug: variant.meta.slug, label: "See the vibe-steered run" }
+      ? { plain: doc, vibe: variant, initialMode: "plain" as const } // navigated to the plain slug
       : null;
+
+  // When a pair exists the toggle owns all vibe display, so the header is seed-identity only
+  // (the plain doc carries no vibe block) with no cross-link. A lone seed keeps its own header.
+  const headerDoc = steer ? steer.plain : doc;
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-5 py-10">
-      <SeedHeader doc={doc} pair={pair} />
-      <CoverageStrip coverage={doc.coverage} meta={doc.meta} />
-
-      <section>
-        <h2 className="mb-4 flex items-baseline gap-2 text-xl font-semibold tracking-tight">
-          Recommendations
-          <span className="text-muted-foreground text-sm font-normal">
-            top {doc.results.length}, audio-scored first
-          </span>
-        </h2>
-        <ResultList results={doc.results} />
-      </section>
-
-      <TransparencyPanel doc={doc} />
+      <SeedHeader doc={headerDoc} />
+      {steer ? (
+        // The toggle owns every run-specific surface (funnel + list + transparency) so they all
+        // track the active run together — latency and the raw response body differ between the two
+        // runs, so pinning them outside the toggle would desync them from the visible list.
+        <VibeSteer
+          plain={steer.plain}
+          vibe={steer.vibe}
+          initialMode={steer.initialMode}
+        />
+      ) : (
+        <>
+          <CoverageStrip coverage={doc.coverage} meta={doc.meta} />
+          <section>
+            <h2 className="mb-4 flex items-baseline gap-2 text-xl font-semibold tracking-tight">
+              Recommendations
+              <span className="text-muted-foreground text-sm font-normal">
+                top {doc.results.length}, audio-scored first
+              </span>
+            </h2>
+            <ResultList results={doc.results} />
+          </section>
+          <TransparencyPanel doc={doc} />
+        </>
+      )}
     </div>
   );
 }

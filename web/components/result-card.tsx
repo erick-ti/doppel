@@ -1,4 +1,4 @@
-import { ExternalLink, Sparkles } from "lucide-react";
+import { ArrowDown, ArrowUp, ExternalLink, Sparkles } from "lucide-react";
 
 import { RawJsonDialog } from "@/components/raw-json-dialog";
 import { ScoreBreakdown } from "@/components/score-breakdown";
@@ -11,9 +11,62 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import type { RankDelta } from "@/lib/rank-delta";
 import type { BatchStats } from "@/lib/scores";
 import { cn } from "@/lib/utils";
 import type { ResultItem } from "@/types/recommendation";
+
+/**
+ * How this row moved versus the plain run — shown only on the vibe-steered side of the toggle.
+ * The visible glyph is aria-hidden; the full phrase rides on role="img" + aria-label so screen
+ * readers announce e.g. "Up 6 places versus the plain run" rather than a bare "6".
+ */
+function RankDeltaBadge({ delta }: { delta: RankDelta }) {
+  if (delta.kind === "same") {
+    return (
+      <span
+        role="img"
+        aria-label="Same rank as the plain run"
+        title="Same rank as the plain run"
+        className="text-muted-foreground inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-mono text-[11px] tabular-nums"
+      >
+        <span aria-hidden>— even</span>
+      </span>
+    );
+  }
+  if (delta.kind === "new") {
+    return (
+      <span
+        role="img"
+        aria-label="New under this vibe — absent from the plain run"
+        title="New under this vibe — absent from the plain run"
+        className="bg-audio/15 text-audio inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold tracking-wide uppercase"
+      >
+        <span aria-hidden>New</span>
+      </span>
+    );
+  }
+  const up = delta.kind === "up";
+  const label = `${up ? "Up" : "Down"} ${delta.by} ${delta.by === 1 ? "place" : "places"} vs the plain run`;
+  return (
+    <span
+      role="img"
+      aria-label={label}
+      title={label}
+      className={cn(
+        "inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 font-mono text-[11px] font-medium tabular-nums",
+        up ? "bg-emerald-500/15 text-emerald-400" : "bg-muted text-muted-foreground",
+      )}
+    >
+      {up ? (
+        <ArrowUp className="size-3" aria-hidden />
+      ) : (
+        <ArrowDown className="size-3" aria-hidden />
+      )}
+      <span aria-hidden>{delta.by}</span>
+    </span>
+  );
+}
 
 /**
  * One recommended track. Renders only real `ResultItem` fields, every nullable one guarded:
@@ -23,9 +76,12 @@ import type { ResultItem } from "@/types/recommendation";
 export function ResultCard({
   item,
   batch,
+  delta,
 }: {
   item: ResultItem;
   batch: BatchStats;
+  /** Rank movement vs the plain run — only supplied on the vibe-steered side of the toggle. */
+  delta?: RankDelta | null;
 }) {
   return (
     <Card className="gap-0 overflow-hidden py-0">
@@ -51,19 +107,22 @@ export function ResultCard({
             <p className="text-muted-foreground text-sm">{item.artist}</p>
           </div>
 
-          {item.was_audio_scored ? (
-            <Badge variant="audio" title="Reranked by the CLAP audio embedding">
-              <Sparkles aria-hidden />
-              CLAP-reranked
-            </Badge>
-          ) : (
-            <Badge
-              variant="muted"
-              title="Surfaced by cultural retrieval only — not audio-reranked"
-            >
-              cultural backfill
-            </Badge>
-          )}
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
+            {item.was_audio_scored ? (
+              <Badge variant="audio" title="Reranked by the CLAP audio embedding">
+                <Sparkles aria-hidden />
+                CLAP-reranked
+              </Badge>
+            ) : (
+              <Badge
+                variant="muted"
+                title="Surfaced by cultural retrieval only — not audio-reranked"
+              >
+                cultural backfill
+              </Badge>
+            )}
+            {delta && <RankDeltaBadge delta={delta} />}
+          </div>
         </div>
 
         {/* Cultural source chips */}

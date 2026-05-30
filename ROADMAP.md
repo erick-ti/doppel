@@ -87,10 +87,12 @@ Phases (each independently shippable; ~6.5–9.5 build-days total):
 - ✓ **Phase 0 — Data export** (shipped — PR #16): `scripts/export_showcase.py` + the shared
   `doppel/api/responses.py` wire-builder (export is byte-identical to the live API) + a source-failure
   secret-redaction fix; 10 curated seed JSONs exported (from the warm local corpus) to `web/public/seeds/`.
-- ☐ **Phase 1 — "Minimum impressive"**: Next.js scaffold + seed gallery + result cards with the
-  correct four-axis score breakdown.
-- ☐ **Phase 2 — "Wow" polish**: hero landing + real-telemetry funnel animation + vibe-steer toggle +
-  System-Transparency/degradation panel.
+- ✓ **Phase 1 — "Minimum impressive"** (shipped — PR #17; **live on Vercel** at
+  https://doppel-music.vercel.app): Next.js 16 static-export app (App Router + TS + Tailwind v4 +
+  hand-authored shadcn-style ui), seed gallery + result cards with the correct four-axis score breakdown
+  + transparency panel. Analytics + README showcase note in PR #18.
+- → **Phase 2 — "Wow" polish (CURRENT)**: hero landing + real-telemetry funnel animation + vibe-steer
+  toggle + System-Transparency/degradation panel.
 - ☐ **Phase 3 — Technical-depth layer**: `/how-it-works` (architecture-evolution narrative, competitive
   wedge, eval-evidence + ablation viz) + per-result raw-JSON / "Engineer's note" disclosures.
 - ☐ **Phase 4 — Recorded deep-dive** (the "endgame masterpiece"): a 6–8 min SSH-tunnel screencast of

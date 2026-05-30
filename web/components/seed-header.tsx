@@ -4,15 +4,14 @@ import { ArrowLeft, ExternalLink, Wand2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { SeedDocument } from "@/types/recommendation";
 
-/** Header for a results view: seed identity, echoed vibe, MusicBrainz deep-link, pair cross-link. */
-export function SeedHeader({
-  doc,
-  pair,
-}: {
-  doc: SeedDocument;
-  /** The paired run (plain <-> vibe-steered), if one was exported. */
-  pair: { slug: string; label: string } | null;
-}) {
+/**
+ * Header for a results view: seed identity, echoed vibe, MusicBrainz deep-link.
+ *
+ * When a plain<->vibe pair exists the page renders the toggle (which owns all vibe display) and
+ * passes the plain doc here, so the vibe badge/quote stay dormant; they only render for a lone
+ * vibe seed shown without a toggle.
+ */
+export function SeedHeader({ doc }: { doc: SeedDocument }) {
   const vibe = doc.vibe != null && doc.vibe.trim().length > 0;
   const mbUrl = doc.seed.mbid
     ? `https://musicbrainz.org/recording/${doc.seed.mbid}`
@@ -67,16 +66,6 @@ export function SeedHeader({
           </a>
         ) : (
           <span>No MBID resolved for the seed</span>
-        )}
-
-        {pair && (
-          <Link
-            href={`/seed/${pair.slug}`}
-            className="text-audio hover:text-audio/80 inline-flex items-center gap-1.5 font-medium transition-colors"
-          >
-            <Wand2 className="size-3.5" aria-hidden />
-            {pair.label}
-          </Link>
         )}
       </div>
     </div>
