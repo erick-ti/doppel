@@ -14,8 +14,9 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+# Anchored to repo root so these Python-packaging dirs don't swallow the JS app's web/lib (and web/lib64).
+/lib/
+/lib64/
 parts/
 sdist/
 var/
