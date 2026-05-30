@@ -1,0 +1,204 @@
+{
+  "status": "succeeded",
+  "query_id": 65,
+  "seed": {
+    "title": "The Less I Know the Better",
+    "artist": "Tame Impala",
+    "mbid": "78be434c-0908-458f-9693-f16cdebb68ef"
+  },
+  "vibe": null,
+  "results": [
+    {
+      "position": 1,
+      "title": "Multi‐Love",
+      "artist": "Unknown Mortal Orchestra",
+      "mbid": "8ca037cb-59d5-406d-8b87-bc17ad399713",
+      "deezer_url": "https://www.deezer.com/track/99241562",
+      "was_audio_scored": true,
+      "audio_score": 0.945997,
+      "vibe_text_score": null,
+      "combined_score": 1.0,
+      "cultural_score": 0.022762,
+      "sources": [
+        "lastfm",
+        "listenbrainz"
+      ],
+      "rationale": "The highest audio similarity score here (0.946) points to a very close sonic match to the seed, and both LastFM and ListenBrainz listeners consistently link Unknown Mortal Orchestra's 'Multi-Love' with Tame Impala, making this the strongest recommendation by every available signal."
+    },
+    {
+      "position": 2,
+      "title": "Stargazing",
+      "artist": "The Neighbourhood",
+      "mbid": "dbfc68ee-6888-46f6-9cbe-2ccb103a7d4f",
+      "deezer_url": "https://www.deezer.com/track/1168839002",
+      "was_audio_scored": true,
+      "audio_score": 0.906213,
+      "vibe_text_score": null,
+      "combined_score": 0.926504,
+      "cultural_score": 0.012195,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "A strong audio similarity of 0.906 and shared LastFM listener data both support this recommendation, suggesting 'Stargazing' sits in a sonically similar space to the seed."
+    },
+    {
+      "position": 3,
+      "title": "Borderline",
+      "artist": "Tame Impala",
+      "mbid": "6c337c9d-8637-4720-9af2-d914019149b8",
+      "deezer_url": "https://www.deezer.com/track/872345282",
+      "was_audio_scored": true,
+      "audio_score": 0.903081,
+      "vibe_text_score": null,
+      "combined_score": 0.920718,
+      "cultural_score": 0.016129,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "As another Tame Impala track with a 0.903 audio similarity to the seed, 'Borderline' is almost self-evidently a natural follow-up, confirmed by LastFM listener co-plays."
+    },
+    {
+      "position": 4,
+      "title": "Electric Feel",
+      "artist": "MGMT",
+      "mbid": "987a88ef-6f47-479c-a0ad-1a17aa85e8ed",
+      "deezer_url": "https://www.deezer.com/track/536484",
+      "was_audio_scored": true,
+      "audio_score": 0.900413,
+      "vibe_text_score": null,
+      "combined_score": 0.915789,
+      "cultural_score": 0.016129,
+      "sources": [
+        "listenbrainz"
+      ],
+      "rationale": "MGMT's 'Electric Feel' scores 0.9 in audio similarity and is linked via ListenBrainz listener taste data, indicating both a sonic closeness and a shared fanbase with the seed."
+    },
+    {
+      "position": 5,
+      "title": "Stressed Out",
+      "artist": "twenty one pilots",
+      "mbid": "e2b9b868-5aa3-400a-aae2-7c7e9c7d35fd",
+      "deezer_url": "https://www.deezer.com/track/99976952",
+      "was_audio_scored": true,
+      "audio_score": 0.891718,
+      "vibe_text_score": null,
+      "combined_score": 0.899726,
+      "cultural_score": 0.011364,
+      "sources": [
+        "listenbrainz"
+      ],
+      "rationale": "'Stressed Out' achieves a solid 0.892 audio similarity and appears in ListenBrainz listener data alongside the seed, suggesting meaningful overlap in how audiences experience both tracks."
+    },
+    {
+      "position": 6,
+      "title": "Fallen Star",
+      "artist": "The Neighbourhood",
+      "mbid": "c45e50b6-d07e-47d8-9335-b1d594bf8eb5",
+      "deezer_url": "https://www.deezer.com/track/1503420632",
+      "was_audio_scored": true,
+      "audio_score": 0.885262,
+      "vibe_text_score": null,
+      "combined_score": 0.8878,
+      "cultural_score": 0.014286,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "With an 0.885 audio similarity and LastFM cultural overlap, this second Neighbourhood entry reinforces that the artist's sound aligns well with the seed, even if slightly less closely than 'Stargazing'."
+    },
+    {
+      "position": 7,
+      "title": "Lamb's Wool",
+      "artist": "Foster the People",
+      "mbid": "266dc6be-2564-4840-9d95-d2e6225f7813",
+      "deezer_url": "https://www.deezer.com/track/940191612",
+      "was_audio_scored": true,
+      "audio_score": 0.87963,
+      "vibe_text_score": null,
+      "combined_score": 0.877394,
+      "cultural_score": 0.011494,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Foster the People's 'Lamb's Wool' scores 0.88 in audio similarity and surfaces via LastFM listener data, pointing to a consistent sonic and cultural connection with the seed."
+    },
+    {
+      "position": 8,
+      "title": "Imagination",
+      "artist": "Foster the People",
+      "mbid": "41115c35-d5a0-4635-8845-d3169be4f927",
+      "deezer_url": "https://www.deezer.com/track/696429242",
+      "was_audio_scored": true,
+      "audio_score": 0.876362,
+      "vibe_text_score": null,
+      "combined_score": 0.871356,
+      "cultural_score": 0.013889,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Also by Foster the People and scoring 0.876, 'Imagination' is backed by LastFM data, suggesting the same artist-level sonic affinity with the seed as 'Lamb's Wool', just marginally less close."
+    },
+    {
+      "position": 9,
+      "title": "When You Die",
+      "artist": "MGMT",
+      "mbid": "45aff48a-6200-4109-b23c-f7fc66b4befd",
+      "deezer_url": "https://www.deezer.com/track/457602432",
+      "was_audio_scored": true,
+      "audio_score": 0.867942,
+      "vibe_text_score": null,
+      "combined_score": 0.855803,
+      "cultural_score": 0.023923,
+      "sources": [
+        "lastfm",
+        "listenbrainz"
+      ],
+      "rationale": "MGMT's 'When You Die' earns a 0.868 audio similarity and appears on both LastFM and ListenBrainz, giving it cross-platform cultural support alongside a meaningful sonic likeness to the seed."
+    },
+    {
+      "position": 10,
+      "title": "You Won't Be Missing That Part of Me",
+      "artist": "Melody's Echo Chamber",
+      "mbid": "2554a952-2211-4c2f-a822-97b825bf24ce",
+      "deezer_url": "https://www.deezer.com/track/139939785",
+      "was_audio_scored": true,
+      "audio_score": 0.847464,
+      "vibe_text_score": null,
+      "combined_score": 0.817972,
+      "cultural_score": 0.0125,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Melody's Echo Chamber's entry has the lowest audio similarity here (0.847) but still registers a notable sonic resemblance to the seed, supported by LastFM listener co-occurrence data."
+    }
+  ],
+  "degradation": {
+    "seed_audio_scored": true,
+    "cultural_backfill_count": 0,
+    "rationales_available": true,
+    "degraded_sources": {}
+  },
+  "coverage": {
+    "candidate_count": 179,
+    "resolve_attempted": 75,
+    "resolved_found": 75,
+    "resolved_rejected": 0,
+    "resolved_not_found": 0,
+    "found_ratio": 1.0,
+    "audio_scored": 10,
+    "backfill": 0,
+    "embeddings_cache_hits": 75,
+    "embeddings_computed": 0,
+    "latency_ms": 17023
+  },
+  "meta": {
+    "slug": "the-less-i-know-the-better",
+    "genre": "indie",
+    "exported_at": "2026-05-29T07:21:28+00:00",
+    "git_sha": "f62b468",
+    "git_dirty": true,
+    "clap_model_version": "laion/larger_clap_music_and_speech+mean",
+    "alpha": 0.7,
+    "beta": 0.3,
+    "resolve_candidate_limit": 75
+  }
+}

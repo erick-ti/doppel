@@ -1,0 +1,204 @@
+{
+  "status": "succeeded",
+  "query_id": 59,
+  "seed": {
+    "title": "Midnight City",
+    "artist": "M83",
+    "mbid": "e83bc6ba-eff9-412c-8c11-5153672f25e7"
+  },
+  "vibe": null,
+  "results": [
+    {
+      "position": 1,
+      "title": "Steve McQueen",
+      "artist": "M83",
+      "mbid": "77ab9e03-bcc4-47f3-b566-c793e9ced1ca",
+      "deezer_url": "https://www.deezer.com/track/75572726",
+      "was_audio_scored": true,
+      "audio_score": 0.88326,
+      "vibe_text_score": null,
+      "combined_score": 1.0,
+      "cultural_score": 0.015625,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Another M83 track, 'Steve McQueen' scores the highest audio similarity (0.883) of all candidates, making it the closest sonic match to 'Midnight City,' and is further backed by last.fm listener data."
+    },
+    {
+      "position": 2,
+      "title": "Trying to Be Cool",
+      "artist": "Phoenix",
+      "mbid": "943b4939-c39f-4287-901c-ac47a06eed54",
+      "deezer_url": "https://www.deezer.com/track/3025925711",
+      "was_audio_scored": true,
+      "audio_score": 0.819818,
+      "vibe_text_score": null,
+      "combined_score": 0.891005,
+      "cultural_score": 0.011364,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Phoenix's 'Trying to Be Cool' shows strong audio similarity (0.82) to 'Midnight City' and is supported by last.fm cultural data, suggesting it resonates with the same listener base drawn to M83's synth-driven indie sound."
+    },
+    {
+      "position": 3,
+      "title": "Tongue Tied",
+      "artist": "Grouplove",
+      "mbid": "00814269-b88d-4999-980c-31f735cc0e82",
+      "deezer_url": "https://www.deezer.com/track/13544758",
+      "was_audio_scored": true,
+      "audio_score": 0.807539,
+      "vibe_text_score": null,
+      "combined_score": 0.869909,
+      "cultural_score": 0.014085,
+      "sources": [
+        "listenbrainz"
+      ],
+      "rationale": "Grouplove's 'Tongue Tied' earns a solid audio similarity score (0.808) against 'Midnight City' and is surfaced by listenbrainz listener patterns, pointing to a shared sonic character."
+    },
+    {
+      "position": 4,
+      "title": "Safe and Sound",
+      "artist": "Capital Cities",
+      "mbid": "759d5190-97a4-48b8-90d4-c298dab9c72e",
+      "deezer_url": "https://www.deezer.com/track/2976584651",
+      "was_audio_scored": true,
+      "audio_score": 0.802783,
+      "vibe_text_score": null,
+      "combined_score": 0.861738,
+      "cultural_score": 0.029206,
+      "sources": [
+        "lastfm",
+        "listenbrainz"
+      ],
+      "rationale": "Capital Cities' 'Safe and Sound' scores 0.803 in audio similarity and is backed by both last.fm and listenbrainz, making it one of the most culturally well-supported recommendations here alongside a strong sonic match."
+    },
+    {
+      "position": 5,
+      "title": "Kids",
+      "artist": "MGMT",
+      "mbid": "c741a7ef-dd33-4c79-a4d4-8745d9675620",
+      "deezer_url": "https://www.deezer.com/track/536485",
+      "was_audio_scored": true,
+      "audio_score": 0.785075,
+      "vibe_text_score": null,
+      "combined_score": 0.831316,
+      "cultural_score": 0.031514,
+      "sources": [
+        "lastfm",
+        "listenbrainz"
+      ],
+      "rationale": "MGMT's 'Kids' carries a good audio similarity (0.785) to 'Midnight City' and is endorsed by both last.fm and listenbrainz communities, reflecting a well-established cultural kinship with M83's anthemic style."
+    },
+    {
+      "position": 6,
+      "title": "Sweet Disposition",
+      "artist": "The Temper Trap",
+      "mbid": "9c57ad32-9688-4ef5-baa2-b79e4d2404ae",
+      "deezer_url": "https://www.deezer.com/track/3822464",
+      "was_audio_scored": true,
+      "audio_score": 0.777698,
+      "vibe_text_score": null,
+      "combined_score": 0.818642,
+      "cultural_score": 0.013514,
+      "sources": [
+        "listenbrainz"
+      ],
+      "rationale": "The Temper Trap's 'Sweet Disposition' shows a notable audio similarity (0.778) to 'Midnight City' and is surfaced by listenbrainz listener taste data as a compatible listen."
+    },
+    {
+      "position": 7,
+      "title": "Houdini",
+      "artist": "Foster the People",
+      "mbid": "c373d6db-4340-4ec5-891a-8130b4440ded",
+      "deezer_url": "https://www.deezer.com/track/15546835",
+      "was_audio_scored": true,
+      "audio_score": 0.777669,
+      "vibe_text_score": null,
+      "combined_score": 0.818591,
+      "cultural_score": 0.011765,
+      "sources": [
+        "listenbrainz"
+      ],
+      "rationale": "Foster the People's 'Houdini' matches 'Midnight City' with an audio similarity of 0.778 and is supported by listenbrainz data, suggesting overlapping audiences for these two tracks."
+    },
+    {
+      "position": 8,
+      "title": "Alive",
+      "artist": "Empire of the Sun",
+      "mbid": "009bf814-1f1f-4ecd-9ff9-38e62a313702",
+      "deezer_url": "https://www.deezer.com/track/67625876",
+      "was_audio_scored": true,
+      "audio_score": 0.77023,
+      "vibe_text_score": null,
+      "combined_score": 0.805812,
+      "cultural_score": 0.014493,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Empire of the Sun's 'Alive' registers an audio similarity of 0.77 to 'Midnight City' and is recommended by last.fm listener patterns, indicating a culturally recognized connection between these acts."
+    },
+    {
+      "position": 9,
+      "title": "Carried Away",
+      "artist": "Passion Pit",
+      "mbid": "87dbc086-4144-4ff9-8465-05a1371166f1",
+      "deezer_url": "https://www.deezer.com/track/46226321",
+      "was_audio_scored": true,
+      "audio_score": 0.76507,
+      "vibe_text_score": null,
+      "combined_score": 0.796947,
+      "cultural_score": 0.012048,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Passion Pit's 'Carried Away' scores 0.765 in audio similarity and is backed by last.fm data, pointing to a sonic and cultural affinity with 'Midnight City.'"
+    },
+    {
+      "position": 10,
+      "title": "Take a Walk",
+      "artist": "Passion Pit",
+      "mbid": "080d1de1-d1d0-4818-b25d-49f9451ab7cb",
+      "deezer_url": "https://www.deezer.com/track/46226301",
+      "was_audio_scored": true,
+      "audio_score": 0.764921,
+      "vibe_text_score": null,
+      "combined_score": 0.796691,
+      "cultural_score": 0.013699,
+      "sources": [
+        "listenbrainz"
+      ],
+      "rationale": "Also by Passion Pit, 'Take a Walk' shares the same audio similarity score (0.765) as 'Carried Away' and is surfaced by listenbrainz, further reinforcing Passion Pit's overall proximity to M83's sound."
+    }
+  ],
+  "degradation": {
+    "seed_audio_scored": true,
+    "cultural_backfill_count": 0,
+    "rationales_available": true,
+    "degraded_sources": {}
+  },
+  "coverage": {
+    "candidate_count": 180,
+    "resolve_attempted": 75,
+    "resolved_found": 75,
+    "resolved_rejected": 0,
+    "resolved_not_found": 0,
+    "found_ratio": 1.0,
+    "audio_scored": 10,
+    "backfill": 0,
+    "embeddings_cache_hits": 75,
+    "embeddings_computed": 0,
+    "latency_ms": 10871
+  },
+  "meta": {
+    "slug": "midnight-city",
+    "genre": "electronic",
+    "exported_at": "2026-05-29T07:19:14+00:00",
+    "git_sha": "f62b468",
+    "git_dirty": true,
+    "clap_model_version": "laion/larger_clap_music_and_speech+mean",
+    "alpha": 0.7,
+    "beta": 0.3,
+    "resolve_candidate_limit": 75
+  }
+}

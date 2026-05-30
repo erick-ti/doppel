@@ -1,0 +1,208 @@
+{
+  "status": "succeeded",
+  "query_id": 61,
+  "seed": {
+    "title": "Dreams",
+    "artist": "Fleetwood Mac",
+    "mbid": "248cc9d1-97ea-493e-84d4-4c5ec718683b"
+  },
+  "vibe": null,
+  "results": [
+    {
+      "position": 1,
+      "title": "Here Comes the Sun",
+      "artist": "The Beatles",
+      "mbid": "440f60e8-0b25-4ec4-abb1-c6beec624ab0",
+      "deezer_url": "https://www.deezer.com/track/116348464",
+      "was_audio_scored": true,
+      "audio_score": 0.851348,
+      "vibe_text_score": null,
+      "combined_score": 1.0,
+      "cultural_score": 0.012987,
+      "sources": [
+        "listenbrainz"
+      ],
+      "rationale": "A strong audio similarity (0.851) to 'Dreams' makes this the closest sonic match in the list, and listenbrainz listener-taste data further backs the pairing."
+    },
+    {
+      "position": 2,
+      "title": "The Chain",
+      "artist": "Fleetwood Mac",
+      "mbid": "cd06c484-9319-4376-a104-504871e19756",
+      "deezer_url": "https://www.deezer.com/track/63480992",
+      "was_audio_scored": true,
+      "audio_score": 0.807798,
+      "vibe_text_score": null,
+      "combined_score": 0.920981,
+      "cultural_score": 0.016129,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "As a fellow Fleetwood Mac track with solid audio similarity (0.808) and lastfm cultural support, 'The Chain' is a natural companion from the same band and era."
+    },
+    {
+      "position": 3,
+      "title": "The Logical Song",
+      "artist": "Supertramp",
+      "mbid": "97f82215-ff75-48e5-8d59-ac7145bfb3e3",
+      "deezer_url": "https://www.deezer.com/track/2503274",
+      "was_audio_scored": true,
+      "audio_score": 0.788846,
+      "vibe_text_score": null,
+      "combined_score": 0.886594,
+      "cultural_score": 0.02578,
+      "sources": [
+        "lastfm",
+        "listenbrainz"
+      ],
+      "rationale": "Both lastfm and listenbrainz listeners link this Supertramp track to the seed, and a strong audio similarity (0.789) suggests a meaningful sonic resemblance to 'Dreams.'"
+    },
+    {
+      "position": 4,
+      "title": "Tiny Dancer",
+      "artist": "Elton John",
+      "mbid": "d63bf39f-ec30-4f9f-b5a1-1397756016a3",
+      "deezer_url": "https://www.deezer.com/track/1151503",
+      "was_audio_scored": true,
+      "audio_score": 0.77922,
+      "vibe_text_score": null,
+      "combined_score": 0.869127,
+      "cultural_score": 0.029412,
+      "sources": [
+        "lastfm",
+        "listenbrainz"
+      ],
+      "rationale": "Supported by both cultural sources and a high audio similarity (0.779), this Elton John classic lands close to 'Dreams' sonically and is a consistent favorite among fans of the seed."
+    },
+    {
+      "position": 5,
+      "title": "More Than a Feeling",
+      "artist": "Boston",
+      "mbid": "5698b33c-eada-493e-ba34-636acc149cf8",
+      "deezer_url": "https://www.deezer.com/track/84340025",
+      "was_audio_scored": true,
+      "audio_score": 0.775866,
+      "vibe_text_score": null,
+      "combined_score": 0.863041,
+      "cultural_score": 0.026316,
+      "sources": [
+        "lastfm",
+        "listenbrainz"
+      ],
+      "rationale": "With audio similarity of 0.776 and agreement across both lastfm and listenbrainz, this Boston track sits firmly in the same classic-rock sonic space as 'Dreams.'"
+    },
+    {
+      "position": 6,
+      "title": "Edge of Seventeen",
+      "artist": "Stevie Nicks",
+      "mbid": "e13a455e-58a2-433d-9dcf-9523126569e4",
+      "deezer_url": "https://www.deezer.com/track/680601",
+      "was_audio_scored": true,
+      "audio_score": 0.765004,
+      "vibe_text_score": null,
+      "combined_score": 0.843333,
+      "cultural_score": 0.031025,
+      "sources": [
+        "lastfm",
+        "listenbrainz"
+      ],
+      "rationale": "Stevie Nicks is of course closely tied to Fleetwood Mac, and the audio similarity (0.765) plus cross-source cultural data make this a well-supported recommendation."
+    },
+    {
+      "position": 7,
+      "title": "Breakfast in America",
+      "artist": "Supertramp",
+      "mbid": "da4b050d-a32a-4159-aee9-77e1fc7f3e13",
+      "deezer_url": "https://www.deezer.com/track/2503276",
+      "was_audio_scored": true,
+      "audio_score": 0.752176,
+      "vibe_text_score": null,
+      "combined_score": 0.820058,
+      "cultural_score": 0.010526,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Lastfm listeners pair this Supertramp track with 'Dreams,' and an audio similarity of 0.752 indicates a reasonable sonic closeness, building on the Supertramp connection already seen at position 3."
+    },
+    {
+      "position": 8,
+      "title": "Bohemian Rhapsody",
+      "artist": "Queen",
+      "mbid": "b1a9c0e9-d987-4042-ae91-78d6a3267d69",
+      "deezer_url": "https://www.deezer.com/track/568115892",
+      "was_audio_scored": true,
+      "audio_score": 0.748362,
+      "vibe_text_score": null,
+      "combined_score": 0.813137,
+      "cultural_score": 0.027027,
+      "sources": [
+        "lastfm",
+        "listenbrainz"
+      ],
+      "rationale": "Surfaced by both lastfm and listenbrainz, 'Bohemian Rhapsody' is a consistent cultural neighbor of 'Dreams,' though its audio similarity (0.748) is somewhat lower, reflecting its more distinctive sonic identity."
+    },
+    {
+      "position": 9,
+      "title": "Crazy on You",
+      "artist": "Heart",
+      "mbid": "4b7d721b-bfee-4d72-a204-11fd39255ac3",
+      "deezer_url": "https://www.deezer.com/track/3127720",
+      "was_audio_scored": true,
+      "audio_score": 0.742181,
+      "vibe_text_score": null,
+      "combined_score": 0.801922,
+      "cultural_score": 0.011236,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Lastfm listener data connects this Heart track to 'Dreams,' and an audio similarity of 0.742 provides moderate sonic backing for the pairing."
+    },
+    {
+      "position": 10,
+      "title": "You’re So Vain",
+      "artist": "Carly Simon",
+      "mbid": "27089139-92c0-499c-9597-c66c9b11bdfd",
+      "deezer_url": "https://www.deezer.com/track/766109",
+      "was_audio_scored": true,
+      "audio_score": 0.737482,
+      "vibe_text_score": null,
+      "combined_score": 0.793397,
+      "cultural_score": 0.019417,
+      "sources": [
+        "lastfm",
+        "listenbrainz"
+      ],
+      "rationale": "Both lastfm and listenbrainz place this Carly Simon classic alongside 'Dreams' in listener taste, and an audio similarity of 0.737 offers reasonable sonic grounding for the recommendation."
+    }
+  ],
+  "degradation": {
+    "seed_audio_scored": true,
+    "cultural_backfill_count": 0,
+    "rationales_available": true,
+    "degraded_sources": {}
+  },
+  "coverage": {
+    "candidate_count": 169,
+    "resolve_attempted": 75,
+    "resolved_found": 75,
+    "resolved_rejected": 0,
+    "resolved_not_found": 0,
+    "found_ratio": 1.0,
+    "audio_scored": 10,
+    "backfill": 0,
+    "embeddings_cache_hits": 75,
+    "embeddings_computed": 0,
+    "latency_ms": 11422
+  },
+  "meta": {
+    "slug": "dreams",
+    "genre": "pre-2000",
+    "exported_at": "2026-05-29T07:19:42+00:00",
+    "git_sha": "f62b468",
+    "git_dirty": true,
+    "clap_model_version": "laion/larger_clap_music_and_speech+mean",
+    "alpha": 0.7,
+    "beta": 0.3,
+    "resolve_candidate_limit": 75
+  }
+}

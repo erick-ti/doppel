@@ -1,0 +1,205 @@
+{
+  "status": "succeeded",
+  "query_id": 62,
+  "seed": {
+    "title": "Despacito",
+    "artist": "Luis Fonsi",
+    "mbid": "1109d8da-ce4a-4739-9414-242dc3e9b81c"
+  },
+  "vibe": null,
+  "results": [
+    {
+      "position": 1,
+      "title": "Date La Vuelta",
+      "artist": "Luis Fonsi",
+      "mbid": "0541e257-f381-4e85-9d5a-3c22763a2e4c",
+      "deezer_url": "https://www.deezer.com/track/669342482",
+      "was_audio_scored": true,
+      "audio_score": 0.905973,
+      "vibe_text_score": null,
+      "combined_score": 1.0,
+      "cultural_score": 0.012821,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "As a fellow Luis Fonsi track, it shares the same artist DNA and scores an exceptionally high audio similarity (0.906), making it the closest sonic match to Despacito in this list."
+    },
+    {
+      "position": 2,
+      "title": "Danza Kuduro",
+      "artist": "Don Omar",
+      "mbid": "da585d52-389a-4282-bdce-5b9939fef76a",
+      "deezer_url": "https://www.deezer.com/track/7600267",
+      "was_audio_scored": true,
+      "audio_score": 0.899346,
+      "vibe_text_score": null,
+      "combined_score": 0.987978,
+      "cultural_score": 0.016393,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Danza Kuduro posts a very high audio similarity (0.899) to Despacito and was surfaced by Last.fm listener data, suggesting fans of one frequently gravitate to the other."
+    },
+    {
+      "position": 3,
+      "title": "Bailando",
+      "artist": "Enrique Iglesias",
+      "mbid": "1b5261e0-3fe5-4874-a691-6f953c19a436",
+      "deezer_url": "https://www.deezer.com/track/765849012",
+      "was_audio_scored": true,
+      "audio_score": 0.892085,
+      "vibe_text_score": null,
+      "combined_score": 0.974804,
+      "cultural_score": 0.015873,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Bailando by Enrique Iglesias carries a strong audio similarity (0.892) to Despacito and is backed by Last.fm cultural overlap, reflecting its place in the same Latin pop mainstream."
+    },
+    {
+      "position": 4,
+      "title": "Reggaetón lento (Bailemos)",
+      "artist": "CNCO",
+      "mbid": "47b5a941-72bb-40c9-924a-9b34c8f51914",
+      "deezer_url": "https://www.deezer.com/track/130850550",
+      "was_audio_scored": true,
+      "audio_score": 0.885483,
+      "vibe_text_score": null,
+      "combined_score": 0.962826,
+      "cultural_score": 0.027149,
+      "sources": [
+        "lastfm",
+        "listenbrainz"
+      ],
+      "rationale": "Reggaetón lento scores 0.885 in audio similarity and is the only candidate surfaced by both Last.fm and ListenBrainz, indicating broad cross-platform listener overlap with Despacito."
+    },
+    {
+      "position": 5,
+      "title": "SÚBEME LA RADIO",
+      "artist": "Enrique Iglesias feat. Descemer Bueno, Zion & Lennox",
+      "mbid": "0e22bef4-0e8b-4ad8-a524-7ae27b7c9714",
+      "deezer_url": "https://www.deezer.com/track/142748736",
+      "was_audio_scored": true,
+      "audio_score": 0.88481,
+      "vibe_text_score": null,
+      "combined_score": 0.961604,
+      "cultural_score": 0.013889,
+      "sources": [
+        "listenbrainz"
+      ],
+      "rationale": "SÚBEME LA RADIO matches Despacito's audio profile closely (0.885) and was flagged by ListenBrainz listeners as a companion track, pointing to a shared sonic and cultural space."
+    },
+    {
+      "position": 6,
+      "title": "Bailando Bachata",
+      "artist": "Chayanne",
+      "mbid": "161b914e-ed09-4fa7-a120-9e15301df8db",
+      "deezer_url": "https://www.deezer.com/track/2280832027",
+      "was_audio_scored": true,
+      "audio_score": 0.880681,
+      "vibe_text_score": null,
+      "combined_score": 0.954114,
+      "cultural_score": 0.011628,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Bailando Bachata by Chayanne achieves a solid audio similarity of 0.881 to Despacito, with Last.fm listener data further confirming its appeal to the same audience."
+    },
+    {
+      "position": 7,
+      "title": "Mi Gente",
+      "artist": "J Balvin",
+      "mbid": "efffd9f8-298c-4ce8-9770-ef385b0d1832",
+      "deezer_url": "https://www.deezer.com/track/376989861",
+      "was_audio_scored": true,
+      "audio_score": 0.873282,
+      "vibe_text_score": null,
+      "combined_score": 0.940691,
+      "cultural_score": 0.016129,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Mi Gente by J Balvin registers a strong audio similarity (0.873) alongside Last.fm cultural support, placing it firmly in the same Latin urban sound territory as Despacito."
+    },
+    {
+      "position": 8,
+      "title": "Me rehúso",
+      "artist": "Danny Ocean",
+      "mbid": "095b6855-8eba-4ee1-ab57-aa26c65d5a55",
+      "deezer_url": "https://www.deezer.com/track/373531191",
+      "was_audio_scored": true,
+      "audio_score": 0.85661,
+      "vibe_text_score": null,
+      "combined_score": 0.910443,
+      "cultural_score": 0.017864,
+      "sources": [
+        "lastfm",
+        "listenbrainz"
+      ],
+      "rationale": "Me rehúso lands at 0.857 audio similarity and is supported by both Last.fm and ListenBrainz, suggesting it resonates with Despacito listeners across multiple taste communities."
+    },
+    {
+      "position": 9,
+      "title": "El amante",
+      "artist": "Nicky Jam",
+      "mbid": "e463612d-9898-4948-9f5c-5eca7dc99b2d",
+      "deezer_url": "https://www.deezer.com/track/140421777",
+      "was_audio_scored": true,
+      "audio_score": 0.856608,
+      "vibe_text_score": null,
+      "combined_score": 0.910438,
+      "cultural_score": 0.025327,
+      "sources": [
+        "lastfm",
+        "listenbrainz"
+      ],
+      "rationale": "El amante by Nicky Jam ties at 0.857 audio similarity with dual-source cultural backing (Last.fm and ListenBrainz), reflecting consistent listener crossover with Despacito."
+    },
+    {
+      "position": 10,
+      "title": "Run Up",
+      "artist": "Major Lazer feat. PARTYNEXTDOOR & Nicki Minaj",
+      "mbid": "31eca135-d5d5-4d50-81d5-9f53da861d7b",
+      "deezer_url": "https://www.deezer.com/track/2347316775",
+      "was_audio_scored": true,
+      "audio_score": 0.855961,
+      "vibe_text_score": null,
+      "combined_score": 0.909266,
+      "cultural_score": 0.011905,
+      "sources": [
+        "listenbrainz"
+      ],
+      "rationale": "Run Up has a respectable audio similarity (0.856) and was surfaced by ListenBrainz; the Major Lazer-led, reggaeton-inflected production appears to share enough sonic qualities with Despacito to attract overlapping listeners."
+    }
+  ],
+  "degradation": {
+    "seed_audio_scored": true,
+    "cultural_backfill_count": 0,
+    "rationales_available": true,
+    "degraded_sources": {}
+  },
+  "coverage": {
+    "candidate_count": 192,
+    "resolve_attempted": 75,
+    "resolved_found": 74,
+    "resolved_rejected": 0,
+    "resolved_not_found": 1,
+    "found_ratio": 0.987,
+    "audio_scored": 10,
+    "backfill": 0,
+    "embeddings_cache_hits": 71,
+    "embeddings_computed": 0,
+    "latency_ms": 11380
+  },
+  "meta": {
+    "slug": "despacito",
+    "genre": "non-english",
+    "exported_at": "2026-05-29T07:19:55+00:00",
+    "git_sha": "f62b468",
+    "git_dirty": true,
+    "clap_model_version": "laion/larger_clap_music_and_speech+mean",
+    "alpha": 0.7,
+    "beta": 0.3,
+    "resolve_candidate_limit": 75
+  }
+}
