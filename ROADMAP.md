@@ -38,7 +38,11 @@ Graceful degradation:
 - Seed without preview → cultural-only results
 - Fewer than 10 audio-scored candidates → backfill with culturally ranked results via Reciprocal Rank Fusion
 
-## Current Milestone
+## Final Milestone — v1 COMPLETE (wrapped 2026-05-28)
+
+**v1 is formally complete and wrapped (2026-05-28).** Day 7 below was the last planned v1 milestone —
+all ✓ items shipped; the unchecked items are deferred-beyond-v1 and condition-gated (none a blocker).
+The active milestone is now **v1.1 — Showcase Frontend** (below).
 
 **Day 7 — VPS deploy + first eval round shipped** (PR #8 → `4277951`, live on a Hetzner CX33 — cold
 `/recommend` 701 s / warm 12 s validated in prod, 2026-05-27; the `eval/` harness drove a pilot + 19-seed
@@ -63,10 +67,46 @@ adversarial reviews (rationale in DECISIONS.md):
 
 _Day 0 (external dependency validation) — **complete, verdict GO** (2026-05-21). Day 1-2 (matcher/resolver) — **complete, merged 2026-05-21** (PR #2): match verification, provider-informed canonicalization, and cover/ISRC/artist-MBID hardening. Day 3 (candidate aggregator) — **complete, merged 2026-05-22** (PR #3): Last.fm + ListenBrainz sources, conservative dedupe, RRF (k=60), Gate-1, per-source isolation/observability. Day 4 (CLAP embedder + similarity scoring) — **complete, merged 2026-05-23** (PR #4): in-memory PyAV decode, deterministic duration-weighted window pooling, audio (+ optional vibe-text) cosine with within-batch min-max + α/β fusion, and hardened preview/text input guards. Day 5 (full database schema + asyncpg access layer) — **complete 2026-05-23** (PR #5): Postgres 16 + pgvector (`tracks`/`audio_assets`/`canonical_lookups`/`embeddings`/`query_logs`), a checksum-guarded raw-SQL migration runner, and the cache/corpus access layer. Day 6 (LLM explainer + FastAPI `/recommend`) — **complete, merged 2026-05-24** (PR #6 → `7ac120b`): the shared inline/worker `run_pipeline` (two async gates, cache-first resolve, ephemeral embed, scoring + cultural backfill), a degradable Claude explainer, the ARQ worker, FastAPI `/recommend` + poll, migration 0002 (telemetry + result snapshot), hardened across three adversarial-review rounds. See SESSION_NOTES.md / DECISIONS.md._
 
+## v1.1 — Showcase Frontend (CURRENT — started 2026-05-28)
+
+A public-safe showcase frontend that demonstrates Doppel to any visitor — instant first-glance value + a
+verifiable technical-depth layer — **WITHOUT** exposing the live backend, persisting audio, or doing
+request-time inference. Deliberately crosses the v1 "Frontend/UI" Non-Goal as a conscious post-v1
+scope decision. Full plan + design rationale in `V1.1_SHOWCASE_PLAN.md`; the wrap/scope decision is in
+DECISIONS.md (2026-05-28).
+
+**Architecture — Option A (static-precompute).** A Next.js app (in `web/`) on Vercel serves frozen
+`RecommendationResponse` JSON, regenerated once per curated seed by running the REAL pipeline on the
+VPS (`scripts/export_showcase.py`). A recorded deep-dive drives the live engine over the existing SSH
+tunnel for the "it actually runs" proof. This sidesteps, by design (not by patching): the 701 s
+cold-latency cliff, the "validate-before-public" live-embedding legal question, and the
+no-auth/DoS/cost liability. The deferred poll-handle/auth/rate-limit/asyncpg hardening (the v1 list
+above) is **narrated as scoped judgment, not built**.
+
+Phases (each independently shippable; ~6.5–9.5 build-days total):
+- ⏳ **Phase 0 — Data export** (in progress): `scripts/export_showcase.py` written + the shared
+  `doppel/api/responses.py` wire-builder extracted (so the export is byte-identical to the live API);
+  pending the one-time curated-seed export run on the VPS.
+- ☐ **Phase 1 — "Minimum impressive"**: Next.js scaffold + seed gallery + result cards with the
+  correct four-axis score breakdown.
+- ☐ **Phase 2 — "Wow" polish**: hero landing + real-telemetry funnel animation + vibe-steer toggle +
+  System-Transparency/degradation panel.
+- ☐ **Phase 3 — Technical-depth layer**: `/how-it-works` (architecture-evolution narrative, competitive
+  wedge, eval-evidence + ablation viz) + per-result raw-JSON / "Engineer's note" disclosures.
+- ☐ **Phase 4 — Recorded deep-dive** (the "endgame masterpiece"): a 6–8 min SSH-tunnel screencast of
+  the real cold→warm path, embedded on `/deep-dive`.
+
+Curated roster: 8 genre heroes + 2 vibe-steer variants (HUMBLE.-acoustic the hero) — plan §3.
+
+Done = curated showcase live on Vercel; `/how-it-works` + `/deep-dive` shipped; the VPS remains
+SSH-only and internet-private.
+
 ## Upcoming Milestones
 
-Day 7 is the last planned v1 milestone. Post-v1 improvements (corpus densification, the HNSW retrieval
-lane, LLM-reranking A/B, vibe-to-acoustic translation) are deferred — see BRAINDUMP.md "Future Improvements (Deferred)".
+Day 7 was the last planned **v1** milestone; **v1.1 — Showcase Frontend** (above) is the current
+post-v1 milestone. Further post-v1.1 improvements (corpus densification, the HNSW retrieval lane,
+LLM-reranking A/B, vibe-to-acoustic translation) remain deferred — see BRAINDUMP.md "Future
+Improvements (Deferred)".
 
 ## Non-Goals
 
