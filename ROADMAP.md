@@ -84,9 +84,9 @@ no-auth/DoS/cost liability. The deferred poll-handle/auth/rate-limit/asyncpg har
 above) is **narrated as scoped judgment, not built**.
 
 Phases (each independently shippable; ~6.5–9.5 build-days total):
-- ⏳ **Phase 0 — Data export** (in progress): `scripts/export_showcase.py` written + the shared
-  `doppel/api/responses.py` wire-builder extracted (so the export is byte-identical to the live API);
-  pending the one-time curated-seed export run on the VPS.
+- ✓ **Phase 0 — Data export** (shipped — PR #16): `scripts/export_showcase.py` + the shared
+  `doppel/api/responses.py` wire-builder (export is byte-identical to the live API) + a source-failure
+  secret-redaction fix; 10 curated seed JSONs exported (from the warm local corpus) to `web/public/seeds/`.
 - ☐ **Phase 1 — "Minimum impressive"**: Next.js scaffold + seed gallery + result cards with the
   correct four-axis score breakdown.
 - ☐ **Phase 2 — "Wow" polish**: hero landing + real-telemetry funnel animation + vibe-steer toggle +
