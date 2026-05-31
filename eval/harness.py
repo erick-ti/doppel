@@ -97,6 +97,32 @@ def _ablation(results: Sequence[RecommendationResult], pool: Sequence[RankedCand
     }
 
 
+async def _open_query_log(deps, sources, seed: Seed) -> tuple[int, Any]:
+    """Aggregate the cultural pool and pre-create the `queued` query_logs row (gate-1 telemetry),
+    returning its id and the aggregate result. Shared by :func:`run_seed` and the Phase-1 vibe A/B
+    driver (:mod:`eval.vibe_ab`).
+
+    No request_key: the eval is a library driver, not a real request, and must NOT join the in-flight
+    dedup (the active-request_key unique index covers queued/running rows). The index treats NULLs as
+    distinct, so a row orphaned by a crash/cancel/SIGKILL — which the running-row reaper won't touch
+    while it's `queued` — still can't wedge a re-run or a real /recommend for the same seed. (Callers
+    also terminalize the row on failure, belt-and-braces.)
+    """
+    result = await aggregate(sources, seed.title, seed.artist)
+    async with deps.pool.acquire() as conn:
+        uncached = await db.count_uncached_candidates(
+            conn, [(c.title, c.artist) for c in result.candidates[:RESOLVE_CANDIDATE_LIMIT]]
+        )
+        gate1 = gate_for(uncached, threshold=GATE1_ASYNC_THRESHOLD)
+        qid = await db.insert_query_log(conn, QueryLogFields(
+            seed_title=seed.title, seed_artist=seed.artist, vibe_text=seed.vibe, status="queued",
+            candidate_count=len(result.candidates), degraded=result.degraded,
+            failed_sources=result.failed_sources, gate1=gate1.value,
+            gate1_threshold=GATE1_ASYNC_THRESHOLD, uncached_count=uncached,
+        ))
+    return qid, result
+
+
 async def run_seed(deps, sources, seed: Seed) -> dict[str, Any]:
     """Run one seed through the real pipeline (job mode) and collect its metrics. A regular failure is
     recorded as a per-seed error so the batch completes; a cancellation is re-raised so it stops the
@@ -104,23 +130,7 @@ async def run_seed(deps, sources, seed: Seed) -> dict[str, Any]:
     started = time.monotonic()
     qid: int | None = None
     try:
-        result = await aggregate(sources, seed.title, seed.artist)
-        async with deps.pool.acquire() as conn:
-            uncached = await db.count_uncached_candidates(
-                conn, [(c.title, c.artist) for c in result.candidates[:RESOLVE_CANDIDATE_LIMIT]]
-            )
-            gate1 = gate_for(uncached, threshold=GATE1_ASYNC_THRESHOLD)
-            # No request_key: the eval is a library driver, not a real request, and must NOT join the
-            # in-flight dedup (the active-request_key unique index covers queued/running rows). The
-            # index treats NULLs as distinct, so a row orphaned by a crash/cancel/SIGKILL — which the
-            # running-row reaper won't touch while it's `queued` — still can't wedge a re-run or a real
-            # /recommend for the same seed. (The failure path also terminalizes it, belt-and-braces.)
-            qid = await db.insert_query_log(conn, QueryLogFields(
-                seed_title=seed.title, seed_artist=seed.artist, vibe_text=seed.vibe, status="queued",
-                candidate_count=len(result.candidates), degraded=result.degraded,
-                failed_sources=result.failed_sources, gate1=gate1.value,
-                gate1_threshold=GATE1_ASYNC_THRESHOLD, uncached_count=uncached,
-            ))
+        qid, result = await _open_query_log(deps, sources, seed)
         rec = await run_pipeline(
             deps, seed.title, seed.artist, seed.vibe, result.candidates,
             execution_mode="job", query_log_id=qid,
