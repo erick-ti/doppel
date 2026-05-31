@@ -10,18 +10,24 @@ export function SiteHeader() {
             vibe-matched song recommendations
           </span>
         </Link>
-        <div className="flex items-center gap-3">
+        <nav className="flex items-center gap-3 sm:gap-4" aria-label="Primary">
           <Link
             href="/how-it-works"
             className="text-muted-foreground hover:text-foreground text-sm font-medium whitespace-nowrap transition-colors"
           >
             How it works
           </Link>
-          <span className="text-muted-foreground hidden rounded-md border px-2 py-0.5 font-mono text-[11px] whitespace-nowrap sm:inline">
+          <Link
+            href="/deep-dive"
+            className="text-muted-foreground hover:text-foreground text-sm font-medium whitespace-nowrap transition-colors"
+          >
+            Deep dive
+          </Link>
+          <span className="text-muted-foreground hidden rounded-md border px-2 py-0.5 font-mono text-[11px] whitespace-nowrap md:inline">
             static showcase
-            <span className="hidden md:inline"> · no live backend</span>
+            <span className="hidden lg:inline"> · no live backend</span>
           </span>
-        </div>
+        </nav>
       </div>
     </header>
   );
