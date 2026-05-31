@@ -178,6 +178,18 @@ export function CoverageStrip({
     foundReasons.push(`${coverage.resolved_rejected} rejected`);
   const foundNote = foundReasons.length ? foundReasons.join(" · ") : "full coverage";
 
+  // CLAP scores only the found candidates that actually have an embedding (cache hit + freshly
+  // computed) — a found candidate whose preview won't embed falls to cultural backfill, never the
+  // audio rerank. So the embedded count, NOT `resolved_found`, is how many were truly CLAP-scored;
+  // surface the gap honestly when found > embedded (e.g. Take Five: 64 of 68 embedded). (Cultural-only
+  // degraded runs carry null embedding counts and no audio rerank — that copy is the deferred F2 work.)
+  const embedded =
+    (coverage.embeddings_cache_hits ?? 0) + (coverage.embeddings_computed ?? 0);
+  const audioNote =
+    embedded < coverage.resolved_found
+      ? `CLAP-scored ${embedded} of ${coverage.resolved_found} found · top 10 kept`
+      : `CLAP-scored all ${coverage.resolved_found} found · top 10 kept`;
+
   const stages: Stage[] = [
     {
       value: coverage.candidate_count,
@@ -200,7 +212,7 @@ export function CoverageStrip({
     {
       value: coverage.audio_scored,
       label: "audio-reranked",
-      note: "CLAP scored all found; top 10 kept",
+      note: audioNote,
       leg: "audio",
     },
   ];
