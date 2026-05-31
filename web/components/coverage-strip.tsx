@@ -178,15 +178,27 @@ export function CoverageStrip({
     foundReasons.push(`${coverage.resolved_rejected} rejected`);
   const foundNote = foundReasons.length ? foundReasons.join(" · ") : "full coverage";
 
+  // Two distinct degraded signals, kept separate so the funnel never overclaims:
+  //  - `audioStepRan` (embeddings_cache_hits !== null): did the embed step run AT ALL? Null only on a
+  //    cultural-only run with no usable seed preview (the exporter omits the counts). Drives the FOOTER.
+  //  - `audioReranked` (audio_scored > 0): did any track actually get CLAP-reranked into the result? This
+  //    is False not just on the no-preview run but ALSO when the seed embedded yet every candidate failed
+  //    to embed (non-null zero counts, all-cultural-backfill list). Drives the final STAGE label/note, so
+  //    a 0-rerank run never reads "audio-reranked / top 10 kept" — it reads "cultural backfill" honestly.
+  const audioStepRan = coverage.embeddings_cache_hits != null;
+  const audioReranked = coverage.audio_scored > 0;
+
   // CLAP scores only the found candidates that actually have an embedding (cache hit + freshly
   // computed) — a found candidate whose preview won't embed falls to cultural backfill, never the
   // audio rerank. So the embedded count, NOT `resolved_found`, is how many were truly CLAP-scored;
-  // surface the gap honestly when found > embedded (e.g. Take Five: 64 of 68 embedded). (Cultural-only
-  // degraded runs carry null embedding counts and no audio rerank — that copy is the deferred F2 work.)
+  // surface the gap honestly when found > embedded (e.g. Take Five: 64 of 68 embedded).
   const embedded =
     (coverage.embeddings_cache_hits ?? 0) + (coverage.embeddings_computed ?? 0);
-  const audioNote =
-    embedded < coverage.resolved_found
+  const audioNote = !audioReranked
+    ? audioStepRan
+      ? "no candidate embedded — cultural backfill only"
+      : "cultural-only — no usable seed preview, so no audio rerank"
+    : embedded < coverage.resolved_found
       ? `CLAP-scored ${embedded} of ${coverage.resolved_found} found · top 10 kept`
       : `CLAP-scored all ${coverage.resolved_found} found · top 10 kept`;
 
@@ -209,12 +221,20 @@ export function CoverageStrip({
       note: foundNote,
       leg: "cultural",
     },
-    {
-      value: coverage.audio_scored,
-      label: "audio-reranked",
-      note: audioNote,
-      leg: "audio",
-    },
+    audioReranked
+      ? {
+          value: coverage.audio_scored,
+          label: "audio-reranked",
+          note: audioNote,
+          leg: "audio",
+        }
+      : {
+          // No audio path — the final stage is the cultural backfill that filled the list instead.
+          value: coverage.backfill,
+          label: "cultural backfill",
+          note: audioNote,
+          leg: "cultural",
+        },
   ];
 
   // The widest stage anchors every bar's proportion (candidate_count is always the funnel mouth).
@@ -303,13 +323,25 @@ export function CoverageStrip({
       </div>
 
       <div className="text-muted-foreground mt-4 border-t pt-3 font-mono text-[11px] tabular-nums">
-        {coverage.embeddings_cache_hits ?? 0} embeddings from cache ·{" "}
-        {coverage.embeddings_computed ?? 0} computed · {coverage.latency_ms} ms
-        total
-        <span className="text-muted-foreground">
-          {" "}
-          (cache-first: warm runs skip re-embedding)
-        </span>
+        {audioStepRan ? (
+          <>
+            {coverage.embeddings_cache_hits ?? 0} embeddings from cache ·{" "}
+            {coverage.embeddings_computed ?? 0} computed · {coverage.latency_ms} ms
+            total
+            <span className="text-muted-foreground">
+              {" "}
+              (cache-first: warm runs skip re-embedding)
+            </span>
+          </>
+        ) : (
+          <>
+            no embedding step · {coverage.latency_ms} ms total
+            <span className="text-muted-foreground">
+              {" "}
+              (no usable seed preview — cultural recall only)
+            </span>
+          </>
+        )}
       </div>
     </motion.div>
   );
