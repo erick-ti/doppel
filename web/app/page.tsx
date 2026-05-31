@@ -1,3 +1,5 @@
+import { HeroArc } from "@/components/hero-arc";
+import { SeedBox } from "@/components/seed-box";
 import { SeedCard } from "@/components/seed-card";
 import { getGenreHeroes, getVibeVariants } from "@/lib/seeds";
 
@@ -24,7 +26,7 @@ export default async function Home() {
   return (
     <div className="mx-auto w-full max-w-6xl px-5">
       {/* Hero */}
-      <section className="py-16 sm:py-24">
+      <section className="py-12 sm:py-24">
         <h1 className="max-w-3xl text-4xl leading-tight font-bold tracking-tight sm:text-5xl">
           Find songs that <span className="text-audio">sound</span> like the one
           you love — not just what other listeners clicked.
@@ -59,10 +61,15 @@ export default async function Home() {
             </span>
           ))}
         </div>
+
+        <SeedBox />
       </section>
 
+      {/* The problem -> dead-ends -> wedge -> evidence narrative */}
+      <HeroArc />
+
       {/* Gallery — genre heroes */}
-      <section className="pb-8">
+      <section id="seed-gallery" className="scroll-mt-20 pb-8">
         <div className="mb-5 flex items-baseline justify-between">
           <h2 className="text-xl font-semibold tracking-tight">Seed gallery</h2>
           <span className="text-muted-foreground text-sm">

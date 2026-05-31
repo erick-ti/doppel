@@ -231,7 +231,7 @@ export function CoverageStrip({
                 ? "Replay the funnel animation"
                 : "Skip the funnel animation"
             }
-            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium outline-none transition-colors focus-visible:ring-[3px]"
+            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 -mr-1 inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium outline-none transition-colors focus-visible:ring-[3px]"
           >
             {status === "done" ? (
               <>

@@ -86,8 +86,10 @@ export function ResultCard({
   return (
     <Card className="gap-0 overflow-hidden py-0">
       <div className="flex flex-col gap-4 p-5">
-        {/* Header: rank + title/artist + audio-scored badge */}
-        <div className="flex items-start gap-4">
+        {/* Header: rank + title/artist + audio-scored badge. On narrow phones the badge column wraps
+            to its own full-width line (max-sm:basis-full) so a long title keeps the row; from sm up it
+            returns to the right-aligned column. */}
+        <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
           <div
             className={cn(
               "flex size-9 shrink-0 items-center justify-center rounded-md font-mono text-sm font-semibold tabular-nums",
@@ -107,7 +109,7 @@ export function ResultCard({
             <p className="text-muted-foreground text-sm">{item.artist}</p>
           </div>
 
-          <div className="flex shrink-0 flex-col items-end gap-1.5">
+          <div className="flex shrink-0 items-start gap-1.5 max-sm:basis-full sm:flex-col sm:items-end">
             {item.was_audio_scored ? (
               <Badge variant="audio" title="Reranked by the CLAP audio embedding">
                 <Sparkles aria-hidden />
