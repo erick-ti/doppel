@@ -16,13 +16,14 @@ from collections.abc import Awaitable, Callable
 
 import httpx
 
-from doppel.config import HTTP_TIMEOUT_S, USER_AGENT
+from doppel.config import HTTP_TIMEOUT_S, USER_AGENT, VIBE_TRANSLATION_ENABLED
 from doppel.db.pool import close_pool, get_pool
 from doppel.embedding.embedder import ClapEmbedder
 from doppel.explanation import ClaudeExplainer
 from doppel.pipeline.recommend import PipelineDeps
 from doppel.sources.deezer import DeezerClient
 from doppel.sources.musicbrainz import MusicBrainzClient
+from doppel.translation import ClaudeVibeTranslator
 
 
 def build_http_client() -> httpx.AsyncClient:
@@ -48,13 +49,18 @@ async def build_deps(
         embedder=ClapEmbedder(),
         http=http,
         explainer=ClaudeExplainer(),
+        # v2 flagship, default OFF (VIBE_TRANSLATION_ENABLED): when off, no translator is wired and the
+        # raw vibe goes straight to embed — pipeline behaviour is byte-identical to pre-v2.
+        translator=ClaudeVibeTranslator() if VIBE_TRANSLATION_ENABLED else None,
         enqueue_job=enqueue_job,
     )
 
 
 async def close_deps(deps: PipelineDeps) -> None:
-    """Tear down what :func:`build_deps` opened — the HTTP client, the explainer, and the pool."""
+    """Tear down what :func:`build_deps` opened — the HTTP client, the explainer, the translator, the pool."""
     await deps.http.aclose()
     if isinstance(deps.explainer, ClaudeExplainer):
         await deps.explainer.aclose()
+    if isinstance(deps.translator, ClaudeVibeTranslator):
+        await deps.translator.aclose()
     await close_pool()

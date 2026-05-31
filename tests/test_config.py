@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import pytest
 
+from doppel import config
 from doppel.config import _validate_tuning
 
 # A coherent baseline (mirrors the shipped defaults); individual cases override one field.
@@ -72,3 +73,12 @@ def test_stale_reclaim_not_above_timeout_raises(stale_reclaim):
 
 def test_stale_reclaim_just_above_timeout_ok():
     _validate_tuning(**{**_OK, "stale_reclaim": 901})  # boundary: strictly greater is allowed
+
+
+def test_fusion_weights_are_convex_by_construction():
+    # α is DERIVED as 1−β, so the fusion pair is always convex (α+β=1) and combined_score stays in
+    # [0, 1]. A Codex review caught that an earlier independent-knob form let β=0.5 + default α=0.7
+    # emit combined_score>1 and break the [0, 1] contract the API/showcase render; this pins the fix.
+    assert config.AUDIO_SIM_WEIGHT + config.VIBE_TEXT_WEIGHT == pytest.approx(1.0)
+    assert 0.0 <= config.VIBE_TEXT_WEIGHT <= 1.0
+    assert 0.0 <= config.AUDIO_SIM_WEIGHT <= 1.0

@@ -137,6 +137,14 @@ class Explainer(Protocol):
     ) -> Mapping[int, str]: ...
 
 
+class VibeTranslator(Protocol):
+    """The vibe→acoustic-terms seam (v2 flagship): rewrite a natural-language vibe into the literal
+    acoustic vocabulary CLAP was trained on *before* text-encoding. Optional. Must degrade to the raw
+    vibe on any failure, so an absent/failing translator leaves the eval-validated path untouched."""
+
+    async def translate(self, vibe: str) -> str: ...
+
+
 @dataclass
 class PipelineDeps:
     """Everything :func:`run_pipeline` needs, injected by the API lifespan / worker startup.
@@ -152,6 +160,7 @@ class PipelineDeps:
     embedder: ClapEmbedder
     http: httpx.AsyncClient  # preview fetches for embed_preview
     explainer: Explainer | None = None
+    translator: VibeTranslator | None = None  # v2 flagship; None ⇒ raw vibe goes straight to embed
     enqueue_job: Callable[..., Awaitable[object]] | None = None
 
 
@@ -260,8 +269,18 @@ async def _resolve_and_embed_seed(
     return (mbid, provider_track_id, vector)
 
 
+async def _translate_vibe(deps: PipelineDeps, vibe: str | None) -> str | None:
+    """Rewrite the vibe into literal acoustic terms (v2 flagship) when a translator is wired, else pass
+    it through. The translator itself degrades to the raw vibe on any failure, so this never raises and
+    a ``None``/absent translator (the default) leaves the eval-validated raw-vibe path exactly intact."""
+    if not vibe or not vibe.strip() or deps.translator is None:
+        return vibe
+    return await deps.translator.translate(vibe)
+
+
 async def _embed_vibe(deps: PipelineDeps, vibe: str | None) -> np.ndarray | None:
-    """Embed the vibe description into the CLAP text space, or ``None`` (no vibe / degraded)."""
+    """Embed the (already-translated) vibe text into the CLAP text space, or ``None`` (no vibe /
+    degraded). Stays pure str→vector — translation happens upstream in :func:`_translate_vibe`."""
     if not vibe or not vibe.strip():
         return None
     try:
@@ -598,7 +617,13 @@ async def run_pipeline(
         seed_mbid, seed_ptid, seed_vector = await _resolve_and_embed_seed(
             deps, conn, seed_title, seed_artist
         )
-    vibe_vector = await _embed_vibe(deps, vibe)
+    # No-op while VIBE_TRANSLATION_ENABLED is OFF (default): translator=None ⇒ raw vibe, no Anthropic
+    # call. If the flag is ever enabled, move _translate_vibe BELOW the Gate-2 COLD deferral (the
+    # `return Deferred(...)` further down) so an inline request that returns 202 doesn't pay an LLM call
+    # the worker then repeats from the raw vibe (Codex review 2026-05-31). The CLAP _embed_vibe is
+    # local/cheap, so its position here is fine.
+    vibe_for_embed = await _translate_vibe(deps, vibe)
+    vibe_vector = await _embed_vibe(deps, vibe_for_embed)
 
     resolved: list[_Resolved] = []
     counts = _ResolveCounts()

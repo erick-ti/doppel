@@ -67,7 +67,7 @@ adversarial reviews (rationale in DECISIONS.md):
 
 _Day 0 (external dependency validation) — **complete, verdict GO** (2026-05-21). Day 1-2 (matcher/resolver) — **complete, merged 2026-05-21** (PR #2): match verification, provider-informed canonicalization, and cover/ISRC/artist-MBID hardening. Day 3 (candidate aggregator) — **complete, merged 2026-05-22** (PR #3): Last.fm + ListenBrainz sources, conservative dedupe, RRF (k=60), Gate-1, per-source isolation/observability. Day 4 (CLAP embedder + similarity scoring) — **complete, merged 2026-05-23** (PR #4): in-memory PyAV decode, deterministic duration-weighted window pooling, audio (+ optional vibe-text) cosine with within-batch min-max + α/β fusion, and hardened preview/text input guards. Day 5 (full database schema + asyncpg access layer) — **complete 2026-05-23** (PR #5): Postgres 16 + pgvector (`tracks`/`audio_assets`/`canonical_lookups`/`embeddings`/`query_logs`), a checksum-guarded raw-SQL migration runner, and the cache/corpus access layer. Day 6 (LLM explainer + FastAPI `/recommend`) — **complete, merged 2026-05-24** (PR #6 → `7ac120b`): the shared inline/worker `run_pipeline` (two async gates, cache-first resolve, ephemeral embed, scoring + cultural backfill), a degradable Claude explainer, the ARQ worker, FastAPI `/recommend` + poll, migration 0002 (telemetry + result snapshot), hardened across three adversarial-review rounds. See SESSION_NOTES.md / DECISIONS.md._
 
-## v1.1 — Showcase Frontend (CURRENT — started 2026-05-28)
+## v1.1 — Showcase Frontend (frontend feature-complete 2026-05-31; only the deep-dive recording remains)
 
 A public-safe showcase frontend that demonstrates Doppel to any visitor — instant first-glance value + a
 verifiable technical-depth layer — **WITHOUT** exposing the live backend, persisting audio, or doing
@@ -91,24 +91,61 @@ Phases (each independently shippable; ~6.5–9.5 build-days total):
   https://doppel-music.vercel.app): Next.js 16 static-export app (App Router + TS + Tailwind v4 +
   hand-authored shadcn-style ui), seed gallery + result cards with the correct four-axis score breakdown
   + transparency panel. Analytics + README showcase note in PR #18.
-- → **Phase 2 — "Wow" polish (CURRENT)**: hero landing + real-telemetry funnel animation + vibe-steer
-  toggle + System-Transparency/degradation panel.
-- ☐ **Phase 3 — Technical-depth layer**: `/how-it-works` (architecture-evolution narrative, competitive
-  wedge, eval-evidence + ablation viz) + per-result raw-JSON / "Engineer's note" disclosures.
-- ☐ **Phase 4 — Recorded deep-dive** (the "endgame masterpiece"): a 6–8 min SSH-tunnel screencast of
-  the real cold→warm path, embedded on `/deep-dive`.
+- ✓ **Phase 2 — "Wow" polish** (shipped — PRs #19/#20/#21): vibe-steer toggle (plain↔vibe FLIP) +
+  real-telemetry funnel animation (count-up + proportional narrowing, `idle=final` SSR-safe) + expanded
+  hero arc (problem→dead-ends→wedge→evidence) + disabled free-text seed box + System-Transparency panel +
+  a full responsive/mobile pass.
+- ✓ **Phase 3 — Technical-depth layer** (shipped — PR #22): `/how-it-works` (architecture-evolution
+  narrative, competitive wedge + honest "where it doesn't win", eval-evidence panels + N=75 ablation, CSS
+  pipeline DAG, all DIAGNOSTIC-labelled) + per-result raw-JSON disclosures. Eval figures frozen in
+  `web/lib/eval-evidence.ts`. (Also folded in the Codex-caught funnel "CLAP-scored N of M found" honesty fix.)
+- ✓ **Phase 4 — Recorded deep-dive — PAGE shipped, video pending** (PR #23): `/deep-dive` route + a
+  written act-by-act walkthrough + a placeholder video slot. The **screencast itself is recorded LAST**
+  (operator-only, against the final system) and swapped in via a one-line `DEEP_DIVE_VIDEO` change —
+  DECISIONS.md 2026-05-31. This is the only remaining v1.1 work, and it's non-code.
 
 Curated roster: 8 genre heroes + 2 vibe-steer variants (HUMBLE.-acoustic the hero) — plan §3.
 
 Done = curated showcase live on Vercel; `/how-it-works` + `/deep-dive` shipped; the VPS remains
 SSH-only and internet-private.
 
+## v2 — Deepen the Engine (CURRENT — started 2026-05-31)
+
+An algorithmic-quality milestone: repair the one pipeline link the Day-7 eval proved broken — controllable
+vibe steering (CLAP's text encoder scores cultural descriptors at ~0.15–0.37, semantically inconsistent).
+**Flagship: LLM vibe→acoustic-terms translation** — rewrite a natural-language vibe into the literal
+acoustic vocabulary CLAP was trained on, *before* text-encoding; degrades to the raw vibe, never touches
+the audio embeddings cache (`model_version`). Scope decision + the label-free ship gate + engineering
+defaults: DECISIONS.md 2026-05-31.
+
+Phases (each independently shippable; flag-off where it touches the hot path, so `main` stays deployable):
+- ☐ **Phase 1 — Measurement instrument first**: a two-arm eval (raw-vibe vs translated) + a
+  Spearman agreement-vs-audio-order lift in `eval/harness.py`. Eval-only; makes the flagship's go/no-go
+  decidable *before* the feature exists.
+- ☐ **Phase 2 — Flagship translator (flag OFF)**: a `VibeTranslator` dep (cloned from the explainer's
+  degradable, prompt-cached discipline) + a `_translate_vibe` seam in `recommend.py` behind
+  `VIBE_TRANSLATION_ENABLED` (default off). Flag-off ⇒ pipeline byte-identical to today.
+- ☐ **Phase 3 — Decision + telemetry**: migration `0003` adds nullable `query_logs.translated_vibe_text`;
+  flip the flag on iff the Phase-1 gate passed.
+- ☐ **Phase 4 — Showcase surfacing**: re-export curated seeds + render raw→translated in the transparency
+  panel (static, public-safe, neutral language).
+
+**Ship gate (label-free)**: flip default-on iff translated-vibe text-cosine rises AND its rank-order agrees
+*more* with the reliable audio order (Spearman lift > 0) WHILE score-spread holds. Inflation without
+agreement → reject, flag stays off (cost = zero; degrade-to-raw is the floor).
+
+Deferred: **HNSW second retrieval lane → gated v2.1** (the `embeddings_hnsw_idx` index + `knn()` query
+already exist; only a caller-side RRF merge is missing — but it widens a non-bottleneck link, so ship only
+if a discovery-yield metric is positive). **LLM-reranking A/B → v3** (bets against the validated "CLAP owns
+ranking" rule; needs a blind human-preference gate). **Corpus densification** (eval shows coverage isn't
+the ceiling).
+
 ## Upcoming Milestones
 
-Day 7 was the last planned **v1** milestone; **v1.1 — Showcase Frontend** (above) is the current
-post-v1 milestone. Further post-v1.1 improvements (corpus densification, the HNSW retrieval lane,
-LLM-reranking A/B, vibe-to-acoustic translation) remain deferred — see BRAINDUMP.md "Future
-Improvements (Deferred)".
+**v2 — Deepen the Engine** (above) is the current milestone (started 2026-05-31); v1.1's frontend is
+feature-complete, with only the operator-recorded deep-dive screencast deferred. Past v2: the **HNSW
+retrieval lane** is a gated **v2.1**, **LLM-reranking A/B** is **v3**, and **corpus densification** stays
+deferred — see DECISIONS.md 2026-05-31 and BRAINDUMP.md "Future Improvements (Deferred)".
 
 ## Non-Goals
 
@@ -134,3 +171,5 @@ Improvements (Deferred)".
 - **Candidate pool yield** — **RESOLVED (Day-7 eval)**: the full 19-seed benchmark measured per-seed yields ~100–198 after dedupe (jazz standards / Piaf ~100; mainstream pop/electronic ~180–198); the min-max-fused rerank works across that range. Below the 200-300 target for thin-data seeds, but sufficient — the top-N resolve cap is 75 regardless.
 - **CLAP dual-load memory** — **RESOLVED (Day 0)**: ~659 MB process RSS per load (~1.3 GB dual-load across FastAPI + ARQ worker), 76 ms/clip warm on CPU, 512-dim. Fits a modest VPS.
 - **Coverage matrix representativeness** — **RESOLVED (Day-7 eval)**: re-measured across R&B (Pink + White, Cranes in the Sky), pre-2000 (Bohemian Rhapsody, Dreams), and non-English (Despacito, La Vie en rose) in the 19-seed benchmark — 19/19 seed audio-scored, median resolve found-ratio 0.987. The Day-0 small-sample 100% claim holds at scale; Deezer coverage is not the weak link.
+- **Deep-dive screencast** — **OPEN (v1.1)**: record the 6–8 min SSH-tunnel cold→warm walkthrough (script in `web/lib/deep-dive.ts` `ACTS` / plan §6), or is the written walkthrough already on `/deep-dive` enough? Leaning: record last as the project's final step, then swap it in via the one-line `DEEP_DIVE_VIDEO` change (DECISIONS.md 2026-05-31). Operator-only work.
+- **Custom domain** — **OPEN (v1.1)**: keep the free `doppel-music.vercel.app`, or register a custom domain? (`.music` explored, not bought.)
