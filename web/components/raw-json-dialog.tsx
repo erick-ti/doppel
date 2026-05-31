@@ -26,11 +26,11 @@ export function RawJsonDialog({
 }) {
   return (
     <Dialog>
-      <DialogTrigger className="text-muted-foreground hover:text-foreground focus-visible:ring-ring focus-visible:ring-offset-background inline-flex items-center gap-1.5 rounded text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none">
+      <DialogTrigger className="text-muted-foreground hover:text-foreground focus-visible:ring-ring focus-visible:ring-offset-background -mr-1 inline-flex items-center gap-1.5 rounded px-1 py-1.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none">
         <Braces className="size-3.5" aria-hidden />
         {triggerLabel}
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}

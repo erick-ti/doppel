@@ -10,8 +10,9 @@ export function SiteHeader() {
             vibe-matched song recommendations
           </span>
         </Link>
-        <span className="text-muted-foreground rounded-md border px-2 py-0.5 font-mono text-[11px]">
-          static showcase · no live backend
+        <span className="text-muted-foreground rounded-md border px-2 py-0.5 font-mono text-[11px] whitespace-nowrap">
+          static showcase
+          <span className="hidden sm:inline"> · no live backend</span>
         </span>
       </div>
     </header>
