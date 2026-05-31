@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Lock, Search } from "lucide-react";
 
 /**
@@ -6,12 +7,12 @@ import { Lock, Search } from "lucide-react";
  * Honest by design: arbitrary live input would hit the ~12-min cold path (resolve + embed a fresh
  * candidate set), so there is no public live endpoint — the showcase serves frozen real runs instead.
  * The box looks like the real entry point but is non-interactive, with the reason stated inline and a
- * native-tooltip `title` for the hover. It points at the curated gallery rather than a route that does
- * not exist yet (the recorded cold-run deep-dive is a later phase).
+ * native-tooltip `title` for the hover. The CTA points at /deep-dive, which walks the cold→warm run
+ * step by step (the recorded screencast is a later add; the written walkthrough stands in until then).
  */
 export function SeedBox() {
   const reason =
-    "Arbitrary live input takes ~12 min cold (resolve + embed a fresh candidate set), so there is no public live endpoint. Browse the curated runs below — each is real, frozen pipeline output.";
+    "Arbitrary live input takes ~12 min cold (resolve + embed a fresh candidate set), so there is no public live endpoint. The deep-dive walks that run step by step; the curated runs below are real, frozen pipeline output.";
 
   return (
     <div className="mt-10 max-w-xl">
@@ -31,13 +32,14 @@ export function SeedBox() {
       <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
         Live arbitrary input takes ~12&nbsp;min cold, so there’s no public
         endpoint — the engine never runs on this site.{" "}
-        <a
-          href="#seed-gallery"
+        <Link
+          href="/deep-dive"
           className="text-foreground underline decoration-dotted underline-offset-2"
         >
-          Browse the curated runs
-        </a>{" "}
-        below — every one is real, frozen pipeline output.
+          Walk through a real cold→warm run
+        </Link>
+        , or browse the curated runs below — every one is real, frozen pipeline
+        output.
       </p>
     </div>
   );
