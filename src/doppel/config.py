@@ -162,8 +162,20 @@ ALLOWED_PREVIEW_HOST_SUFFIXES = ("dzcdn.net", "deezer.com")
 # descriptors (BRAINDUMP risk), so the default leans audio-dominant. Provisional —
 # to be calibrated against real score distributions in Day 7 eval. With no vibe
 # description, scoring falls back to audio alone (β drops out) regardless of these.
-AUDIO_SIM_WEIGHT = 0.7  # α
-VIBE_TEXT_WEIGHT = 0.3  # β
+# β (the vibe-text leg) is the single tunable knob; α (audio leg) is DERIVED as 1−β so the pair stays
+# convex (α+β=1) and combined_score is provably in [0, 1]. scoring.py min-max-normalizes each leg to
+# [0, 1], so the fused top reaches α+β — an independent α+β>1 would emit combined_score>1 and break the
+# [0, 1] contract the API/showcase render (Codex adversarial review 2026-05-31; the original v2 unlock
+# validated each weight separately and missed the sum). The live β-sweep showed β=0.3 leaves the vibe
+# leg nearly inert and β≈0.5 makes steering visible, so β stays env-tunable; default 0.3 ⇒ α=0.7, the
+# eval-validated pair, unchanged. (score_candidates still accepts explicit α/β for offline sweeps.)
+VIBE_TEXT_WEIGHT = float(os.getenv("VIBE_TEXT_WEIGHT", "0.3"))  # β
+if not 0.0 <= VIBE_TEXT_WEIGHT <= 1.0:
+    raise ValueError(
+        f"VIBE_TEXT_WEIGHT={VIBE_TEXT_WEIGHT} must be in [0, 1] — it is the vibe-leg fusion weight; "
+        "α is derived as 1−β."
+    )
+AUDIO_SIM_WEIGHT = 1.0 - VIBE_TEXT_WEIGHT  # α, derived ⇒ α+β=1 (convex ⇒ combined_score ∈ [0, 1])
 
 # Seed-equivalence suppression (Day-7 eval follow-up): drop a result that is the *seed itself* under a
 # different master — a near-identical audio match (raw cosine ≥ SEED_EQUIVALENCE_AUDIO_MIN) whose title
@@ -234,6 +246,16 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 LLM_MODEL = os.getenv("LLM_MODEL", "claude-sonnet-4-6")
 LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "2048"))
 LLM_TIMEOUT_S = float(os.getenv("LLM_TIMEOUT_S", "30"))
+
+# Vibe→acoustic-terms translation (v2 flagship — DECISIONS.md 2026-05-31). Default OFF: when enabled,
+# a small/fast LLM rewrites the listener's natural-language vibe into literal CLAP-trained acoustic
+# terms before text-encoding, to clear the weak text encoder's ~0.15–0.37 cultural-descriptor wall.
+# Degrades to the raw vibe on any failure (missing key / API error / timeout / empty output), so the
+# eval-validated raw-vibe path is always the floor — the flagship can only help or no-op, never regress.
+VIBE_TRANSLATION_ENABLED = _env_bool("VIBE_TRANSLATION_ENABLED", False)
+VIBE_TRANSLATION_MODEL = os.getenv("VIBE_TRANSLATION_MODEL", "claude-haiku-4-5-20251001")
+VIBE_TRANSLATION_MAX_TOKENS = int(os.getenv("VIBE_TRANSLATION_MAX_TOKENS", "256"))
+VIBE_TRANSLATION_TIMEOUT_S = float(os.getenv("VIBE_TRANSLATION_TIMEOUT_S", "10"))
 
 # Gate 2 (ROADMAP "two-gate async model"): at or above this many FOUND candidates that lack a
 # servable embedding, defer the embedding work to the async path instead of embedding inline (CLAP
