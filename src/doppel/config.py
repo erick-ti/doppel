@@ -257,6 +257,15 @@ VIBE_TRANSLATION_MODEL = os.getenv("VIBE_TRANSLATION_MODEL", "claude-haiku-4-5-2
 VIBE_TRANSLATION_MAX_TOKENS = int(os.getenv("VIBE_TRANSLATION_MAX_TOKENS", "256"))
 VIBE_TRANSLATION_TIMEOUT_S = float(os.getenv("VIBE_TRANSLATION_TIMEOUT_S", "10"))
 
+# HNSW vibe-retrieval lane (v2 — DECISIONS.md 2026-05-31). Default OFF: when enabled AND a vibe is
+# present, run_pipeline's scoring stage knn()s the corpus for the K vibe-nearest tracks and injects them
+# as PRE-RESOLVED, MBID-keyed scoring inputs (`_hnsw_lane`) — already-embedded servable corpus rows,
+# never the title-keyed pool/dedupe/resolve/gate path. It runs after both gates (a COLD request defers
+# without it; the worker does the work), so it never delays a deferral. Off ⇒ behaviour byte-identical
+# to pre-v2.
+HNSW_LANE_ENABLED = _env_bool("HNSW_LANE_ENABLED", False)
+HNSW_LANE_K = int(os.getenv("HNSW_LANE_K", "20"))
+
 # Gate 2 (ROADMAP "two-gate async model"): at or above this many FOUND candidates that lack a
 # servable embedding, defer the embedding work to the async path instead of embedding inline (CLAP
 # is ~230 ms/clip, so a large miss set would stall a warm request). Provisional like Gate 1's

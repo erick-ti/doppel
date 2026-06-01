@@ -42,6 +42,8 @@ from doppel.config import (
     CLAP_MODEL_VERSION,
     EMBED_CONCURRENCY,
     GATE2_ASYNC_THRESHOLD,
+    HNSW_LANE_ENABLED,
+    HNSW_LANE_K,
     RECOMMENDATION_LIMIT,
     RESOLVE_CANDIDATE_LIMIT,
     SEED_EQUIVALENCE_AUDIO_MIN,
@@ -289,6 +291,15 @@ async def _embed_vibe(deps: PipelineDeps, vibe: str | None) -> np.ndarray | None
         return None  # a bad vibe degrades to audio-only scoring, never sinks the request
 
 
+def _resolved_from_track(cand: RankedCandidate, track: asyncpg.Record) -> _Resolved:
+    """Hydrate a _Resolved from a servable-track row (shared by the by-MBID and by-title cache paths)."""
+    return _Resolved(
+        ranked=cand, mbid=str(track["mbid"]), asset_id=track["asset_id"],
+        preview_url=track["preview_url"], provider_track_id=track["provider_track_id"],
+        match_confidence=track["match_confidence"],
+    )
+
+
 async def _resolve_pool(
     deps: PipelineDeps, conn: asyncpg.Connection, pool: Sequence[RankedCandidate]
 ) -> tuple[list[_Resolved], _ResolveCounts]:
@@ -303,11 +314,7 @@ async def _resolve_pool(
             if hit["status"] == "found":
                 track = await db.get_servable_track(conn, hit["mbid"])
                 if track is not None:
-                    resolved.append(_Resolved(
-                        ranked=cand, mbid=str(track["mbid"]), asset_id=track["asset_id"],
-                        preview_url=track["preview_url"], provider_track_id=track["provider_track_id"],
-                        match_confidence=track["match_confidence"],
-                    ))
+                    resolved.append(_resolved_from_track(cand, track))
                     counts.found += 1
                 else:
                     counts.rejected += 1  # FOUND lookup whose asset has since flipped → not servable
@@ -378,6 +385,51 @@ def _is_seed_equivalent(title: str, audio_score: float, seed_title: str | None) 
     if not seed_title or audio_score < SEED_EQUIVALENCE_AUDIO_MIN:
         return False
     return fuzz.token_set_ratio(title, seed_title, processor=default_process) / 100.0 >= SEED_EQUIVALENCE_TITLE_MIN
+
+
+async def _hnsw_lane(
+    deps: PipelineDeps, vibe_vector: np.ndarray, seed_mbid: str | None, already: set[str]
+) -> tuple[list[_Resolved], dict[str, np.ndarray]]:
+    """The HNSW vibe lane (v2 — DECISIONS.md 2026-05-31): ``knn`` the corpus for the vibe-nearest tracks
+    and hydrate each by its EXACT corpus MBID into a pre-resolved, pre-embedded scoring input.
+
+    The lane candidates are already-resolved, already-embedded corpus rows, so they enter at the SCORING
+    stage keyed by MBID — never the title-native pool/dedupe/resolve/gate machinery. That is what makes
+    identity unambiguous (the verified MBID, not a title-deduped union — two same-title recordings stay
+    distinct) and the cost zero-MB (pure cache reads). It runs only here, at scoring, which is *after*
+    both gates: a COLD request defers before reaching this, and the worker (job mode) runs it — so the
+    lane never delays a deferral or loads CLAP for a request the API will hand off. Excludes the seed and
+    any MBID already scorable from the cultural pool. Returns ``([], {})`` on any miss — the cultural
+    results stand alone."""
+    async with deps.pool.acquire() as conn:
+        hits = await db.knn(conn, vibe_vector, HNSW_LANE_K, model_version=CLAP_MODEL_VERSION)
+        mbids = [m for m in (str(h["mbid"]) for h in hits) if m != seed_mbid and m not in already]
+        mbids = list(dict.fromkeys(mbids))  # knn order, deduped
+        if not mbids:
+            return [], {}
+        tracks = await conn.fetch(
+            "SELECT mbid, title, artist FROM tracks WHERE mbid = ANY($1::uuid[])", mbids
+        )
+        meta = {str(r["mbid"]): (r["title"], r["artist"]) for r in tracks}
+        emb = {str(r["mbid"]): np.asarray(r["embedding"])
+               for r in await db.fetch_embeddings(conn, mbids, CLAP_MODEL_VERSION)}
+        resolved: list[_Resolved] = []
+        vectors: dict[str, np.ndarray] = {}
+        for rank, m in enumerate(mbids, start=1):  # knn order = vibe-nearest first
+            if m not in emb or m not in meta:
+                continue  # not servable / no track row → skip (cultural results stand)
+            track = await db.get_servable_track(conn, m)
+            if track is None:
+                continue
+            title, artist = meta[m]
+            # cultural_score=0.0 — an HNSW-only hit has NO cultural-source consensus, and that field is
+            # read downstream (API/showcase/explainer) as Last.fm/ListenBrainz evidence; fabricating an
+            # RRF value there would misrepresent it (Codex review 2026-05-31). `sources=("hnsw",)` carries
+            # the real provenance; audio-scored ranking uses combined_score, not cultural_score.
+            ranked = RankedCandidate(title, artist, 0.0, {"hnsw": rank}, frozenset({m}))
+            resolved.append(_resolved_from_track(ranked, track))
+            vectors[m] = emb[m]
+    return resolved, vectors
 
 
 def _build_results(
@@ -629,6 +681,7 @@ async def run_pipeline(
     counts = _ResolveCounts()
     vectors: dict[str, np.ndarray] = {}
     cache_hits = 0
+    embeddings_computed = 0  # CLAP computations this request (cultural misses only; NOT lane cache reads)
     missing: list[_Resolved] = []
     gate2 = Gate.WARM
 
@@ -664,7 +717,23 @@ async def run_pipeline(
             ))
 
         # 4. Embed the misses (bounded concurrency) and merge with the cache hits.
-        vectors.update(await _embed_missing(deps, missing))
+        embedded = await _embed_missing(deps, missing)
+        vectors.update(embedded)
+        embeddings_computed = len(embedded)  # captured BEFORE the lane: only cultural misses are computed
+
+        # 4b. HNSW vibe lane (default off): inject the vibe-nearest corpus tracks as pre-resolved,
+        #     MBID-keyed scoring inputs. Runs here — after both gates — so a COLD request defers without
+        #     it and the worker (job mode) does the work; a track already scorable from the cultural pool
+        #     is skipped. Off ⇒ no knn, behaviour byte-identical to pre-v2.
+        if HNSW_LANE_ENABLED and vibe_vector is not None:
+            lane_resolved, lane_vectors = await _hnsw_lane(
+                deps, vibe_vector, seed_mbid, {r.mbid for r in resolved}
+            )
+            resolved += lane_resolved
+            vectors.update(lane_vectors)
+            # lane vectors are servable_embeddings reads = cache hits, never new CLAP computations
+            # (Codex review 2026-05-31), so they must NOT inflate embeddings_computed.
+            cache_hits += len(lane_vectors)
 
     # 5. Score + cultural backfill.
     results = _build_results(
@@ -687,7 +756,7 @@ async def run_pipeline(
         gate2=(gate2.value if audio_path else None),
         gate2_threshold=(GATE2_ASYNC_THRESHOLD if audio_path else None),
         missing_embeddings_count=(len(missing) if audio_path else None),
-        embeddings_computed=(len(vectors) - cache_hits if audio_path else None),
+        embeddings_computed=(embeddings_computed if audio_path else None),
         embeddings_cache_hits=(cache_hits if audio_path else None),
         audio_scored_count=audio_scored, backfill_count=len(results) - audio_scored,
         seed_audio_scored=audio_path, rationales_available=rationales_available,
