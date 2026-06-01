@@ -9,11 +9,87 @@ from __future__ import annotations
 import numpy as np
 
 from doppel.aggregation.ranking import RankedCandidate
+from doppel.pipeline import recommend
 from doppel.pipeline.recommend import _build_results, _Resolved
 
 
 def _cand(title: str, rank: int, score: float, mbids=frozenset()) -> RankedCandidate:
     return RankedCandidate(title, f"Artist {title}", score, {"lastfm": rank}, mbids)
+
+
+class _FakeConn:
+    """Minimal asyncpg-conn stand-in: returns a fixed tracks rowset for the title/artist fetch."""
+
+    def __init__(self, track_rows):
+        self._track_rows = track_rows
+
+    async def fetch(self, sql, *args):
+        return self._track_rows
+
+
+class _FakeAcquire:
+    def __init__(self, conn):
+        self._conn = conn
+
+    async def __aenter__(self):
+        return self._conn
+
+    async def __aexit__(self, *exc):
+        return False
+
+
+class _FakeDeps:
+    """deps.pool.acquire() yields the fake conn (the only thing _hnsw_lane needs from deps)."""
+
+    def __init__(self, conn):
+        self.pool = self
+        self._conn = conn
+
+    def acquire(self):
+        return _FakeAcquire(self._conn)
+
+
+async def test_hnsw_lane_hydrates_distinct_mbids_by_exact_identity(monkeypatch):
+    # The redesigned lane (Codex round 3): knn hits become pre-resolved, MBID-keyed scoring inputs.
+    # Two distinct corpus recordings that SHARE a title/artist stay distinct by exact MBID (no title
+    # dedupe); the seed and already-scorable MBIDs are excluded; an unservable hit is skipped.
+    knn_hits = [{"mbid": "seed"}, {"mbid": "m1"}, {"mbid": "m2"}, {"mbid": "dup"}, {"mbid": "unservable"}]
+
+    async def _knn(conn, vec, k, *, model_version):
+        return knn_hits
+
+    async def _fetch_emb(conn, mbids, model_version):
+        return [{"mbid": m, "embedding": [float(i)]} for i, m in enumerate(mbids) if m in {"m1", "m2"}]
+
+    async def _servable(conn, mbid):
+        m = str(mbid)
+        return ({"mbid": m, "asset_id": 1, "preview_url": "u", "provider_track_id": f"p-{m}",
+                 "match_confidence": 0.9} if m in {"m1", "m2"} else None)
+
+    monkeypatch.setattr(recommend.db, "knn", _knn)
+    monkeypatch.setattr(recommend.db, "fetch_embeddings", _fetch_emb)
+    monkeypatch.setattr(recommend.db, "get_servable_track", _servable)
+    track_rows = [{"mbid": "m1", "title": "Intro", "artist": "The xx"},   # same displayed title/artist,
+                  {"mbid": "m2", "title": "Intro", "artist": "The xx"}]   # distinct recordings
+    deps = _FakeDeps(_FakeConn(track_rows))
+
+    resolved, vectors = await recommend._hnsw_lane(deps, np.zeros(4), seed_mbid="seed", already={"dup"})
+
+    assert sorted(r.mbid for r in resolved) == ["m1", "m2"]   # same-title recordings kept distinct
+    assert set(vectors) == {"m1", "m2"}
+    # identity is the exact corpus MBID (not a title-deduped union), tagged hnsw, with NO fabricated
+    # cultural consensus (cultural_score=0 — an hnsw-only hit has no Last.fm/ListenBrainz backing)
+    assert all(r.ranked.mbids == frozenset({r.mbid}) and r.ranked.sources == ("hnsw",)
+               and r.ranked.cultural_score == 0.0 for r in resolved)
+    assert {"seed", "dup", "unservable"}.isdisjoint(r.mbid for r in resolved)
+
+
+async def test_hnsw_lane_empty_on_no_hits(monkeypatch):
+    async def _knn(conn, vec, k, *, model_version):
+        return []
+    monkeypatch.setattr(recommend.db, "knn", _knn)
+    resolved, vectors = await recommend._hnsw_lane(_FakeDeps(_FakeConn([])), np.zeros(4), "seed", set())
+    assert resolved == [] and vectors == {}
 
 
 def test_backfill_uses_verified_mbid_never_source_mbid():
