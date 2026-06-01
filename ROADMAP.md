@@ -111,34 +111,36 @@ SSH-only and internet-private.
 
 ## v2 — Deepen the Engine (CURRENT — started 2026-05-31)
 
-An algorithmic-quality milestone: repair the one pipeline link the Day-7 eval proved broken — controllable
-vibe steering (CLAP's text encoder scores cultural descriptors at ~0.15–0.37, semantically inconsistent).
-**Flagship: LLM vibe→acoustic-terms translation** — rewrite a natural-language vibe into the literal
-acoustic vocabulary CLAP was trained on, *before* text-encoding; degrades to the raw vibe, never touches
-the audio embeddings cache (`model_version`). Scope decision + the label-free ship gate + engineering
-defaults: DECISIONS.md 2026-05-31.
+An algorithmic-quality milestone repairing the one pipeline link the Day-7 eval proved broken —
+controllable vibe steering (CLAP's text encoder scores cultural descriptors at ~0.15–0.37, semantically
+inconsistent). Measurement-first throughout: hypothesize → build flag-off → measure → decide. Full arc +
+rationale: DECISIONS.md 2026-05-31.
 
-Phases (each independently shippable; flag-off where it touches the hot path, so `main` stays deployable):
-- ☐ **Phase 1 — Measurement instrument first**: a two-arm eval (raw-vibe vs translated) + a
-  Spearman agreement-vs-audio-order lift in `eval/harness.py`. Eval-only; makes the flagship's go/no-go
-  decidable *before* the feature exists.
-- ☐ **Phase 2 — Flagship translator (flag OFF)**: a `VibeTranslator` dep (cloned from the explainer's
-  degradable, prompt-cached discipline) + a `_translate_vibe` seam in `recommend.py` behind
-  `VIBE_TRANSLATION_ENABLED` (default off). Flag-off ⇒ pipeline byte-identical to today.
-- ☐ **Phase 3 — Decision + telemetry**: migration `0003` adds nullable `query_logs.translated_vibe_text`;
-  flip the flag on iff the Phase-1 gate passed.
-- ☐ **Phase 4 — Showcase surfacing**: re-export curated seeds + render raw→translated in the transparency
-  panel (static, public-safe, neutral language).
+**Hypothesis (DISCONFIRMED) — LLM vibe→acoustic-terms translation** (merged flag-off, PR #24). The bet was
+that rewriting a vibe into literal CLAP-trained acoustic terms *before* text-encoding would clear the
+weak-encoder wall. A label-free A/B + β-sensitivity harness (`eval/vibe_ab.py`) measured it live and
+disconfirmed it: translation *lowers* the CLAP text cosine (0/3 vibe seeds pass the gate), and at β=0.3
+the vibe leg barely moves output regardless — the bottleneck is the candidate *pool*, not the text vector.
+The `ClaudeVibeTranslator` ships dormant (`VIBE_TRANSLATION_ENABLED=False`); the work also coupled the
+fusion weights (β is the env knob, α=1−β ⇒ `combined_score ∈ [0,1]`).
 
-**Ship gate (label-free)**: flip default-on iff translated-vibe text-cosine rises AND its rank-order agrees
-*more* with the reliable audio order (Spearman lift > 0) WHILE score-spread holds. Inflation without
-agreement → reject, flag stays off (cost = zero; degrade-to-raw is the floor).
+**Flagship — HNSW vibe-retrieval lane** (built flag-off, `HNSW_LANE_ENABLED`). The disconfirmation pointed
+at the pool: steer-away vibes fail because the seed's cultural neighbours can't contain the steer
+direction. A bounded feasibility spike (`eval/hnsw_spike.py`) + a hybrid measurement
+(`eval/hnsw_hybrid.py`) confirmed global `knn(vibe)` surfaces plausible on-vibe tracks the cultural pool
+lacks, and that they survive the rerank at β≈0.5 (Blinding Lights → 8/10 acoustic ballads, end-to-end).
+After three Codex rounds the lane was **redesigned** into a clean MBID-keyed scoring input inside
+`run_pipeline` (`_hnsw_lane`): corpus tracks are MBID-native and now treated as such, never round-tripped
+through the title-keyed pool. Validated; 293 offline + the db-gated suite in CI.
 
-Deferred: **HNSW second retrieval lane → gated v2.1** (the `embeddings_hnsw_idx` index + `knn()` query
-already exist; only a caller-side RRF merge is missing — but it widens a non-bottleneck link, so ship only
-if a discovery-yield metric is positive). **LLM-reranking A/B → v3** (bets against the validated "CLAP owns
-ranking" rule; needs a blind human-preference gate). **Corpus densification** (eval shows coverage isn't
-the ceiling).
+**Before enabling the lane** (the remaining v2 work): full source-aware provenance so HNSW results are
+honest about themselves — a frontend "hnsw" source chip, explainer-prompt awareness, eval-ablation labels
+(DECISIONS.md 2026-05-31). Optional tuning: `HNSW_LANE_K`, pgvector `ef_search`, the β interaction. The
+lane is correct + complete as a flag-off experiment; turning it on is gated on the provenance work.
+
+Deferred past v2: **LLM-reranking A/B → v3** (bets against the validated "CLAP owns ranking" rule; needs a
+blind human-preference gate). **Corpus densification** (better-motivated now — the lane leans on corpus
+diversity — though the accidental-accretion corpus already demonstrates the mechanism).
 
 ## Upcoming Milestones
 
