@@ -1,0 +1,414 @@
+{
+  "schema_version": 1,
+  "slug": "take-five",
+  "mode": "warm",
+  "captured_at": "2026-06-12T20:00:46+00:00",
+  "git_sha": "f3975a4",
+  "git_dirty": false,
+  "config": {
+    "alpha": 0.7,
+    "beta": 0.3,
+    "resolve_candidate_limit": 75,
+    "clap_model_version": "laion/larger_clap_music_and_speech+mean",
+    "gate1_threshold": 5,
+    "gate2_threshold": 10,
+    "hnsw_lane": true,
+    "hnsw_lane_k": 20
+  },
+  "total_ms": 14118,
+  "stages": [
+    {
+      "stage": "aggregate",
+      "t0_ms": 0,
+      "t1_ms": 1105,
+      "counters": {
+        "candidates": 100,
+        "failed_sources": 0
+      }
+    },
+    {
+      "stage": "gate1",
+      "t0_ms": 1105,
+      "t1_ms": 1117,
+      "counters": {
+        "uncached": 0,
+        "threshold": 5,
+        "verdict": "warm"
+      }
+    },
+    {
+      "stage": "seed",
+      "t0_ms": 1117,
+      "t1_ms": 1123,
+      "counters": {
+        "audio_scored": true,
+        "vibe_present": false
+      }
+    },
+    {
+      "stage": "resolve",
+      "t0_ms": 1123,
+      "t1_ms": 1162,
+      "counters": {
+        "attempted": 75,
+        "cache_hits": 75,
+        "found": 68,
+        "rejected": 2,
+        "not_found": 5
+      },
+      "events": [
+        {
+          "t_ms": 1123,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1124,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1124,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1125,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1126,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1127,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1127,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1128,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1128,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1129,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1129,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1130,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1132,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1133,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1134,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1134,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1135,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1135,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1136,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1136,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1137,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1138,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1138,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1139,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1140,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1140,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1141,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1142,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1142,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1143,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1143,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1144,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1145,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1145,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1146,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1146,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1147,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1147,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1148,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1148,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1149,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1149,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1149,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1150,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1150,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1151,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1151,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1151,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1152,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1152,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1152,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1152,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1153,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1153,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1153,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1154,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1154,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1155,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1155,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1155,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1156,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1156,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1157,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1157,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1158,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1158,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1158,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1159,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1159,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1159,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1160,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1160,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1160,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1161,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1161,
+          "kind": "resolve.cache_hit"
+        }
+      ]
+    },
+    {
+      "stage": "gate2",
+      "t0_ms": 1162,
+      "t1_ms": 1167,
+      "counters": {
+        "missing": 4,
+        "threshold": 10,
+        "verdict": "warm",
+        "embedding_cache_hits": 64
+      }
+    },
+    {
+      "stage": "embed",
+      "t0_ms": 1167,
+      "t1_ms": 1314,
+      "counters": {
+        "attempted": 4,
+        "computed": 0,
+        "failed": 4
+      }
+    },
+    {
+      "stage": "results",
+      "t0_ms": 1314,
+      "t1_ms": 1316,
+      "counters": {
+        "top": 10,
+        "audio_scored": 10,
+        "backfill": 0
+      },
+      "top_mbids": [
+        "187c3045-ac26-4837-b256-a34705934b51",
+        "f035c81c-25b7-49b7-bcc5-72b03a7d2607",
+        "6a85b0ab-495d-4ff4-9381-c1fb63f33a49",
+        "0bdecbca-403a-4f0b-9aa2-2396a6961083",
+        "b2bd91c9-38bb-4696-b363-cfb9f43b7227",
+        "272dbf93-1501-4650-bbde-627ff0588a73",
+        "a36aa252-3250-4f51-821d-dd94c1248499",
+        "1f1fd94d-35f2-4ca4-8b29-01100caa2a19",
+        "cf05e83e-8f63-4196-9165-e43855467006",
+        "f23bb951-755e-4a87-855e-e6d3ce2bab6e"
+      ]
+    },
+    {
+      "stage": "explain",
+      "t0_ms": 1316,
+      "t1_ms": 14118,
+      "counters": {
+        "rationales_available": true
+      }
+    }
+  ]
+}
