@@ -34,7 +34,10 @@ export interface ResultItem {
   combined_score: number | null;
   /** Unbounded RRF (k=60) cultural-consensus score. Always present. */
   cultural_score: number;
-  /** Cultural sources that surfaced this candidate, e.g. ["lastfm", "listenbrainz"]. */
+  /**
+   * Sources that surfaced this candidate, e.g. ["lastfm", "listenbrainz"]. The v2 HNSW vibe lane
+   * tags its results ["hnsw"] (global vibe/acoustic retrieval, not a cultural source).
+   */
   sources: string[];
   rationale: string | null;
 }
