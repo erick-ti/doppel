@@ -67,7 +67,7 @@ adversarial reviews (rationale in DECISIONS.md):
 
 _Day 0 (external dependency validation) — **complete, verdict GO** (2026-05-21). Day 1-2 (matcher/resolver) — **complete, merged 2026-05-21** (PR #2): match verification, provider-informed canonicalization, and cover/ISRC/artist-MBID hardening. Day 3 (candidate aggregator) — **complete, merged 2026-05-22** (PR #3): Last.fm + ListenBrainz sources, conservative dedupe, RRF (k=60), Gate-1, per-source isolation/observability. Day 4 (CLAP embedder + similarity scoring) — **complete, merged 2026-05-23** (PR #4): in-memory PyAV decode, deterministic duration-weighted window pooling, audio (+ optional vibe-text) cosine with within-batch min-max + α/β fusion, and hardened preview/text input guards. Day 5 (full database schema + asyncpg access layer) — **complete 2026-05-23** (PR #5): Postgres 16 + pgvector (`tracks`/`audio_assets`/`canonical_lookups`/`embeddings`/`query_logs`), a checksum-guarded raw-SQL migration runner, and the cache/corpus access layer. Day 6 (LLM explainer + FastAPI `/recommend`) — **complete, merged 2026-05-24** (PR #6 → `7ac120b`): the shared inline/worker `run_pipeline` (two async gates, cache-first resolve, ephemeral embed, scoring + cultural backfill), a degradable Claude explainer, the ARQ worker, FastAPI `/recommend` + poll, migration 0002 (telemetry + result snapshot), hardened across three adversarial-review rounds. See SESSION_NOTES.md / DECISIONS.md._
 
-## v1.1 — Showcase Frontend (frontend feature-complete 2026-05-31; only the deep-dive recording remains)
+## v1.1 — Showcase Frontend (COMPLETE — frontend 2026-05-31; the deferred screencast superseded by v1.2's replay console, 2026-06-12)
 
 A public-safe showcase frontend that demonstrates Doppel to any visitor — instant first-glance value + a
 verifiable technical-depth layer — **WITHOUT** exposing the live backend, persisting audio, or doing
@@ -77,8 +77,9 @@ DECISIONS.md (2026-05-28).
 
 **Architecture — Option A (static-precompute).** A Next.js app (in `web/`) on Vercel serves frozen
 `RecommendationResponse` JSON, regenerated once per curated seed by running the REAL pipeline on the
-VPS (`scripts/export_showcase.py`). A recorded deep-dive drives the live engine over the existing SSH
-tunnel for the "it actually runs" proof. This sidesteps, by design (not by patching): the 701 s
+VPS (`scripts/export_showcase.py`). A recorded deep-dive over the existing SSH tunnel was planned to
+carry the "it actually runs" proof — superseded by the v1.2 replay console (2026-06-12), which takes
+that role over. This sidesteps, by design (not by patching): the 701 s
 cold-latency cliff, the "validate-before-public" live-embedding legal question, and the
 no-auth/DoS/cost liability. The deferred poll-handle/auth/rate-limit/asyncpg hardening (the v1 list
 above) is **narrated as scoped judgment, not built**.
@@ -99,17 +100,19 @@ Phases (each independently shippable; ~6.5–9.5 build-days total):
   narrative, competitive wedge + honest "where it doesn't win", eval-evidence panels + N=75 ablation, CSS
   pipeline DAG, all DIAGNOSTIC-labelled) + per-result raw-JSON disclosures. Eval figures frozen in
   `web/lib/eval-evidence.ts`. (Also folded in the Codex-caught funnel "CLAP-scored N of M found" honesty fix.)
-- ✓ **Phase 4 — Recorded deep-dive — PAGE shipped, video pending** (PR #23): `/deep-dive` route + a
+- ✓ **Phase 4 — Recorded deep-dive — PAGE shipped; video superseded by v1.2 (recording optional)** (PR #23): `/deep-dive` route + a
   written act-by-act walkthrough + a placeholder video slot. The **screencast itself is recorded LAST**
   (operator-only, against the final system) and swapped in via a one-line `DEEP_DIVE_VIDEO` change —
-  DECISIONS.md 2026-05-31. This is the only remaining v1.1 work, and it's non-code.
+  DECISIONS.md 2026-05-31. **Superseded 2026-06-12**: the v1.2 replay console takes over the
+  "it actually runs" proof (DECISIONS.md 2026-06-12 v1.2); the written walkthrough stays, a recording
+  is optional, and v1.1 closes.
 
 Curated roster: 8 genre heroes + 2 vibe-steer variants (HUMBLE.-acoustic the hero) — plan §3.
 
 Done = curated showcase live on Vercel; `/how-it-works` + `/deep-dive` shipped; the VPS remains
 SSH-only and internet-private.
 
-## v2 — Deepen the Engine (CURRENT — started 2026-05-31)
+## v2 — Deepen the Engine (COMPLETE — 2026-05-31 → 2026-06-12)
 
 An algorithmic-quality milestone repairing the one pipeline link the Day-7 eval proved broken —
 controllable vibe steering (CLAP's text encoder scores cultural descriptors at ~0.15–0.37, semantically
@@ -139,20 +142,54 @@ eval A/B (lane × β over the vibe seeds, 2026-06-12) measured the flip. At the 
 cleanly improves descriptive vibes (new on-vibe #1 for the M83 seed) with zero hub-track leakage, so
 `HNSW_LANE_ENABLED` now **defaults ON**. β=0.5 steering (which also unlocks moderate-steer seeds like
 Take Five) is a follow-on, gated on hub-track mitigation — the A/B reproduced the known corpus hub
-surfacing at β=0.5. Remaining tuning: `HNSW_LANE_K`, pgvector `ef_search`.
+surfacing at β=0.5. Remaining tuning: `HNSW_LANE_K`, pgvector `ef_search`. **Production rollout complete
+(2026-06-12)**: the VPS redeployed to the enabled build, its corpus warmed 147→934 embeddings via an
+API-driven pass over the 16 benchmark seeds, and the lane verified live (an `hnsw`-tagged result on a
+real vibe request).
 
 Deferred past v2: **LLM-reranking A/B → v3** (bets against the validated "CLAP owns ranking" rule; needs a
 blind human-preference gate). **Corpus densification** (better-motivated now — the lane leans on corpus
 diversity — though the accidental-accretion corpus already demonstrates the mechanism).
 
+## v1.2 — Engine Replay Console (CURRENT — started 2026-06-12)
+
+The showcase's landing page becomes an idle "engine console": a visitor picks a curated seed and watches
+a **stage-by-stage animated replay of a real recorded pipeline run** — aggregate → gate 1 → resolve →
+gate 2 → embed → hnsw lane → score → backfill → explain → results — driven by per-stage telemetry captured from
+the real pipeline, stamped (`git_sha`, capture date) and explicitly labeled a **recorded replay** (time
+compression shown, e.g. "cold run 11m41s, replayed at 40×"; the page never implies a live run was
+triggered). Alongside it, a visually distinct **live ops panel** shows genuinely real-time production
+signals via outbound push only — healthchecks.io public status badges (backup + heartbeat checks) and a
+VPS cron pushing a sanitized `stats.json` (corpus size, queries served, last backup) to a public-read
+Cloudflare R2 bucket — no new inbound surface, no client-side tokens; the VPS stays loopback + SSH-only.
+Still Option A (static-precompute): replay data ships as **sidecar trace files** per seed
+(`web/public/seeds/<slug>.trace.json`) captured by an export-only `trace_recorder` seam; the 10 frozen
+seed docs are not regenerated (one new cold-run capture *adds* a seed). Supersedes the v1.1 deep-dive
+screencast (decision + full rationale: DECISIONS.md 2026-06-12 v1.2).
+
+Phases (each independently shippable):
+- **Phase 1 — Trace capture + sidecars** (backend): `trace_recorder` on `PipelineDeps` (default `None`;
+  production paths untouched), exporter integration + `--trace-only`, warm sidecars for the 10 curated
+  seeds, one real cold-run capture, the `RunTrace` TS type.
+- **Phase 2 — Replay console** (frontend flagship): idle-console landing + curated seed picker (the
+  disabled seed-box inverts), `/run/[slug]` replay view (animated DAG, play/pause/scrub/speed, mode
+  banner, reduced-motion path), results cascade reusing the existing card components.
+- **Phase 3 — Live ops panel**: healthchecks badges + heartbeat cron, `stats.json` push + tiles, fail-soft
+  fallbacks (the static export renders fully with all live fetches failing).
+- **Phase 4 — Optional polish**: host vitals, a `/status` route, the custom-domain question.
+
+Done = console-first landing live on Vercel with replays for every curated seed + at least the
+backup/heartbeat live tiles; the VPS remains SSH-only and internet-private.
+
 ## Upcoming Milestones
 
-**v2 — Deepen the Engine** (above) is the current milestone (started 2026-05-31); v1.1's frontend is
-feature-complete, with only the operator-recorded deep-dive screencast deferred. The **HNSW vibe-retrieval
-lane** is the v2 flagship — built, provenance-gated, A/B-measured, and **enabled by default** (β=0.3;
-β=0.5 steering is a follow-on gated on hub-track mitigation). Past v2: **LLM-reranking A/B** is **v3**
-and **corpus densification** stays deferred — see DECISIONS.md 2026-05-31 / 2026-06-12 and BRAINDUMP.md
-"Future Improvements (Deferred)".
+**v2 — Deepen the Engine is COMPLETE (2026-05-31 → 2026-06-12)**: the HNSW vibe-retrieval lane shipped
+end-to-end — built flag-off, provenance-gated, 2×2 A/B-measured, enabled by default (β=0.3), and live in
+production. Its gated leftovers are **post-v2 follow-ons**, not open milestone work: hub-track mitigation
+→ β=0.5 steering (DECISIONS.md 2026-06-12), and `HNSW_LANE_K` / `ef_search` tuning. The current milestone
+is **v1.2 — Engine Replay Console** (above), which also closes v1.1 by superseding its deferred
+screencast. Past v2: **LLM-reranking A/B** is **v3** and **corpus densification** stays deferred
+— see DECISIONS.md 2026-05-31 / 2026-06-12 and BRAINDUMP.md "Future Improvements (Deferred)".
 
 ## Non-Goals
 
@@ -178,5 +215,5 @@ and **corpus densification** stays deferred — see DECISIONS.md 2026-05-31 / 20
 - **Candidate pool yield** — **RESOLVED (Day-7 eval)**: the full 19-seed benchmark measured per-seed yields ~100–198 after dedupe (jazz standards / Piaf ~100; mainstream pop/electronic ~180–198); the min-max-fused rerank works across that range. Below the 200-300 target for thin-data seeds, but sufficient — the top-N resolve cap is 75 regardless.
 - **CLAP dual-load memory** — **RESOLVED (Day 0)**: ~659 MB process RSS per load (~1.3 GB dual-load across FastAPI + ARQ worker), 76 ms/clip warm on CPU, 512-dim. Fits a modest VPS.
 - **Coverage matrix representativeness** — **RESOLVED (Day-7 eval)**: re-measured across R&B (Pink + White, Cranes in the Sky), pre-2000 (Bohemian Rhapsody, Dreams), and non-English (Despacito, La Vie en rose) in the 19-seed benchmark — 19/19 seed audio-scored, median resolve found-ratio 0.987. The Day-0 small-sample 100% claim holds at scale; Deezer coverage is not the weak link.
-- **Deep-dive screencast** — **OPEN (v1.1)**: record the 6–8 min SSH-tunnel cold→warm walkthrough (script in `web/lib/deep-dive.ts` `ACTS` / plan §6), or is the written walkthrough already on `/deep-dive` enough? Leaning: record last as the project's final step, then swap it in via the one-line `DEEP_DIVE_VIDEO` change (DECISIONS.md 2026-05-31). Operator-only work.
+- **Deep-dive screencast** — **RESOLVED (2026-06-12, superseded)**: the v1.2 replay console takes over the "it actually runs" proof (interactive, honestly time-compressed, not operator-gated — DECISIONS.md 2026-06-12 v1.2). The written walkthrough stays on `/deep-dive`; a recording is optional and the `DEEP_DIVE_VIDEO` one-line swap remains available if one is ever made.
 - **Custom domain** — **OPEN (v1.1)**: keep the free `doppel-music.vercel.app`, or register a custom domain? (`.music` explored, not bought.)
