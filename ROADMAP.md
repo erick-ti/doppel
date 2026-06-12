@@ -145,9 +145,10 @@ diversity — though the accidental-accretion corpus already demonstrates the me
 ## Upcoming Milestones
 
 **v2 — Deepen the Engine** (above) is the current milestone (started 2026-05-31); v1.1's frontend is
-feature-complete, with only the operator-recorded deep-dive screencast deferred. Past v2: the **HNSW
-retrieval lane** is a gated **v2.1**, **LLM-reranking A/B** is **v3**, and **corpus densification** stays
-deferred — see DECISIONS.md 2026-05-31 and BRAINDUMP.md "Future Improvements (Deferred)".
+feature-complete, with only the operator-recorded deep-dive screencast deferred. The **HNSW vibe-retrieval
+lane** is the v2 flagship (built flag-off; enabling it is gated on the source-aware provenance work). Past
+v2: **LLM-reranking A/B** is **v3** and **corpus densification** stays deferred — see DECISIONS.md
+2026-05-31 and BRAINDUMP.md "Future Improvements (Deferred)".
 
 ## Non-Goals
 
@@ -158,7 +159,7 @@ deferred — see DECISIONS.md 2026-05-31 and BRAINDUMP.md "Future Improvements (
 - Fine-tuned audio models
 - LLM reranking (explanation only in v1)
 - Background corpus densification
-- Global ANN retrieval via HNSW (index exists for future use)
+- Enabling global ANN (HNSW) vibe retrieval in production — the lane is built flag-off in v2; turning it on is gated on the source-aware provenance work (DECISIONS.md 2026-05-31)
 - Additional preview providers beyond Deezer
 - MusicBrainz local mirror
 - `is_explicit` content filtering
