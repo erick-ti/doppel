@@ -21,6 +21,10 @@ Run on the VPS (where the corpus is already warm from the eval runs) over the SS
 First run of an uncached seed pays the ~701 s cold path once; a warm seed exports in ~12 s. Use
 ``--only <slug,…>`` to (re)run a subset, and ``--degraded "Title::Artist"`` to capture one
 intentionally-degraded (no-seed-preview → cultural-only) response for the System-Transparency panel.
+
+v1.2 replay sidecars: every export also writes ``<slug>.trace.json`` — real per-stage timings/counters
+from a :class:`TraceRecorder` riding the run (DECISIONS.md 2026-06-12). ``--trace-only`` refreshes the
+sidecars without rewriting the frozen seed docs, gated on the traced top-N matching the doc's.
 """
 from __future__ import annotations
 
@@ -42,12 +46,16 @@ from doppel.config import (
     AUDIO_SIM_WEIGHT,
     CLAP_MODEL_VERSION,
     GATE1_ASYNC_THRESHOLD,
+    GATE2_ASYNC_THRESHOLD,
+    HNSW_LANE_ENABLED,
+    HNSW_LANE_K,
     RESOLVE_CANDIDATE_LIMIT,
     VIBE_TEXT_WEIGHT,
 )
 from doppel.db import QueryLogFields
 from doppel.pipeline.deps import build_deps, close_deps
 from doppel.pipeline.recommend import Recommendation, run_pipeline
+from doppel.pipeline.trace import TraceRecorder, build_trace_document, reconcile_top_identity
 from doppel.sources.lastfm import LastFmClient
 from doppel.sources.listenbrainz import ListenBrainzClient
 
@@ -82,6 +90,10 @@ CURATED: list[ShowcaseSeed] = [
     # Second, honestly-subtle vibe example.
     ShowcaseSeed("midnight-city-vibe-latenight", "Midnight City", "M83", "electronic",
                  vibe="melancholic, late-night driving"),
+    # v1.2 cold-run capture (DECISIONS.md 2026-06-12): chosen because the corpus held NO country at
+    # capture time (verified: 0 tracks/lookups), so its first export records a REAL cold trace — the
+    # Gate-1 COLD verdict and the MB-paced resolve grind the replay console animates. Warm thereafter.
+    ShowcaseSeed("jolene", "Jolene", "Dolly Parton", "country"),
 ]
 
 
@@ -97,12 +109,29 @@ def _git_sha() -> str:
 
 
 def _git_dirty() -> bool:
-    """True if any *tracked* file differs from HEAD — then ``git_sha`` is not a clean, reproducible
-    commit. A soft provenance flag (not a gate): it keeps the stamp honest rather than blocking work."""
+    """True when the working tree differs from HEAD in ANY way — staged, unstaged, or untracked
+    (gitignored files excluded) — then ``git_sha`` is not a clean, reproducible commit. A soft
+    provenance flag (not a gate): it keeps the stamp honest rather than blocking work. Call ONCE at
+    batch start and reuse: the batch's own artifact writes must not flip later seeds' stamps (the
+    code state the stamp certifies does not change mid-batch)."""
     try:
-        return subprocess.run(["git", "diff", "--quiet"]).returncode != 0
+        out = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True)
+        return bool(out.stdout.strip())
     except OSError:
         return False
+
+
+def _salvage_trace(trace_doc: dict[str, Any] | None, slug: str) -> None:
+    """Best-effort dump of a built-but-discarded trace to the gitignored ``eval/reports/`` — a COLD
+    capture's trace is unrepeatable (its run already warmed the corpus), so a gates-fail or error
+    must never silently destroy the measurement; salvage it for diagnosis/possible reuse."""
+    if trace_doc is None:
+        return
+    with contextlib.suppress(Exception):
+        rejects = Path("eval/reports")
+        rejects.mkdir(parents=True, exist_ok=True)
+        (rejects / f"{slug}.trace.rejected.json").write_text(
+            json.dumps(trace_doc, indent=2, ensure_ascii=False) + "\n")
 
 
 def _coverage(rec: Recommendation, row) -> dict[str, Any]:
@@ -226,10 +255,23 @@ async def _terminalize(deps, qid: int | None, seed: ShowcaseSeed, exc: BaseExcep
             ))
 
 
+def _trace_config() -> dict[str, Any]:
+    """The config snapshot stamped into every trace sidecar — the knobs the replay narrates."""
+    return {
+        "alpha": AUDIO_SIM_WEIGHT, "beta": VIBE_TEXT_WEIGHT,
+        "resolve_candidate_limit": RESOLVE_CANDIDATE_LIMIT,
+        "clap_model_version": CLAP_MODEL_VERSION,
+        "gate1_threshold": GATE1_ASYNC_THRESHOLD, "gate2_threshold": GATE2_ASYNC_THRESHOLD,
+        "hnsw_lane": HNSW_LANE_ENABLED, "hnsw_lane_k": HNSW_LANE_K,
+    }
+
+
 async def export_seed(
-    deps, sources, seed: ShowcaseSeed, out_dir: Path, sha: str, *, allow_gate_warnings: bool = False
+    deps, sources, seed: ShowcaseSeed, out_dir: Path, sha: str, *, dirty: bool,
+    allow_gate_warnings: bool = False, trace_only: bool = False,
 ) -> dict[str, Any]:
-    """Run one seed through the real pipeline (job mode, explainer ON) and write ``<slug>.json``.
+    """Run one seed through the real pipeline (job mode, explainer ON) and write ``<slug>.json``
+    plus its ``<slug>.trace.json`` replay sidecar (v1.2).
 
     Mirrors eval.harness.run_seed's orchestration: aggregate → count uncached → Gate 1 → insert a
     ``queued`` row → run_pipeline(job) → reload the row + result snapshot. Serializes via the shared
@@ -238,12 +280,34 @@ async def export_seed(
     payload with a degraded source never lands on disk, even under ``allow_gate_warnings``. When a
     selected seed is blocked or errors, any stale ``<slug>.json`` is removed (fail-closed: the public
     set stays current-and-passing or absent, never a prior run's JSON).
+
+    **Traces (v1.2 — DECISIONS.md 2026-06-12)**: a :class:`TraceRecorder` rides ``deps`` for the run
+    and its sidecar is written next to the seed doc. ``trace_only=True`` refreshes the sidecar
+    WITHOUT rewriting the frozen seed doc — gated by :func:`reconcile_top_identity`: the traced run's
+    top-N must equal the on-disk doc's, else the seed fails (the documented signal to re-export doc +
+    trace together). A full export reconciles too (same-run sanity) and the trace is written only when
+    the doc is — the pair ships together or not at all.
     """
     started = time.monotonic()
     qid: int | None = None
     path = out_dir / f"{seed.slug}.json"
+    trace_path = out_dir / f"{seed.slug}.trace.json"
+    if trace_only and not path.exists():
+        # FAIL FAST — before aggregate/run_pipeline: a refresh without a frozen doc would otherwise
+        # pay a full (possibly COLD ~10-min, MB-paced, corpus-warming) run only to discard the trace.
+        # Warming is irreversible, so this guard is what preserves a pending one-shot cold capture
+        # (e.g. jolene) from a routine default-roster --trace-only pass.
+        return {"slug": seed.slug, "label": seed.title, "ok": False, "removed_stale": False,
+                "error": f"--trace-only: no frozen {path.name} to reconcile against; "
+                         "run a full export for this seed first (skipped BEFORE any pipeline work)",
+                "wall_s": 0.0}
+    recorder = TraceRecorder()
+    deps.trace_recorder = recorder
+    trace_doc: dict[str, Any] | None = None
     try:
         agg = await aggregate(sources, seed.title, seed.artist)
+        recorder.stage("aggregate", candidates=len(agg.candidates),
+                       failed_sources=len(agg.failed_sources))
         async with deps.pool.acquire() as conn:
             uncached = await db.count_uncached_candidates(
                 conn, [(c.title, c.artist) for c in agg.candidates[:RESOLVE_CANDIDATE_LIMIT]]
@@ -257,6 +321,10 @@ async def export_seed(
                 failed_sources=agg.failed_sources, gate1=gate1.value,
                 gate1_threshold=GATE1_ASYNC_THRESHOLD, uncached_count=uncached,
             ))
+            # Closed AFTER the queued-row insert so that write lands in the gate1 segment (it is part
+            # of the gate-1 handoff), not silently absorbed into the pipeline's "seed" stage.
+            recorder.stage("gate1", uncached=uncached, threshold=GATE1_ASYNC_THRESHOLD,
+                           verdict=gate1.value)
         rec = await run_pipeline(
             deps, seed.title, seed.artist, seed.vibe, agg.candidates,
             execution_mode="job", query_log_id=qid,
@@ -277,10 +345,71 @@ async def export_seed(
         payload["meta"] = {
             "slug": seed.slug, "genre": seed.genre,
             "exported_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-            "git_sha": sha, "git_dirty": _git_dirty(), "clap_model_version": CLAP_MODEL_VERSION,
+            "git_sha": sha, "git_dirty": dirty, "clap_model_version": CLAP_MODEL_VERSION,
             "alpha": AUDIO_SIM_WEIGHT, "beta": VIBE_TEXT_WEIGHT,
             "resolve_candidate_limit": RESOLVE_CANDIDATE_LIMIT,
         }
+
+        trace_doc = build_trace_document(
+            recorder, slug=seed.slug, mode=gate1.value,
+            captured_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            git_sha=sha, git_dirty=dirty, config=_trace_config(),
+        )
+
+        if trace_only:
+            # Refresh the sidecar WITHOUT rewriting the frozen seed doc (which existed at entry —
+            # the fail-fast guard). Ordered checks; on any failure the seed fails LOUDLY and the
+            # existing sidecar is kept (it remains the last reconciled pair member) — except proven
+            # top-N divergence, the one verdict that makes it stale.
+
+            def _refused(reason: str, *, removed: bool = False) -> dict[str, Any]:
+                return {"slug": seed.slug, "label": seed.title, "ok": False,
+                        "removed_stale": removed, "error": reason,
+                        "wall_s": round(time.monotonic() - started, 1)}
+
+            # 1. Mode-downgrade guard FIRST (before anything destructive): a cold capture is
+            #    one-shot — its corpus is warm forever after, so an overwrite is unrecoverable.
+            if trace_path.exists():
+                existing_mode = json.loads(trace_path.read_text()).get("mode")
+                if existing_mode != trace_doc["mode"]:
+                    return _refused(
+                        f"refusing to overwrite the {existing_mode!r}-mode sidecar with a "
+                        f"{trace_doc['mode']!r} trace — a cold capture is one-shot; if intended, "
+                        "re-export this seed fully (doc + trace together)")
+            # 2. Quality gates: the frozen docs all passed them; a refresh run that doesn't (e.g. a
+            #    degraded source mid-run) must not ship its trace beside a clean doc.
+            gates = _gate_report(seed, payload)
+            passed, problems = _gates_pass(seed, gates)
+            if not passed:
+                return _refused(f"trace run failed gates ({', '.join(problems)}) — sidecar not "
+                                "refreshed (transient? re-run; persistent? re-export doc + trace)")
+            frozen = json.loads(path.read_text())
+            # 3. Config drift: a sidecar must not pair knobs with a doc whose scores they didn't
+            #    produce. Every contract field the frozen meta RECORDS is compared (Codex adversarial
+            #    review 2026-06-12 — clap_model_version re-keys the whole embeddings cache, invariant
+            #    #4, so a model flip invalidates the pairing even when the top-N happens to hold).
+            #    The hnsw knobs / gate thresholds have no frozen-meta baseline to compare: thresholds
+            #    cannot alter results in job mode (gates never defer), and a lane change on a vibe
+            #    seed moves the top-N, which check 4 catches.
+            cfg = _trace_config()
+            drifted = [k for k in ("alpha", "beta", "resolve_candidate_limit", "clap_model_version")
+                       if frozen["meta"].get(k) != cfg[k]]
+            if drifted:
+                return _refused(f"config drift vs frozen meta ({', '.join(drifted)}) — re-export "
+                                "this seed fully (doc + trace together)")
+            # 4. Top-N reconciliation: divergence = the corpus moved; the existing sidecar is now
+            #    provably stale, so it is removed — the documented signal to re-export the pair.
+            mismatch = reconcile_top_identity(recorder.result_identity(), frozen["results"])
+            if mismatch:
+                return _refused("trace/doc top-N divergence (the corpus moved) — re-export this "
+                                "seed WITH its trace: " + "; ".join(mismatch),
+                                removed=_remove_stale(trace_path))
+            out_dir.mkdir(parents=True, exist_ok=True)
+            trace_path.write_text(json.dumps(trace_doc, indent=2, ensure_ascii=False) + "\n")
+            return {"slug": seed.slug, "label": seed.title, "ok": True, "path": str(trace_path),
+                    "wrote": True, "removed_stale": False, "gates": gates, "gates_pass": True,
+                    "gate_problems": [], "wall_s": round(time.monotonic() - started, 1),
+                    "results": len(payload["results"])}
 
         gates = _gate_report(seed, payload)
         passed, problems = _gates_pass(seed, gates)
@@ -290,10 +419,20 @@ async def export_seed(
         wrote = _should_write(passed, problems, allow_gate_warnings=allow_gate_warnings)
         removed_stale = False
         if wrote:
+            # Same-run sanity: the doc and trace come from one run, so a mismatch here is a recorder
+            # bug — fail the seed rather than ship a self-inconsistent pair.
+            mismatch = reconcile_top_identity(recorder.result_identity(), payload["results"])
+            if mismatch:
+                raise RuntimeError("same-run trace/doc reconciliation failed: " + "; ".join(mismatch))
             out_dir.mkdir(parents=True, exist_ok=True)
             path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n")
+            trace_path.write_text(json.dumps(trace_doc, indent=2, ensure_ascii=False) + "\n")
         else:
-            removed_stale = _remove_stale(path)  # fail-closed: a blocked seed leaves no stale public file
+            # fail-closed: a blocked seed leaves no stale public file — doc OR sidecar. The built
+            # trace is salvaged to the private reports dir first (a cold capture is unrepeatable).
+            _salvage_trace(trace_doc, seed.slug)
+            removed_stale = _remove_stale(path)
+            removed_stale = _remove_stale(trace_path) or removed_stale
         wall = round(time.monotonic() - started, 1)
         return {"slug": seed.slug, "label": seed.title, "ok": True,
                 "path": str(path) if wrote else None, "wrote": wrote, "removed_stale": removed_stale,
@@ -303,9 +442,19 @@ async def export_seed(
         await _terminalize(deps, qid, seed, exc)
         if isinstance(exc, asyncio.CancelledError):
             raise
-        removed_stale = _remove_stale(path)  # fail-closed: an errored seed leaves no stale public file
+        # fail-closed removals — full export only: an errored full export leaves neither public file
+        # (the built trace is salvaged privately first — a cold capture is unrepeatable). An errored
+        # --trace-only removes NOTHING: the frozen doc is still the valid public one and the existing
+        # sidecar is still its last reconciled pair member; only a PROVEN divergence (above) stales it.
+        removed_stale = False
+        if not trace_only:
+            _salvage_trace(trace_doc, seed.slug)
+            removed_stale = _remove_stale(trace_path)
+            removed_stale = _remove_stale(path) or removed_stale
         return {"slug": seed.slug, "label": seed.title, "ok": False, "removed_stale": removed_stale,
                 "error": f"{type(exc).__name__}: {exc}", "wall_s": round(time.monotonic() - started, 1)}
+    finally:
+        deps.trace_recorder = None  # deps are shared across seeds — never leak a stale recorder
 
 
 def _select(only: str | None, degraded: str | None) -> list[ShowcaseSeed]:
@@ -337,11 +486,15 @@ async def main() -> None:
     p.add_argument("--allow-gate-warnings", action="store_true",
                    help="exploratory pass: write + exit 0 on a COSMETIC gate failure (backfill / rationales "
                         "/ self-master); no_degraded_sources stays enforced. Such output must NOT be committed.")
+    p.add_argument("--trace-only", action="store_true",
+                   help="refresh <slug>.trace.json replay sidecars WITHOUT rewriting the frozen seed docs; "
+                        "fails a seed whose re-run top-N diverges from its doc (then re-export it fully).")
     args = p.parse_args()
 
     seeds = _select(args.only, args.degraded)
     out_dir = Path(args.out)
     sha = _git_sha()
+    dirty = _git_dirty()  # ONCE, before any artifact writes — the batch's own output is not "dirt"
 
     # Explainer stays ON (build_deps opens it) — rationales are a first-class showcase surface, unlike
     # the eval harness which drops it.
@@ -353,8 +506,9 @@ async def main() -> None:
         for i, seed in enumerate(seeds, 1):
             label = seed.title + (f" [vibe: {seed.vibe}]" if seed.vibe else "")
             print(f"[{i}/{len(seeds)}] {seed.slug}: {label} …", flush=True)
-            row = await export_seed(deps, sources, seed, out_dir, sha,
-                                    allow_gate_warnings=args.allow_gate_warnings)
+            row = await export_seed(deps, sources, seed, out_dir, sha, dirty=dirty,
+                                    allow_gate_warnings=args.allow_gate_warnings,
+                                    trace_only=args.trace_only)
             stale_note = "  [removed stale file]" if row.get("removed_stale") else ""
             if not row["ok"]:
                 print(f"    ERROR {row['error']}  ({row['wall_s']}s){stale_note}", flush=True)
@@ -372,6 +526,10 @@ async def main() -> None:
     gate_fail = [r for r in ok if not r["gates_pass"]]
     print(f"\nexported {len(ok)}/{len(rows)} seeds → {out_dir}  "
           f"({len(ok) - len(gate_fail)} passed gates / {len(gate_fail)} failed)")
+    if dirty and any(r.get("wrote") for r in ok):
+        print("\n⚠ git_dirty=true STAMPED on every file this batch wrote (uncommitted working tree)."
+              "\n  Dev artifacts only — commit the code, then regenerate before shipping"
+              " (--trace-only for sidecars).")
     if len(ok) != len(rows):
         raise SystemExit(1)  # a seed hard-errored — incomplete batch
     if gate_fail and not args.allow_gate_warnings:
