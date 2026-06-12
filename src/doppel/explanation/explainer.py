@@ -47,6 +47,9 @@ more sonically alike). Present only when audio_scored is true.
 [-1, 1]. Present only when a vibe was given and the candidate was audio-scored.
 - "shared_sources": which cultural sources (e.g. lastfm, listenbrainz) surfaced this track as \
 similar to the seed.
+- "retrieved_by": present ONLY when the track was pulled from the whole music library by vibe/acoustic \
+similarity (a global retrieval lane), not surfaced by any cultural source — its "shared_sources" is \
+then empty and it has no cultural-consensus signal by design.
 
 Write ONE rationale per candidate, one or two sentences, grounded ONLY in that evidence and the \
 seed/candidate metadata. Rules:
@@ -58,6 +61,9 @@ rather than inventing a sonic connection.
 - A high audio_similarity supports a sonic-likeness claim; agreement across multiple shared_sources \
 supports a cultural-relevance claim; vibe_text_similarity supports a fits-the-requested-vibe claim. \
 Use whichever signal is actually strong for that candidate.
+- A "retrieved_by" track was found by sonic/vibe similarity to the listener's vibe, not by cultural \
+co-listening — ground its rationale in the audio and vibe_text evidence (how it sonically fits the \
+requested vibe) and do NOT invent a cultural, scene, or listener-overlap connection it does not have.
 - Be specific to this seed/candidate pair; avoid generic filler that would fit any pair.
 
 Return JSON only, matching the schema: an object with a "rationales" array of \
@@ -153,10 +159,20 @@ def _user_payload(
         seed["vibe_description"] = vibe
     candidates = []
     for r in results:
+        # An HNSW-lane hit has no cultural provenance — it was retrieved by vibe/acoustic similarity.
+        # The exact-tuple check is deliberate (NOT `"hnsw" in r.sources`): only a PURELY-hnsw row drops
+        # cultural framing; a future row carrying both "hnsw" and a real cultural source would keep its
+        # cultural evidence. "shared_sources" here is an LLM-prompt-only projection — the durable wire
+        # `sources` retains the ("hnsw",) tag for the chip + telemetry — so we empty it and add a
+        # "retrieved_by" marker, making the model explain the sonic match instead of a fabricated one.
+        hnsw_only = r.sources == ("hnsw",)
         item: dict = {
             "position": r.position, "title": r.title, "artist": r.artist,
-            "audio_scored": r.was_audio_scored, "shared_sources": list(r.sources),
+            "audio_scored": r.was_audio_scored,
+            "shared_sources": [] if hnsw_only else list(r.sources),
         }
+        if hnsw_only:
+            item["retrieved_by"] = "global vibe/acoustic similarity"
         if r.audio_score is not None:
             item["audio_similarity"] = round(r.audio_score, 3)
         if r.vibe_text_score is not None:

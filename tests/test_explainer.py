@@ -140,3 +140,19 @@ async def test_payload_includes_evidence_and_schema_request():
     assert payload["seed"] == {"title": "Seed", "artist": "Artist", "vibe_description": "dreamy"}
     cand = payload["candidates"][0]
     assert cand["audio_similarity"] == 0.82 and cand["shared_sources"] == ["lastfm", "listenbrainz"]
+    assert "retrieved_by" not in cand  # a cultural result is not marked as vibe-retrieved
+
+
+async def test_hnsw_only_result_marked_as_vibe_retrieved():
+    # An HNSW-lane result (sources == ("hnsw",)) carries no cultural provenance: shared_sources is
+    # emptied and a "retrieved_by" marker tells the model it was surfaced by vibe/acoustic similarity,
+    # so the prompt doesn't read "hnsw" as a cultural co-listening source and fabricate a scene link.
+    fake = _FakeClient(_Response(json.dumps({"rationales": []})))
+    explainer = _explainer_with(fake)
+    await explainer.explain(
+        seed_title="Seed", seed_artist="Artist", vibe="sparse acoustic guitar",
+        results=[_result(1, "A", audio_score=0.41, sources=("hnsw",))],
+    )
+    cand = json.loads(fake.messages.calls[0]["messages"][0]["content"])["candidates"][0]
+    assert cand["shared_sources"] == []
+    assert cand["retrieved_by"] == "global vibe/acoustic similarity"
