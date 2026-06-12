@@ -41,7 +41,12 @@ from typing import Any
 from doppel import db
 from doppel.aggregation.aggregator import Gate, aggregate, gate_for
 from doppel.aggregation.ranking import RankedCandidate
-from doppel.config import GATE1_ASYNC_THRESHOLD, RESOLVE_CANDIDATE_LIMIT
+from doppel.config import (
+    GATE1_ASYNC_THRESHOLD,
+    HNSW_LANE_ENABLED,
+    HNSW_LANE_K,
+    RESOLVE_CANDIDATE_LIMIT,
+)
 from doppel.db import QueryLogFields
 from doppel.explanation import ClaudeExplainer
 from doppel.pipeline.deps import build_deps, close_deps
@@ -94,6 +99,25 @@ def _ablation(results: Sequence[RecommendationResult], pool: Sequence[RankedCand
         "n_audio_scored": len(audio),
         "mean_rank_displacement": round(statistics.mean(disps), 2) if disps else None,
         "clap_top3": [f"{r.title} — {r.artist}" for r in results[:3]],
+    }
+
+
+def _hnsw_ablation(results: Sequence[RecommendationResult]) -> dict[str, Any]:
+    """Attribution for the v2 HNSW vibe lane: how many produced results came from it (vs the cultural
+    pool), how many reached the top-k, their final ranks, and their fused-score spread.
+
+    A lane result is tagged ``sources == ("hnsw",)`` (DECISIONS.md 2026-05-31) and is never merged with
+    a cultural source, so ``"hnsw" in r.sources`` cleanly separates the two lanes. Everything is
+    zero/empty when the lane is off (``HNSW_LANE_ENABLED=false``) or surfaced nothing — so an
+    off-vs-on run pair is directly diff-able, which is the measurement gate to flipping the flag.
+    """
+    hnsw = [(i, r) for i, r in enumerate(results) if "hnsw" in r.sources]
+    return {
+        "k": _ABLATION_K,
+        "n_hnsw": len(hnsw),
+        "n_hnsw_top_k": sum(1 for i, _ in hnsw if i < _ABLATION_K),
+        "ranks": [i + 1 for i, _ in hnsw],  # 1-based final positions
+        "combined": _stats([r.combined_score for _, r in hnsw]),
     }
 
 
@@ -186,25 +210,29 @@ def _metrics(seed: Seed, pool, rec: Recommendation, row, wall_s: float) -> dict[
             "combined": _stats([r.combined_score for r in rec.results]),
         },
         "ablation": _ablation(rec.results, pool),
+        "ablation_hnsw": _hnsw_ablation(rec.results),
         "latency_ms": row["latency_ms"],
     }
 
 
 def _render_report(seed_set: str, rows: list[dict[str, Any]], meta: dict[str, Any]) -> str:
     ok = [r for r in rows if r["ok"]]
+    hnsw_state = f"on (K={meta['hnsw_lane_k']})" if meta["hnsw_lane_enabled"] else "off"
     lines = [
         f"# Doppel eval — `{seed_set}` set", "",
         f"_Run {meta['ran_at']} · RESOLVE_CANDIDATE_LIMIT={meta['resolve_limit']} · "
-        f"explainer={'on' if meta['explain'] else 'off'} · {len(ok)}/{len(rows)} seeds ok_", "",
+        f"explainer={'on' if meta['explain'] else 'off'} · hnsw_lane={hnsw_state} · "
+        f"{len(ok)}/{len(rows)} seeds ok_", "",
         "## Per-seed", "",
-        "| seed | genre | cand | found/rej/nf | audio | backfill | cache hits | top10∩cult | rank-displ | audio cos (min/med/max) | vibe cos | latency |",
-        "|---|---|--|--|--|--|--|--|--|--|--|--|",
+        "| seed | genre | cand | found/rej/nf | audio | backfill | cache hits | top10∩cult | rank-displ | hnsw t10/tot | audio cos (min/med/max) | vibe cos | latency |",
+        "|---|---|--|--|--|--|--|--|--|--|--|--|--|",
     ]
     for r in rows:
         if not r["ok"]:
-            lines.append(f"| {r['seed']} | {r['genre']} | — | **ERROR**: {r['error']} | | | | | | | | |")
+            lines.append(f"| {r['seed']} | {r['genre']} | — | **ERROR**: {r['error']} | | | | | | | | | |")
             continue
         c, a, s = r["coverage"], r["ablation"], r["score_dist"]
+        h = r["ablation_hnsw"]
         ac = s["audio"]; vc = s["vibe_text"]
         audio_cos = f"{ac['min']}/{ac['median']}/{ac['max']}" if ac else "—"
         vibe_cos = f"{vc['min']}/{vc['median']}/{vc['max']}" if vc else "—"
@@ -212,14 +240,16 @@ def _render_report(seed_set: str, rows: list[dict[str, Any]], meta: dict[str, An
             f"| {r['seed']} | {r['genre']} | {c['candidate_count']} | "
             f"{c['resolved_found']}/{c['resolved_rejected']}/{c['resolved_not_found']} | "
             f"{c['audio_scored']} | {c['backfill']} | {c['embeddings_cache_hits']} | "
-            f"{a['topk_overlap']} | {a['mean_rank_displacement']} | {audio_cos} | {vibe_cos} | "
-            f"{r['latency_ms']}ms |"
+            f"{a['topk_overlap']} | {a['mean_rank_displacement']} | {h['n_hnsw_top_k']}/{h['n_hnsw']} | "
+            f"{audio_cos} | {vibe_cos} | {r['latency_ms']}ms |"
         )
     if ok:
         found_ratios = [r["coverage"]["found_ratio"] for r in ok if r["coverage"]["found_ratio"] is not None]
         audio_seeds = sum(1 for r in ok if r["seed_audio_scored"])
         overlaps = [r["ablation"]["topk_overlap"] for r in ok if r["ablation"]["topk_overlap"] is not None]
         displ = [r["ablation"]["mean_rank_displacement"] for r in ok if r["ablation"]["mean_rank_displacement"] is not None]
+        n_hnsw_total = sum(r["ablation_hnsw"]["n_hnsw"] for r in ok)
+        n_hnsw_top = sum(r["ablation_hnsw"]["n_hnsw_top_k"] for r in ok)
         lines += [
             "", "## Aggregate (ok seeds)", "",
             f"- seed audio-scored: **{audio_seeds}/{len(ok)}** (coverage — the #1 risk)",
@@ -228,6 +258,9 @@ def _render_report(seed_set: str, rows: list[dict[str, Any]], meta: dict[str, An
             "(lower ⇒ CLAP reranks harder)",
             f"- median audio-scored rank displacement: **{round(statistics.median(displ), 2) if displ else 'n/a'}** "
             "(0 ⇒ CLAP keeps cultural order)",
+            f"- HNSW-lane results: **{n_hnsw_total}** across {len(ok)} seeds "
+            f"({n_hnsw_top} in top-{_ABLATION_K}) — lane {hnsw_state} "
+            "(off ⇒ 0; the off-vs-on diff is the lane's measured contribution)",
             f"- median latency: **{round(statistics.median([r['latency_ms'] for r in ok]))}ms**",
             "", "## CLAP top-3 per seed", "",
         ]
@@ -267,6 +300,7 @@ async def main() -> None:
     meta = {
         "ran_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "seed_set": args.seeds, "resolve_limit": RESOLVE_CANDIDATE_LIMIT, "explain": args.explain,
+        "hnsw_lane_enabled": HNSW_LANE_ENABLED, "hnsw_lane_k": HNSW_LANE_K,
     }
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
