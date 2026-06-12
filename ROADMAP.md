@@ -133,10 +133,13 @@ After three Codex rounds the lane was **redesigned** into a clean MBID-keyed sco
 `run_pipeline` (`_hnsw_lane`): corpus tracks are MBID-native and now treated as such, never round-tripped
 through the title-keyed pool. Validated; 293 offline + the db-gated suite in CI.
 
-**Before enabling the lane** (the remaining v2 work): full source-aware provenance so HNSW results are
-honest about themselves — a frontend "hnsw" source chip, explainer-prompt awareness, eval-ablation labels
-(DECISIONS.md 2026-05-31). Optional tuning: `HNSW_LANE_K`, pgvector `ef_search`, the β interaction. The
-lane is correct + complete as a flag-off experiment; turning it on is gated on the provenance work.
+**Provenance gate + enable (landed)**: full source-aware provenance shipped first — a frontend "hnsw"
+source chip, explainer-prompt awareness, eval-ablation labels (DECISIONS.md 2026-05-31) — then a 2×2
+eval A/B (lane × β over the vibe seeds, 2026-06-12) measured the flip. At the production β=0.3 the lane
+cleanly improves descriptive vibes (new on-vibe #1 for the M83 seed) with zero hub-track leakage, so
+`HNSW_LANE_ENABLED` now **defaults ON**. β=0.5 steering (which also unlocks moderate-steer seeds like
+Take Five) is a follow-on, gated on hub-track mitigation — the A/B reproduced the known corpus hub
+surfacing at β=0.5. Remaining tuning: `HNSW_LANE_K`, pgvector `ef_search`.
 
 Deferred past v2: **LLM-reranking A/B → v3** (bets against the validated "CLAP owns ranking" rule; needs a
 blind human-preference gate). **Corpus densification** (better-motivated now — the lane leans on corpus
@@ -146,9 +149,10 @@ diversity — though the accidental-accretion corpus already demonstrates the me
 
 **v2 — Deepen the Engine** (above) is the current milestone (started 2026-05-31); v1.1's frontend is
 feature-complete, with only the operator-recorded deep-dive screencast deferred. The **HNSW vibe-retrieval
-lane** is the v2 flagship (built flag-off; enabling it is gated on the source-aware provenance work). Past
-v2: **LLM-reranking A/B** is **v3** and **corpus densification** stays deferred — see DECISIONS.md
-2026-05-31 and BRAINDUMP.md "Future Improvements (Deferred)".
+lane** is the v2 flagship — built, provenance-gated, A/B-measured, and **enabled by default** (β=0.3;
+β=0.5 steering is a follow-on gated on hub-track mitigation). Past v2: **LLM-reranking A/B** is **v3**
+and **corpus densification** stays deferred — see DECISIONS.md 2026-05-31 / 2026-06-12 and BRAINDUMP.md
+"Future Improvements (Deferred)".
 
 ## Non-Goals
 
@@ -159,7 +163,7 @@ v2: **LLM-reranking A/B** is **v3** and **corpus densification** stays deferred 
 - Fine-tuned audio models
 - LLM reranking (explanation only in v1)
 - Background corpus densification
-- Enabling global ANN (HNSW) vibe retrieval in production — the lane is built flag-off in v2; turning it on is gated on the source-aware provenance work (DECISIONS.md 2026-05-31)
+- Vibe-first scoring for extreme cross-genre steering (β≥0.5 / a vibe-dominant mode) — the HNSW lane ships at β=0.3 where it is cleanly positive; stronger steering is gated on hub-track mitigation (DECISIONS.md 2026-06-12)
 - Additional preview providers beyond Deezer
 - MusicBrainz local mirror
 - `is_explicit` content filtering
