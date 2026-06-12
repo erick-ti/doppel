@@ -425,7 +425,9 @@ async def _hnsw_lane(
             # cultural_score=0.0 — an HNSW-only hit has NO cultural-source consensus, and that field is
             # read downstream (API/showcase/explainer) as Last.fm/ListenBrainz evidence; fabricating an
             # RRF value there would misrepresent it (Codex review 2026-05-31). `sources=("hnsw",)` carries
-            # the real provenance; audio-scored ranking uses combined_score, not cultural_score.
+            # the real provenance; audio-scored ranking uses combined_score, not cultural_score. ("hnsw"
+            # is a RESERVED synthetic source tag — never name a real cultural source it, or the
+            # source-aware provenance guards (frontend chip / explainer / eval) would collide with it.)
             ranked = RankedCandidate(title, artist, 0.0, {"hnsw": rank}, frozenset({m}))
             resolved.append(_resolved_from_track(ranked, track))
             vectors[m] = emb[m]
