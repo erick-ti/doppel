@@ -53,6 +53,7 @@ from doppel.db import QueryLogFields, QueryLogResultRow
 from doppel.embedding.embedder import ClapEmbedder, EmbeddingError
 from doppel.embedding.scoring import score_candidates
 from doppel.matching.resolver import RecordingCanonicalizer, ResolveStatus, TrackFinder, resolve
+from doppel.pipeline.trace import TraceRecorder, identity_of
 
 ExecutionMode = Literal["inline", "job"]
 
@@ -164,6 +165,10 @@ class PipelineDeps:
     explainer: Explainer | None = None
     translator: VibeTranslator | None = None  # v2 flagship; None ⇒ raw vibe goes straight to embed
     enqueue_job: Callable[..., Awaitable[object]] | None = None
+    # v1.2 export-only seam: the showcase exporter attaches a TraceRecorder to capture per-stage
+    # timings/counters for the replay sidecars. build_deps never sets it, so the API and worker run
+    # with None and every trace call below is a no-op on production paths.
+    trace_recorder: TraceRecorder | None = None
 
 
 def request_key_for(seed_title: str, seed_artist: str, vibe: str | None) -> str:
@@ -211,6 +216,7 @@ class _ResolveCounts:
     found: int = 0
     rejected: int = 0
     not_found: int = 0
+    cached: int = 0  # outcomes served from canonical_lookups (no live resolve) — trace/replay counter
 
 
 # --- steps ------------------------------------------------------------------------------------- #
@@ -311,6 +317,9 @@ async def _resolve_pool(
     for cand in pool:
         hit = await db.get_canonical_lookup(conn, cand.title, cand.artist)
         if hit is not None:
+            counts.cached += 1
+            if deps.trace_recorder is not None:
+                deps.trace_recorder.event("resolve.cache_hit")
             if hit["status"] == "found":
                 track = await db.get_servable_track(conn, hit["mbid"])
                 if track is not None:
@@ -328,6 +337,8 @@ async def _resolve_pool(
             match = await resolve(deps.finder, deps.canonicalizer, cand.title, cand.artist)
         except httpx.HTTPError:
             continue  # transient provider failure → skip this candidate; it falls to cultural backfill
+        if deps.trace_recorder is not None:
+            deps.trace_recorder.event("resolve.live")
         asset_id = await db.persist_resolved_match(conn, cand.title, cand.artist, match)
         if match.status is ResolveStatus.FOUND and asset_id is not None:
             assert match.seed is not None and match.candidate is not None and match.match is not None
@@ -354,6 +365,10 @@ async def _embed_missing(deps: PipelineDeps, missing: Sequence[_Resolved]) -> di
     cultural ranking — one bad external preview never sinks the batch.
     """
     semaphore = asyncio.Semaphore(EMBED_CONCURRENCY)
+    # Bind the recorder ONCE: a task orphaned by a sibling's failure (as_completed abandons, never
+    # cancels) may finish after the exporter has moved deps.trace_recorder to the NEXT seed's
+    # recorder — reading the live field then would emit this run's event into that run's trace.
+    tr = deps.trace_recorder
 
     async def embed_one(item: _Resolved) -> tuple[str, np.ndarray] | None:
         async with semaphore:
@@ -366,6 +381,8 @@ async def _embed_missing(deps: PipelineDeps, missing: Sequence[_Resolved]) -> di
                     conn, mbid=item.mbid, model_version=CLAP_MODEL_VERSION, embedding=vector,
                     source_confidence=item.match_confidence, asset_id=item.asset_id,
                 )
+            if tr is not None:
+                tr.event("embed.computed")
             return (item.mbid, vector)
 
     vectors: dict[str, np.ndarray] = {}
@@ -678,6 +695,8 @@ async def run_pipeline(
     # local/cheap, so its position here is fine.
     vibe_for_embed = await _translate_vibe(deps, vibe)
     vibe_vector = await _embed_vibe(deps, vibe_for_embed)
+    if (tr := deps.trace_recorder) is not None:
+        tr.stage("seed", audio_scored=seed_vector is not None, vibe_present=vibe_vector is not None)
 
     resolved: list[_Resolved] = []
     counts = _ResolveCounts()
@@ -693,6 +712,10 @@ async def run_pipeline(
         #    pool overrun the job timeout; the rest of `pool` still reaches cultural backfill below.
         async with deps.pool.acquire() as conn:
             resolved, counts = await _resolve_pool(deps, conn, pool[:RESOLVE_CANDIDATE_LIMIT])
+        if (tr := deps.trace_recorder) is not None:
+            tr.stage("resolve", attempted=len(pool[:RESOLVE_CANDIDATE_LIMIT]),
+                     cache_hits=counts.cached, found=counts.found, rejected=counts.rejected,
+                     not_found=counts.not_found)
 
         # 3. Gate 2 — how many FOUND candidates still lack a servable vector?
         async with deps.pool.acquire() as conn:
@@ -701,6 +724,9 @@ async def run_pipeline(
         cache_hits = len(vectors)
         missing = [r for r in resolved if r.mbid not in vectors]
         gate2 = gate_for(len(missing), threshold=GATE2_ASYNC_THRESHOLD)
+        if (tr := deps.trace_recorder) is not None:
+            tr.stage("gate2", missing=len(missing), threshold=GATE2_ASYNC_THRESHOLD,
+                     verdict=gate2.value, embedding_cache_hits=cache_hits)
 
         if gate2 is Gate.COLD and execution_mode == "inline":
             assert gate1 is not None  # inline guarantees gate1 (checked at entry)
@@ -722,6 +748,11 @@ async def run_pipeline(
         embedded = await _embed_missing(deps, missing)
         vectors.update(embedded)
         embeddings_computed = len(embedded)  # captured BEFORE the lane: only cultural misses are computed
+        if (tr := deps.trace_recorder) is not None:
+            # attempted/failed make the stage self-describing: computed=0 can mean "all cached"
+            # (attempted=0) OR "every preview failed" (attempted>0) — the replay must tell them apart.
+            tr.stage("embed", attempted=len(missing), computed=embeddings_computed,
+                     failed=len(missing) - embeddings_computed)
 
         # 4b. HNSW vibe lane (default off): inject the vibe-nearest corpus tracks as pre-resolved,
         #     MBID-keyed scoring inputs. Runs here — after both gates — so a COLD request defers without
@@ -736,6 +767,8 @@ async def run_pipeline(
             # lane vectors are servable_embeddings reads = cache hits, never new CLAP computations
             # (Codex review 2026-05-31), so they must NOT inflate embeddings_computed.
             cache_hits += len(lane_vectors)
+            if (tr := deps.trace_recorder) is not None:
+                tr.stage("hnsw_lane", k=HNSW_LANE_K, hydrated=len(lane_resolved))
 
     # 5. Score + cultural backfill.
     results = _build_results(
@@ -743,9 +776,15 @@ async def run_pipeline(
         seed_mbid=seed_mbid, seed_provider_track_id=seed_ptid, seed_title=seed_title,
     )
     audio_scored = sum(1 for r in results if r.was_audio_scored)
+    if (tr := deps.trace_recorder) is not None:
+        tr.stage("results", top=len(results), audio_scored=audio_scored,
+                 backfill=len(results) - audio_scored,
+                 top_mbids=[identity_of(r.mbid, r.title, r.artist) for r in results])
 
     # 6. Explain (rationale only; degradable).
     results, rationales_available = await _explain(deps, seed_title, seed_artist, vibe, results)
+    if (tr := deps.trace_recorder) is not None:
+        tr.stage("explain", rationales_available=rationales_available)
 
     # 7. Persist the query_log + result snapshot.
     audio_path = seed_vector is not None

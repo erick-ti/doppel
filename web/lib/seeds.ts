@@ -43,7 +43,11 @@ let cache: SeedDocument[] | null = null;
 
 async function readAll(): Promise<SeedDocument[]> {
   if (cache) return cache;
-  const files = (await fs.readdir(SEEDS_DIR)).filter((f) => f.endsWith(".json"));
+  // `.trace.json` files are v1.2 replay sidecars (types/trace.ts), not SeedDocuments — never load
+  // them here or the gallery would try to render a trace (no `meta`/`results` shape).
+  const files = (await fs.readdir(SEEDS_DIR)).filter(
+    (f) => f.endsWith(".json") && !f.endsWith(".trace.json"),
+  );
   const docs = await Promise.all(
     files.map(async (f) => {
       const raw = await fs.readFile(path.join(SEEDS_DIR, f), "utf-8");

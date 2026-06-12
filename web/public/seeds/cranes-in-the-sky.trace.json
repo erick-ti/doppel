@@ -1,0 +1,414 @@
+{
+  "schema_version": 1,
+  "slug": "cranes-in-the-sky",
+  "mode": "warm",
+  "captured_at": "2026-06-12T19:59:54+00:00",
+  "git_sha": "f3975a4",
+  "git_dirty": false,
+  "config": {
+    "alpha": 0.7,
+    "beta": 0.3,
+    "resolve_candidate_limit": 75,
+    "clap_model_version": "laion/larger_clap_music_and_speech+mean",
+    "gate1_threshold": 5,
+    "gate2_threshold": 10,
+    "hnsw_lane": true,
+    "hnsw_lane_k": 20
+  },
+  "total_ms": 13047,
+  "stages": [
+    {
+      "stage": "aggregate",
+      "t0_ms": 0,
+      "t1_ms": 1125,
+      "counters": {
+        "candidates": 190,
+        "failed_sources": 0
+      }
+    },
+    {
+      "stage": "gate1",
+      "t0_ms": 1125,
+      "t1_ms": 1134,
+      "counters": {
+        "uncached": 0,
+        "threshold": 5,
+        "verdict": "warm"
+      }
+    },
+    {
+      "stage": "seed",
+      "t0_ms": 1134,
+      "t1_ms": 1137,
+      "counters": {
+        "audio_scored": true,
+        "vibe_present": false
+      }
+    },
+    {
+      "stage": "resolve",
+      "t0_ms": 1137,
+      "t1_ms": 1163,
+      "counters": {
+        "attempted": 75,
+        "cache_hits": 75,
+        "found": 75,
+        "rejected": 0,
+        "not_found": 0
+      },
+      "events": [
+        {
+          "t_ms": 1137,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1138,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1138,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1139,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1139,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1139,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1140,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1140,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1141,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1141,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1141,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1142,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1142,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1143,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1143,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1143,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1144,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1144,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1145,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1145,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1145,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1146,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1146,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1146,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1147,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1147,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1147,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1148,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1148,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1148,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1149,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1149,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1150,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1150,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1150,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1151,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1151,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1151,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1152,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1152,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1152,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1153,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1153,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1154,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1154,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1154,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1155,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1155,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1155,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1156,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1156,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1156,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1157,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1157,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1157,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1158,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1158,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1158,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1159,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1159,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1159,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1159,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1160,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1160,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1160,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1161,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1161,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1161,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1161,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1162,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1162,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1162,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1162,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1163,
+          "kind": "resolve.cache_hit"
+        },
+        {
+          "t_ms": 1163,
+          "kind": "resolve.cache_hit"
+        }
+      ]
+    },
+    {
+      "stage": "gate2",
+      "t0_ms": 1163,
+      "t1_ms": 1168,
+      "counters": {
+        "missing": 0,
+        "threshold": 10,
+        "verdict": "warm",
+        "embedding_cache_hits": 74
+      }
+    },
+    {
+      "stage": "embed",
+      "t0_ms": 1168,
+      "t1_ms": 1168,
+      "counters": {
+        "attempted": 0,
+        "computed": 0,
+        "failed": 0
+      }
+    },
+    {
+      "stage": "results",
+      "t0_ms": 1168,
+      "t1_ms": 1168,
+      "counters": {
+        "top": 10,
+        "audio_scored": 10,
+        "backfill": 0
+      },
+      "top_mbids": [
+        "56d6845a-a6af-42c6-90d1-949f50394147",
+        "62922537-e7b7-48f7-9c0a-298feb2c99cc",
+        "a3e6d7eb-7b2d-4c88-986b-c1a26eaed7b8",
+        "d8b2d919-b709-49ff-8b3d-1d8b28b4626e",
+        "20ddc463-1ac9-47b0-a242-75a7d5c84c61",
+        "f8a6e4ed-79a3-4ca5-9b13-1bbce76e6bd7",
+        "61277fcd-ef57-43a4-b98d-e8634588df7c",
+        "4e58e95e-661c-4eac-ad7d-d866f5ce8ca2",
+        "061987b7-853c-42f7-9402-709914eb6b80",
+        "70f8f900-72f9-453f-9338-8504e260810c"
+      ]
+    },
+    {
+      "stage": "explain",
+      "t0_ms": 1168,
+      "t1_ms": 13047,
+      "counters": {
+        "rationales_available": true
+      }
+    }
+  ]
+}

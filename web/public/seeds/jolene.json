@@ -1,0 +1,203 @@
+{
+  "status": "succeeded",
+  "query_id": 135,
+  "seed": {
+    "title": "Jolene",
+    "artist": "Dolly Parton",
+    "mbid": "52efd876-8a54-49c1-8ea7-7a37e89ecbe7"
+  },
+  "vibe": null,
+  "results": [
+    {
+      "position": 1,
+      "title": "Landslide",
+      "artist": "Fleetwood Mac",
+      "mbid": "d00f3915-f2a8-43c5-8669-39e26665112f",
+      "deezer_url": "https://www.deezer.com/track/3599559",
+      "was_audio_scored": true,
+      "audio_score": 0.824424,
+      "vibe_text_score": null,
+      "combined_score": 1.0,
+      "cultural_score": 0.012821,
+      "sources": [
+        "listenbrainz"
+      ],
+      "rationale": "Strong audio similarity (0.824) to Jolene and surfaced by ListenBrainz listener data; the two tracks share a comparable sonic character as female-fronted, emotionally driven acoustic performances."
+    },
+    {
+      "position": 2,
+      "title": "I Will Always Love You",
+      "artist": "Dolly Parton",
+      "mbid": "92f2ba50-8045-4fa9-a4a4-2235d8fca21e",
+      "deezer_url": "https://www.deezer.com/track/567771",
+      "was_audio_scored": true,
+      "audio_score": 0.790904,
+      "vibe_text_score": null,
+      "combined_score": 0.944563,
+      "cultural_score": 0.016393,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Another Dolly Parton track with high audio similarity (0.791) and last.fm co-listening support, making it a natural companion given the same artist and a similarly heartfelt, country vocal style."
+    },
+    {
+      "position": 3,
+      "title": "Harper Valley P.T.A.",
+      "artist": "Jeannie C. Riley",
+      "mbid": "5ee74a53-66a2-412c-a4ce-a6b9a787bead",
+      "deezer_url": "https://www.deezer.com/track/70843485",
+      "was_audio_scored": true,
+      "audio_score": 0.782902,
+      "vibe_text_score": null,
+      "combined_score": 0.931329,
+      "cultural_score": 0.012048,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Solid audio similarity (0.783) and last.fm cultural overlap; this classic female country-narrative track sits in a sonically and thematically close space to Jolene."
+    },
+    {
+      "position": 4,
+      "title": "Lovesick Blues",
+      "artist": "Linda Ronstadt",
+      "mbid": "3144f784-a064-497b-a34e-9e21d2b2bba9",
+      "deezer_url": "https://www.deezer.com/track/657796282",
+      "was_audio_scored": true,
+      "audio_score": 0.779484,
+      "vibe_text_score": null,
+      "combined_score": 0.925675,
+      "cultural_score": 0.010309,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "High audio similarity (0.779) and last.fm agreement; Linda Ronstadt's country-tinged vocal style aligns closely with the sonic profile of Jolene."
+    },
+    {
+      "position": 5,
+      "title": "Nothing Between Us",
+      "artist": "Lynn Anderson",
+      "mbid": "fa9cda7e-0377-43af-9069-9e1705c8b4dc",
+      "deezer_url": "https://www.deezer.com/track/144390310",
+      "was_audio_scored": true,
+      "audio_score": 0.763728,
+      "vibe_text_score": null,
+      "combined_score": 0.899618,
+      "cultural_score": 0.0125,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Audio similarity of 0.764 and last.fm listener overlap place this Lynn Anderson track in a sonically compatible zone with Jolene's classic country sound."
+    },
+    {
+      "position": 6,
+      "title": "Big Yellow Taxi",
+      "artist": "Joni Mitchell",
+      "mbid": "d84a716c-1377-46a3-b2dc-5a8268e9ed00",
+      "deezer_url": "https://www.deezer.com/track/2812992",
+      "was_audio_scored": true,
+      "audio_score": 0.743784,
+      "vibe_text_score": null,
+      "combined_score": 0.866633,
+      "cultural_score": 0.011364,
+      "sources": [
+        "listenbrainz"
+      ],
+      "rationale": "Surfaced by ListenBrainz with a moderate audio similarity (0.744); listeners who enjoy Jolene also gravitate toward Joni Mitchell's acoustic-leaning storytelling style."
+    },
+    {
+      "position": 7,
+      "title": "Fancy",
+      "artist": "Reba McEntire",
+      "mbid": "f3f84bab-1cf5-4460-b5a3-187acf33015d",
+      "deezer_url": "https://www.deezer.com/track/1234174792",
+      "was_audio_scored": true,
+      "audio_score": 0.739726,
+      "vibe_text_score": null,
+      "combined_score": 0.859921,
+      "cultural_score": 0.012987,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Audio similarity of 0.740 and last.fm cultural signal support this; Reba McEntire's narrative-driven country vocal approach sits in a similar sonic register to Jolene."
+    },
+    {
+      "position": 8,
+      "title": "Stand by Your Man",
+      "artist": "Tammy Wynette",
+      "mbid": "21edf92a-cefa-4ce0-947d-3a5ad8976f9c",
+      "deezer_url": "https://www.deezer.com/track/13197379",
+      "was_audio_scored": true,
+      "audio_score": 0.737269,
+      "vibe_text_score": null,
+      "combined_score": 0.855858,
+      "cultural_score": 0.026257,
+      "sources": [
+        "lastfm",
+        "listenbrainz"
+      ],
+      "rationale": "The strongest cultural consensus here — both last.fm and ListenBrainz agree — alongside a solid audio similarity (0.737), marking this Tammy Wynette classic as a well-supported match."
+    },
+    {
+      "position": 9,
+      "title": "What's Made Milwaukee Famous",
+      "artist": "Lynn Anderson",
+      "mbid": "52527d44-0e6f-414e-8259-9de2ea958f05",
+      "deezer_url": "https://www.deezer.com/track/74916062",
+      "was_audio_scored": true,
+      "audio_score": 0.735194,
+      "vibe_text_score": null,
+      "combined_score": 0.852426,
+      "cultural_score": 0.012346,
+      "sources": [
+        "lastfm"
+      ],
+      "rationale": "Audio similarity of 0.735 and last.fm co-listening data suggest this second Lynn Anderson entry shares enough sonic common ground with Jolene to warrant inclusion."
+    },
+    {
+      "position": 10,
+      "title": "The Chain",
+      "artist": "Fleetwood Mac",
+      "mbid": "cd06c484-9319-4376-a104-504871e19756",
+      "deezer_url": "https://www.deezer.com/track/63480992",
+      "was_audio_scored": true,
+      "audio_score": 0.732166,
+      "vibe_text_score": null,
+      "combined_score": 0.847417,
+      "cultural_score": 0.010101,
+      "sources": [
+        "listenbrainz"
+      ],
+      "rationale": "ListenBrainz listener overlap and an audio similarity of 0.732 connect this Fleetwood Mac track to Jolene's sonic neighborhood, though it represents a slightly different stylistic direction within the same listener community."
+    }
+  ],
+  "degradation": {
+    "seed_audio_scored": true,
+    "cultural_backfill_count": 0,
+    "rationales_available": true,
+    "degraded_sources": {}
+  },
+  "coverage": {
+    "candidate_count": 191,
+    "resolve_attempted": 75,
+    "resolved_found": 74,
+    "resolved_rejected": 0,
+    "resolved_not_found": 1,
+    "found_ratio": 0.987,
+    "audio_scored": 10,
+    "backfill": 0,
+    "embeddings_cache_hits": 15,
+    "embeddings_computed": 59,
+    "latency_ms": 183564
+  },
+  "meta": {
+    "slug": "jolene",
+    "genre": "country",
+    "exported_at": "2026-06-12T20:54:31+00:00",
+    "git_sha": "f0fd934",
+    "git_dirty": false,
+    "clap_model_version": "laion/larger_clap_music_and_speech+mean",
+    "alpha": 0.7,
+    "beta": 0.3,
+    "resolve_candidate_limit": 75
+  }
+}
