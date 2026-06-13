@@ -1,7 +1,8 @@
+import { EngineConsole } from "@/components/engine-console";
 import { HeroArc } from "@/components/hero-arc";
-import { SeedBox } from "@/components/seed-box";
 import { SeedCard } from "@/components/seed-card";
 import { getGenreHeroes, getVibeVariants } from "@/lib/seeds";
+import { getAllTraceSlugs, getLatestCaptureDate } from "@/lib/traces";
 
 /** The four-way wedge — the combination no single competitor does. */
 const WEDGE = [
@@ -18,10 +19,26 @@ const DOT: Record<string, string> = {
 };
 
 export default async function Home() {
-  const [heroes, variants] = await Promise.all([
+  const [heroes, variants, latestCapture, traceSlugs] = await Promise.all([
     getGenreHeroes(),
     getVibeVariants(),
+    getLatestCaptureDate(),
+    getAllTraceSlugs(),
   ]);
+  // Compact, client-safe facts for the picker (lib/seeds itself is server-only). Intersected with
+  // the trace sidecars BY CONSTRUCTION: the picker links /run/[slug], which only static-generates
+  // for doc∩trace — a doc-without-trace seed in this list would 404 on the static export, and the
+  // "N recorded runs" count would overclaim.
+  const withTrace = new Set(traceSlugs);
+  const consoleSeeds = [...heroes, ...variants]
+    .filter((doc) => withTrace.has(doc.meta.slug))
+    .map((doc) => ({
+      slug: doc.meta.slug,
+      title: doc.seed.title,
+      artist: doc.seed.artist,
+      genre: doc.meta.genre,
+      vibe: doc.vibe,
+    }));
 
   return (
     <div className="mx-auto w-full max-w-6xl px-5">
@@ -62,7 +79,7 @@ export default async function Home() {
           ))}
         </div>
 
-        <SeedBox />
+        <EngineConsole seeds={consoleSeeds} latestCapture={latestCapture} />
       </section>
 
       {/* The problem -> dead-ends -> wedge -> evidence narrative */}

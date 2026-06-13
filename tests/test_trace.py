@@ -114,9 +114,13 @@ def test_build_trace_document_shape_and_lean_omissions():
     doc = build_trace_document(
         rec, slug="take-five", mode="warm", captured_at="2026-06-12T00:00:00+00:00",
         git_sha="abc1234", git_dirty=False, config={"alpha": 0.7, "beta": 0.3},
+        paired_export=False,
     )
     assert doc["schema_version"] == TRACE_SCHEMA_VERSION
     assert (doc["slug"], doc["mode"], doc["git_sha"]) == ("take-five", "warm", "abc1234")
+    # Exact pairing provenance, recorded at the source: False here = a --trace-only refresh, so the
+    # frontend must dual-stamp this trace against its frozen doc even on a same-sha/same-day pair.
+    assert doc["paired_export"] is False
     assert doc["total_ms"] == rec.total_ms
     by_name = {s["stage"]: s for s in doc["stages"]}
     assert "events" not in by_name["gate1"]  # empty events omitted (lean public file)

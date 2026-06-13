@@ -22,8 +22,9 @@
  * thing collapses to an instant, motion-free swap under `prefers-reduced-motion`.
  */
 import { useId, useState } from "react";
+import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { Wand2 } from "lucide-react";
+import { Play, Wand2 } from "lucide-react";
 
 import { CoverageStrip } from "@/components/coverage-strip";
 import { ResultCard } from "@/components/result-card";
@@ -71,11 +72,16 @@ export function VibeSteer({
   plain,
   vibe,
   initialMode = "plain",
+  replayHrefs,
 }: {
   plain: SeedDocument;
   vibe: SeedDocument;
   /** Which side the toggle opens on — driven by the slug the visitor navigated to. */
   initialMode?: Mode;
+  /** v1.2: per-run replay routes (null = that run has no trace sidecar). Rendered IN here — a
+   *  run-specific surface must track the toggle like every other one, or the link can point at a
+   *  different recorded run than the visible results (Codex review 2026-06-12). */
+  replayHrefs?: { plain: string | null; vibe: string | null };
 }) {
   const [mode, setMode] = useState<Mode>(initialMode);
   const reduce = useReducedMotion();
@@ -145,8 +151,19 @@ export function VibeSteer({
     );
   });
 
+  const activeReplayHref = mode === "vibe" ? replayHrefs?.vibe : replayHrefs?.plain;
+
   return (
     <div className="flex flex-col gap-8">
+      {activeReplayHref && (
+        <Link
+          href={activeReplayHref}
+          className="text-muted-foreground hover:text-foreground -mb-4 inline-flex w-fit items-center gap-1.5 font-mono text-xs transition-colors"
+        >
+          <Play className="size-3" aria-hidden />
+          watch the {mode === "vibe" ? "vibe-steered" : "plain"} run&rsquo;s recorded replay
+        </Link>
+      )}
       {/* Funnel + everything below reflect the ACTIVE run (only latency differs across the pair). */}
       <CoverageStrip coverage={active.coverage} meta={active.meta} />
 

@@ -5,9 +5,9 @@ import { DEEP_DIVE_VIDEO } from "@/lib/deep-dive";
 /**
  * The deep-dive video surface. Two states, switched by `DEEP_DIVE_VIDEO`:
  *
- *  - null (today)  → an honest "planned" placeholder. The screencast is recorded LAST, once, against
- *    the final system, so it's deliberately not here yet — the written walkthrough below carries the
- *    page until then. This is a real, dignified state, not a 🚧 stub.
+ *  - null (today)  → an honest placeholder. The v1.2 replay console superseded the screencast as the
+ *    "it actually runs" proof (DECISIONS.md 2026-06-12); a recording remains an optional companion,
+ *    and this slot + the one-line swap stay available if one is ever made.
  *  - set (later)   → the actual embed (YouTube iframe or a self-hosted <video>), poster + click-to-play,
  *    never autoplay. Setting the constant is the only change needed to ship it.
  *
@@ -20,11 +20,11 @@ export function VideoSlot() {
     return (
       <div className="bg-card/40 flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed p-6 text-center">
         <Clapperboard className="text-muted-foreground size-8" aria-hidden />
-        <p className="text-sm font-medium">Screencast in the works</p>
+        <p className="text-sm font-medium">Screencast — optional companion</p>
         <p className="text-muted-foreground max-w-md text-xs leading-relaxed">
-          The recorded run is the project&rsquo;s final step — captured once against the finished
-          system so it never goes stale against an interim change. Until then, the act-by-act
-          walkthrough below describes exactly what it shows.
+          The interactive replay console now carries the cold-run story from recorded telemetry; a
+          screencast remains an optional add and would slot in here unchanged. The act-by-act
+          walkthrough below describes the live run in prose.
         </p>
       </div>
     );

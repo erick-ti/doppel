@@ -354,6 +354,9 @@ async def export_seed(
             recorder, slug=seed.slug, mode=gate1.value,
             captured_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
             git_sha=sha, git_dirty=dirty, config=_trace_config(),
+            # Exact pairing provenance: a full export writes doc + trace from THIS one run; a
+            # --trace-only refresh pairs new telemetry with the frozen doc (→ dual-stamp banner).
+            paired_export=not trace_only,
         )
 
         if trace_only:
