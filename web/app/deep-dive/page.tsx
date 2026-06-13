@@ -28,10 +28,34 @@ export default function DeepDive() {
           the other half of the proof: the engine driven live — a warm ~12&nbsp;second answer, the
           ~12&nbsp;minute cold path and why it&rsquo;s bounded by design, and the cache payoff that makes
           both coexist. It&rsquo;s run against the real backend over an SSH tunnel — never linked from this
-          site or exposed to the internet — and captured as the walkthrough below (the recorded screencast
-          is the project&rsquo;s final step).
+          site or exposed to the internet — and captured as the walkthrough below (a recorded screencast
+          remains optional; the interactive replay now carries this proof).
         </p>
       </header>
+
+      <div className="rounded-xl border p-5">
+        <p className="text-sm leading-relaxed">
+          <span className="font-semibold">This story is now interactive.</span>{" "}
+          <span className="text-muted-foreground">
+            The replay console animates recorded runs stage-by-stage from their persisted telemetry —
+            including{" "}
+            <Link
+              href="/run/jolene"
+              className="text-foreground underline decoration-dotted underline-offset-2"
+            >
+              a real Gate-1-cold capture
+            </Link>{" "}
+            of the same shape this page narrates: the MusicBrainz grind, honestly time-compressed
+            (that capture resolved 60 uncached candidates in ~3 min; the production run narrated
+            below hit the full ~12 min at the 75-candidate cap). The warm replays are the cache
+            payoff on screen. Or{" "}
+            <Link href="/" className="text-foreground underline decoration-dotted underline-offset-2">
+              pick any seed from the console
+            </Link>
+            .
+          </span>
+        </p>
+      </div>
 
       <VideoSlot />
 
