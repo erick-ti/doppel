@@ -42,6 +42,12 @@ export interface RunTrace {
   captured_at: string;
   git_sha: string;
   git_dirty: boolean;
+  /**
+   * True when this trace came from the SAME export run that wrote the seed doc beside it; false for
+   * a `--trace-only` refresh (the banner must dual-stamp those, even on the same sha/day). Absent on
+   * sidecars captured before the field existed — consumers fall back to a sha+date heuristic.
+   */
+  paired_export?: boolean;
   /** Config snapshot the run executed under (alpha/beta, gate thresholds, hnsw lane state). */
   config: Record<string, number | string | boolean>;
   /**

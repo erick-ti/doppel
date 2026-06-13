@@ -86,12 +86,17 @@ class TraceRecorder:
 
 def build_trace_document(
     recorder: TraceRecorder, *, slug: str, mode: str, captured_at: str, git_sha: str,
-    git_dirty: bool, config: Mapping[str, Any],
+    git_dirty: bool, config: Mapping[str, Any], paired_export: bool,
 ) -> dict[str, Any]:
     """Assemble the ``<slug>.trace.json`` sidecar body from a completed recorder.
 
     ``mode`` is the run's **measured** Gate-1 verdict (``"warm"``/``"cold"``), not an assumption.
-    Empty ``events`` and absent ``top_mbids`` are omitted per stage to keep the public file lean.
+    ``paired_export`` records, at the only place it is knowable, whether this trace came from the
+    SAME run that produced the seed doc beside it (a full export) or from a ``--trace-only`` refresh
+    — the frontend's single-vs-dual provenance stamp keys on it exactly, instead of inferring batch
+    identity from sha+date heuristics (Codex review 2026-06-12: a same-day refresh on the same
+    commit must still dual-stamp). Empty ``events`` and absent ``top_mbids`` are omitted per stage
+    to keep the public file lean.
     """
     stages: list[dict[str, Any]] = []
     for record in recorder.stages:
@@ -111,6 +116,7 @@ def build_trace_document(
         "captured_at": captured_at,
         "git_sha": git_sha,
         "git_dirty": git_dirty,
+        "paired_export": paired_export,
         "config": dict(config),
         "total_ms": recorder.total_ms,
         "stages": stages,
