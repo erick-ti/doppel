@@ -151,7 +151,7 @@ Deferred past v2: **LLM-reranking A/B → v3** (bets against the validated "CLAP
 blind human-preference gate). **Corpus densification** (better-motivated now — the lane leans on corpus
 diversity — though the accidental-accretion corpus already demonstrates the mechanism).
 
-## v1.2 — Engine Replay Console (build phases COMPLETE — 2026-06-12 → 2026-06-13; operator-wiring + optional Phase 4 remain)
+## v1.2 — Engine Replay Console (COMPLETE — 2026-06-12 → 2026-06-14; all phases shipped, live at doppel.erickti.com)
 
 The showcase's landing page becomes an idle "engine console": a visitor picks a curated seed and watches
 a **stage-by-stage animated replay of a real recorded pipeline run** — aggregate → gate 1 → resolve →
@@ -176,13 +176,16 @@ Phases (each independently shippable):
   hydration/idle=final + reduced-motion path), results cascade reusing the existing card components.
 - ✓ **Phase 3 — Live ops panel** (shipped — PR #30): `scripts/push_stats.sh` (VPS cron → sanitized
   stats.json → public R2) + `web/lib/ops.ts` + `ops-panel`, fail-soft with honest degradation; hardened
-  across 10 Codex rounds. **Operator-wiring remains** (DEPLOY.md §9.3): public R2 bucket + cron + Vercel
-  `NEXT_PUBLIC_*` — until then the panel renders "feed not configured."
-- **Phase 4 — Optional polish** (not started): host vitals, a `/status` route, the custom-domain question.
+  across 10 Codex rounds. **Operator-wired + LIVE (2026-06-14, PR #31)** (DEPLOY.md §9.3): separate public
+  R2 `doppel-stats` bucket + CORS, the `*/15` `push_stats.sh` cron + a `*/5` heartbeat cron, two Vercel
+  `NEXT_PUBLIC_*` vars — serves live corpus/usage/api/backup + the `doppel-heartbeat` badge at `doppel.erickti.com`.
+- ✓ **Phase 4 — Polish** (shipped — this PR): host vitals (uptime/load/mem%) in `stats.json` + the ops
+  panel, a standalone `/status` page; the custom-domain question is resolved (`doppel.erickti.com`). The
+  host vitals begin flowing once the VPS pulls the updated `push_stats.sh`.
 
 Done (build) = console-first landing on Vercel with a stage-by-stage replay for every curated seed + the
-LIVE ops panel rendering honestly; the VPS remains SSH-only and internet-private. Live ops data is gated on
-the §9.3 operator steps.
+LIVE ops panel rendering honestly; the VPS remains SSH-only and internet-private. Live ops data is flowing
+(operator-wiring complete 2026-06-14, PR #31).
 
 ## Upcoming Milestones
 
@@ -191,11 +194,11 @@ end-to-end — built flag-off, provenance-gated, 2×2 A/B-measured, enabled by d
 production. Its gated leftovers are **post-v2 follow-ons**, not open milestone work: hub-track mitigation
 → β=0.5 steering (DECISIONS.md 2026-06-12), and `HNSW_LANE_K` / `ef_search` tuning.
 
-**v1.2 — Engine Replay Console: build phases COMPLETE (2026-06-13)** — Phases 1–3 shipped + merged to
-`main` (PRs #28/#29/#30), which also closed v1.1 by superseding its deferred screencast. Remaining v1.2
-items are **not open milestone work**: operator-only live-panel wiring (DEPLOY.md §9.3) and optional
-Phase 4 polish. **The next milestone is not yet chosen** — candidates: Phase 4, hub-track mitigation →
-β=0.5 (gated v2 follow-on), or corpus densification. Past v2: **LLM-reranking A/B** is **v3** and
+**v1.2 — Engine Replay Console: COMPLETE (2026-06-14)** — all phases shipped + live at
+`doppel.erickti.com`: the replay console (#28/#29/#30), the operator-wired live ops panel (#31), and
+Phase 4 (host vitals + `/status`); this also closed v1.1 by superseding its deferred screencast. **The
+next milestone is not yet chosen** — candidates: hub-track mitigation → β=0.5 (gated v2 follow-on), or
+corpus densification. Past v2: **LLM-reranking A/B** is **v3** and
 **corpus densification** stays deferred — see DECISIONS.md 2026-05-31 / 2026-06-12 and BRAINDUMP.md
 "Future Improvements (Deferred)".
 
