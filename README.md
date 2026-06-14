@@ -6,9 +6,9 @@ audio-embedding scoring and LLM-generated rationales. API-first.
 
 ## Live showcase
 
-[![Doppel — the hero thesis, proof-stat ribbon, and seed gallery](docs/showcase.png)](https://doppel-music.vercel.app)
+[![Doppel — the hero thesis, proof-stat ribbon, and seed gallery](docs/showcase.png)](https://doppel.erickti.com)
 
-A fully static web showcase is live at **https://doppel-music.vercel.app** — a curated gallery of seed
+A fully static web showcase is live at **https://doppel.erickti.com** — a curated gallery of seed
 tracks across eight genres, each rendering its real top-10: ranked neighbors, the four-axis score
 breakdown (raw CLAP audio cosine, vibe-text cosine, within-batch fused rerank, and unbounded RRF
 cultural consensus), source overlap, and the LLM rationale.
