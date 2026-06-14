@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Activity, Database, HardDriveDownload, Radio } from "lucide-react";
+import { Activity, Clock, Database, Gauge, HardDriveDownload, MemoryStick, Radio } from "lucide-react";
 
 import {
   ageSnapshot,
   fetchStats,
   formatCount,
+  formatUptime,
   HEALTHCHECK_BADGE_URL,
   relativeAge,
   safeBadgeUrl,
@@ -148,6 +149,30 @@ export function OpsPanel() {
           sub={stats?.backup.last_success_at ? "local pg_dump" : undefined}
         />
       </div>
+
+      {/* Phase-4 host vitals — only when the feed carries the optional `host` block (post §9.3 update);
+          absent on older feeds or a non-Linux box, so the panel renders fine without this row. */}
+      {stats?.host && (
+        <div className="mt-3 grid grid-cols-3 gap-3">
+          <Tile
+            icon={<Clock className="size-4" aria-hidden />}
+            label="Host uptime"
+            value={formatUptime(stats.host.uptime_seconds)}
+          />
+          <Tile
+            icon={<Gauge className="size-4" aria-hidden />}
+            label="Load avg"
+            value={stats.host.load_1m.toFixed(2)}
+            sub={`${stats.host.load_5m.toFixed(2)} · ${stats.host.load_15m.toFixed(2)} · 5m/15m`}
+          />
+          <Tile
+            icon={<MemoryStick className="size-4" aria-hidden />}
+            label="Memory"
+            value={`${stats.host.mem_used_pct}%`}
+            sub="used"
+          />
+        </div>
+      )}
 
       {stats && (
         <p className="text-muted-foreground/70 mt-3 font-mono text-[11px]">

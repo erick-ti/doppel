@@ -154,8 +154,33 @@ fi
 
 generated_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
+# Host vitals from the VPS host's /proc (Phase 4) — NUMBERS ONLY (uptime seconds, load floats, memory
+# used %); never a hostname/IP/path, so the §9.3 sanitization rule still holds. The block is OPTIONAL:
+# if /proc isn't readable (e.g. a non-Linux dev box) or any field fails to parse, it's omitted entirely
+# and the feed carries no `host` key (the frontend renders the panel without a vitals row — `host` is
+# optional in the feed schema, so absence is normal, never an error).
+host_json=""
+if [[ -r /proc/uptime && -r /proc/loadavg && -r /proc/meminfo ]]; then
+    uptime_s="$(awk '{print int($1)}' /proc/uptime 2>/dev/null)"
+    read -r load1 load5 load15 _ < /proc/loadavg 2>/dev/null || true
+    mem_used_pct="$(awk '/^MemTotal:/{t=$2} /^MemAvailable:/{a=$2} END{ if (t>0) printf "%d", (t-a)*100/t }' /proc/meminfo 2>/dev/null)"
+    # Emit only if EVERY field parsed to a sane number — partials are dropped, not shipped half-built.
+    if [[ "$uptime_s" =~ ^[0-9]+$ && "$load1" =~ ^[0-9]+\.[0-9]+$ && "$load5" =~ ^[0-9]+\.[0-9]+$ \
+          && "$load15" =~ ^[0-9]+\.[0-9]+$ && "$mem_used_pct" =~ ^[0-9]+$ ]]; then
+        host_json=",
+  \"host\": {
+    \"uptime_seconds\": ${uptime_s},
+    \"load_1m\": ${load1},
+    \"load_5m\": ${load5},
+    \"load_15m\": ${load15},
+    \"mem_used_pct\": ${mem_used_pct}
+  }"
+    fi
+fi
+
 # Build the JSON by hand (no jq dependency). Every value is a count / enum / ISO timestamp / a
-# model-version string from our own config — no free text, no host identifiers, no injection surface.
+# model-version string from our own config, or a numeric host vital — no free text, no hostname/IP/path,
+# no injection surface.
 cat > "$STATS_TMP" <<JSON
 {
   "schema_version": 1,
@@ -170,7 +195,7 @@ cat > "$STATS_TMP" <<JSON
     "queries_completed": ${queries_completed:-0}
   },
   "api": { "status": "${api_status}" },
-  "backup": { "last_success_at": ${last_backup} }
+  "backup": { "last_success_at": ${last_backup} }${host_json}
 }
 JSON
 
