@@ -50,15 +50,17 @@ export interface OpsStats {
 
 /**
  * Fail-closed allowlist for the healthchecks badge `<img src>`. ONLY a canonical read-only
- * healthchecks.io SVG **badge** URL may ever be embedded — never a **ping** URL (`hc-ping.com/<uuid>`),
- * which is a credential a per-visitor `<img>` GET would spoof into a permanent "success", silencing
- * real backup alerts (DEPLOY.md §9.2/§9.3). Returns null on anything else, so the panel renders no
- * badge rather than a footgun. (Self-hosted healthchecks on another host ⇒ widen this one regex,
- * deliberately — the default locks to the documented host.)
+ * healthchecks.io SVG **badge** URL may ever be embedded — healthchecks serves these at both the long
+ * `/badge/<key>/<sig>/<tag>.svg` form and the short `/b/<n>/<uuid>.svg` form, so both path prefixes are
+ * accepted. NEVER a **ping** URL (`hc-ping.com/<uuid>`), which is a credential a per-visitor `<img>` GET
+ * would spoof into a permanent "success", silencing real backup alerts (DEPLOY.md §9.2/§9.3); the hard
+ * `healthchecks.io` host lock excludes the `hc-ping.com` host. Returns null on anything else, so the
+ * panel renders no badge rather than a footgun. (Self-hosted healthchecks on another host ⇒ widen this
+ * one regex, deliberately — the default locks to the documented host.)
  */
 export function safeBadgeUrl(url: string | null): string | null {
   if (!url) return null;
-  return /^https:\/\/healthchecks\.io\/badge\/[\w./-]+\.svg(\?[\w=&.-]*)?$/.test(url) ? url : null;
+  return /^https:\/\/healthchecks\.io\/(badge|b)\/[\w./-]+\.svg(\?[\w=&.-]*)?$/.test(url) ? url : null;
 }
 
 /**

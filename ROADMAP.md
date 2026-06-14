@@ -89,7 +89,7 @@ Phases (each independently shippable; ~6.5–9.5 build-days total):
   `doppel/api/responses.py` wire-builder (export is byte-identical to the live API) + a source-failure
   secret-redaction fix; 10 curated seed JSONs exported (from the warm local corpus) to `web/public/seeds/`.
 - ✓ **Phase 1 — "Minimum impressive"** (shipped — PR #17; **live on Vercel** at
-  https://doppel-music.vercel.app): Next.js 16 static-export app (App Router + TS + Tailwind v4 +
+  https://doppel.erickti.com): Next.js 16 static-export app (App Router + TS + Tailwind v4 +
   hand-authored shadcn-style ui), seed gallery + result cards with the correct four-axis score breakdown
   + transparency panel. Analytics + README showcase note in PR #18.
 - ✓ **Phase 2 — "Wow" polish** (shipped — PRs #19/#20/#21): vibe-steer toggle (plain↔vibe FLIP) +
@@ -151,7 +151,7 @@ Deferred past v2: **LLM-reranking A/B → v3** (bets against the validated "CLAP
 blind human-preference gate). **Corpus densification** (better-motivated now — the lane leans on corpus
 diversity — though the accidental-accretion corpus already demonstrates the mechanism).
 
-## v1.2 — Engine Replay Console (CURRENT — started 2026-06-12)
+## v1.2 — Engine Replay Console (build phases COMPLETE — 2026-06-12 → 2026-06-13; operator-wiring + optional Phase 4 remain)
 
 The showcase's landing page becomes an idle "engine console": a visitor picks a curated seed and watches
 a **stage-by-stage animated replay of a real recorded pipeline run** — aggregate → gate 1 → resolve →
@@ -168,28 +168,36 @@ seed docs are not regenerated (one new cold-run capture *adds* a seed). Supersed
 screencast (decision + full rationale: DECISIONS.md 2026-06-12 v1.2).
 
 Phases (each independently shippable):
-- **Phase 1 — Trace capture + sidecars** (backend): `trace_recorder` on `PipelineDeps` (default `None`;
-  production paths untouched), exporter integration + `--trace-only`, warm sidecars for the 10 curated
-  seeds, one real cold-run capture, the `RunTrace` TS type.
-- **Phase 2 — Replay console** (frontend flagship): idle-console landing + curated seed picker (the
-  disabled seed-box inverts), `/run/[slug]` replay view (animated DAG, play/pause/scrub/speed, mode
-  banner, reduced-motion path), results cascade reusing the existing card components.
-- **Phase 3 — Live ops panel**: healthchecks badges + heartbeat cron, `stats.json` push + tiles, fail-soft
-  fallbacks (the static export renders fully with all live fetches failing).
-- **Phase 4 — Optional polish**: host vitals, a `/status` route, the custom-domain question.
+- ✓ **Phase 1 — Trace capture + sidecars** (shipped — PR #28): `trace_recorder` on `PipelineDeps` (default
+  `None`; production paths untouched), exporter integration + `--trace-only`, reconciliation gate +
+  `paired_export`, 11 sidecars incl. one real Jolene cold-run capture, the `RunTrace` TS type.
+- ✓ **Phase 2 — Replay console** (shipped — PR #29): idle-console landing + curated seed picker (the
+  disabled seed-box inverted), `/run/[slug]` RAF replay-player (play/pause/scrub/speed, dual-stamp banner,
+  hydration/idle=final + reduced-motion path), results cascade reusing the existing card components.
+- ✓ **Phase 3 — Live ops panel** (shipped — PR #30): `scripts/push_stats.sh` (VPS cron → sanitized
+  stats.json → public R2) + `web/lib/ops.ts` + `ops-panel`, fail-soft with honest degradation; hardened
+  across 10 Codex rounds. **Operator-wiring remains** (DEPLOY.md §9.3): public R2 bucket + cron + Vercel
+  `NEXT_PUBLIC_*` — until then the panel renders "feed not configured."
+- **Phase 4 — Optional polish** (not started): host vitals, a `/status` route, the custom-domain question.
 
-Done = console-first landing live on Vercel with replays for every curated seed + at least the
-backup/heartbeat live tiles; the VPS remains SSH-only and internet-private.
+Done (build) = console-first landing on Vercel with a stage-by-stage replay for every curated seed + the
+LIVE ops panel rendering honestly; the VPS remains SSH-only and internet-private. Live ops data is gated on
+the §9.3 operator steps.
 
 ## Upcoming Milestones
 
 **v2 — Deepen the Engine is COMPLETE (2026-05-31 → 2026-06-12)**: the HNSW vibe-retrieval lane shipped
 end-to-end — built flag-off, provenance-gated, 2×2 A/B-measured, enabled by default (β=0.3), and live in
 production. Its gated leftovers are **post-v2 follow-ons**, not open milestone work: hub-track mitigation
-→ β=0.5 steering (DECISIONS.md 2026-06-12), and `HNSW_LANE_K` / `ef_search` tuning. The current milestone
-is **v1.2 — Engine Replay Console** (above), which also closes v1.1 by superseding its deferred
-screencast. Past v2: **LLM-reranking A/B** is **v3** and **corpus densification** stays deferred
-— see DECISIONS.md 2026-05-31 / 2026-06-12 and BRAINDUMP.md "Future Improvements (Deferred)".
+→ β=0.5 steering (DECISIONS.md 2026-06-12), and `HNSW_LANE_K` / `ef_search` tuning.
+
+**v1.2 — Engine Replay Console: build phases COMPLETE (2026-06-13)** — Phases 1–3 shipped + merged to
+`main` (PRs #28/#29/#30), which also closed v1.1 by superseding its deferred screencast. Remaining v1.2
+items are **not open milestone work**: operator-only live-panel wiring (DEPLOY.md §9.3) and optional
+Phase 4 polish. **The next milestone is not yet chosen** — candidates: Phase 4, hub-track mitigation →
+β=0.5 (gated v2 follow-on), or corpus densification. Past v2: **LLM-reranking A/B** is **v3** and
+**corpus densification** stays deferred — see DECISIONS.md 2026-05-31 / 2026-06-12 and BRAINDUMP.md
+"Future Improvements (Deferred)".
 
 ## Non-Goals
 
@@ -216,4 +224,4 @@ screencast. Past v2: **LLM-reranking A/B** is **v3** and **corpus densification*
 - **CLAP dual-load memory** — **RESOLVED (Day 0)**: ~659 MB process RSS per load (~1.3 GB dual-load across FastAPI + ARQ worker), 76 ms/clip warm on CPU, 512-dim. Fits a modest VPS.
 - **Coverage matrix representativeness** — **RESOLVED (Day-7 eval)**: re-measured across R&B (Pink + White, Cranes in the Sky), pre-2000 (Bohemian Rhapsody, Dreams), and non-English (Despacito, La Vie en rose) in the 19-seed benchmark — 19/19 seed audio-scored, median resolve found-ratio 0.987. The Day-0 small-sample 100% claim holds at scale; Deezer coverage is not the weak link.
 - **Deep-dive screencast** — **RESOLVED (2026-06-12, superseded)**: the v1.2 replay console takes over the "it actually runs" proof (interactive, honestly time-compressed, not operator-gated — DECISIONS.md 2026-06-12 v1.2). The written walkthrough stays on `/deep-dive`; a recording is optional and the `DEEP_DIVE_VIDEO` one-line swap remains available if one is ever made.
-- **Custom domain** — **OPEN (v1.1)**: keep the free `doppel-music.vercel.app`, or register a custom domain? (`.music` explored, not bought.)
+- **Custom domain** — **RESOLVED (2026-06-14)**: live at the custom domain `doppel.erickti.com` (subdomain of `erickti.com`), replacing the free `doppel-music.vercel.app`.
