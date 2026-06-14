@@ -1,5 +1,6 @@
 import { EngineConsole } from "@/components/engine-console";
 import { HeroArc } from "@/components/hero-arc";
+import { OpsPanel } from "@/components/ops/ops-panel";
 import { SeedCard } from "@/components/seed-card";
 import { getGenreHeroes, getVibeVariants } from "@/lib/seeds";
 import { getAllTraceSlugs, getLatestCaptureDate } from "@/lib/traces";
@@ -80,6 +81,12 @@ export default async function Home() {
         </div>
 
         <EngineConsole seeds={consoleSeeds} latestCapture={latestCapture} />
+      </section>
+
+      {/* LIVE register — the real production system right now, deliberately distinct from the
+          RECORDED replays the console links to (the juxtaposition is the point). */}
+      <section className="pb-8">
+        <OpsPanel />
       </section>
 
       {/* The problem -> dead-ends -> wedge -> evidence narrative */}

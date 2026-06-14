@@ -38,6 +38,10 @@
   --audio-foreground: oklch(0.18 0 0);
   --cultural: oklch(0.8 0.135 78);
   --cultural-foreground: oklch(0.18 0 0);
+
+  /* System-status tokens (v1.2 ops panel) — NOT retrieval legs: --ok = live/up, --warning = stale. */
+  --ok: oklch(0.7 0.15 150);
+  --warning: oklch(0.78 0.14 70);
 }
 
 .dark {
@@ -64,6 +68,10 @@
   --audio-foreground: oklch(0.16 0 0);
   --cultural: oklch(0.82 0.14 78);
   --cultural-foreground: oklch(0.16 0 0);
+
+  /* System-status tokens (v1.2 ops panel) — NOT retrieval legs: --ok = live/up, --warning = stale. */
+  --ok: oklch(0.74 0.15 150);
+  --warning: oklch(0.8 0.14 70);
 }
 
 @theme inline {
@@ -95,6 +103,8 @@
   --color-audio-foreground: var(--audio-foreground);
   --color-cultural: var(--cultural);
   --color-cultural-foreground: var(--cultural-foreground);
+  --color-ok: var(--ok);
+  --color-warning: var(--warning);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
