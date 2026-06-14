@@ -351,6 +351,82 @@ the ping type — so `~/doppel-backups/backup.log` is safe to share. Keep the UR
 crontab only (mode 600 by default), never in the repo, never in the rclone config, never in chat
 paste.
 
+### 9.3 Live stats push for the showcase ops panel (v1.2 Phase 3)
+
+The showcase's **Live** panel (`web/components/ops/ops-panel.tsx`) shows the real production engine —
+corpus size, queries served, API status, last backup — fetched **client-side** from a sanitized
+`stats.json` the VPS pushes to a **public** object store. This is outbound-push by design: it adds
+**no inbound surface** to the loopback+SSH-only box and **no client-held secret** (the file is public
+and contains only counts/enums/timestamps — never an IP, hostname, path, or token). `scripts/push_stats.sh`
+assembles it (container-side `psql` + the loopback `/health` + the newest backup's mtime) and
+`rclone copyto`s it to the bucket. A stale file is the honest "VPS may be down" signal the panel
+renders; healthchecks.io still owns the actual alerting (§9.2).
+
+**1. A SEPARATE public R2 bucket.** Do **not** reuse the encrypted backup bucket (§9.1) — that one is
+private ciphertext. Create a second R2 bucket (e.g. `doppel-stats`), enable **public read** (R2 → the
+bucket → Settings → Public access → allow, via the `r2.dev` URL or a custom domain), and add a **CORS**
+rule allowing `GET` from the Vercel origin (or `*` — the file is public read-only data):
+
+```jsonc
+[ { "AllowedOrigins": ["*"], "AllowedMethods": ["GET"], "AllowedHeaders": ["*"] } ]
+```
+
+Add an rclone remote pointing at it (an `s3`/`Cloudflare` remote like §9.1's `r2-base`, but this one
+is **not** wrapped in `crypt` — the stats file ships in the clear). The public read URL of the object
+is then e.g. `https://<hash>.r2.dev/stats.json`.
+
+**The script enforces the separation, but keep it obviously-correct anyway.** `push_stats.sh` refuses
+to push when `STATS_REMOTE` (a) shares an rclone alias with `BACKUP_REMOTE`, (b) is a `crypt` remote, or
+(c) resolves to the **same underlying bucket** as `BACKUP_REMOTE` — it follows one level of crypt
+indirection to compare the actual R2 bucket, so `STATS_REMOTE=r2-base:doppel-backups/…` against a
+`r2-crypt:`→`r2-base:doppel-backups` backup is caught. The resolve is best-effort (an alias it can't
+parse falls back to guards (a)/(b)), so still target a **distinct, public, plaintext** bucket the
+backup never writes to — a collision would expose backup ciphertext (if that bucket is public) or hide
+the stats where the panel can't read them.
+
+**2. Wire the push into cron** (top-of-file env, like `BACKUP_REMOTE`):
+
+```bash
+( echo "STATS_REMOTE=r2-stats:doppel-stats/stats.json"; crontab -l 2>/dev/null ) | crontab -
+# then add a line (every 15 min):
+# */15 * * * * cd ~/doppel && bash scripts/push_stats.sh >> ~/doppel-backups/stats.log 2>&1
+```
+
+`push_stats.sh` defaults to the prod compose overlay; with `STATS_REMOTE` unset it assembles + prints
+only (a safe dry-run). Smoke-test once: `STATS_REMOTE=r2-stats:doppel-stats/stats.json bash
+~/doppel/scripts/push_stats.sh`, then confirm the public URL serves the JSON.
+
+**3. Point the frontend at it (Vercel build env).** The showcase reads two **public** `NEXT_PUBLIC_*`
+vars at build (absent ⇒ the panel renders an honest "feed not configured" state, no fabricated
+numbers):
+
+- `NEXT_PUBLIC_STATS_URL` — the public `stats.json` URL from step 1 (e.g. `https://<hash>.r2.dev/stats.json`).
+  The frontend GETs this on every visit, so **it must be the stats feed, NEVER a healthchecks ping URL**
+  (`hc-ping.com/<uuid>`) — that's a credential a per-visitor GET would spoof. `safeStatsUrl` (lib/ops.ts)
+  fails closed: a non-`https`, non-`.json`, or healthchecks-host URL is rejected and the panel never
+  fetches it (a rejection is logged in the Vercel build output).
+- `NEXT_PUBLIC_HEALTHCHECK_BADGE_URL` *(optional)* — a healthchecks.io **badge** URL: the read-only
+  SVG, shaped `https://healthchecks.io/badge/<…>.svg`. **NEVER the ping URL** (`https://hc-ping.com/<uuid>`
+  from §9.2) — that one is a credential, and `NEXT_PUBLIC_*` is **inlined into the public JS bundle**,
+  so pasting it here both exposes it AND makes every visitor's browser GET it (spoofing a "success"
+  ping and silencing real backup alerts). The frontend fails closed — `safeBadgeUrl` (lib/ops.ts)
+  renders nothing unless the value matches the badge shape — but treat that as a backstop, not a
+  licence: only ever put a `/badge/….svg` URL in this var.
+
+  The panel labels this badge neutrally ("Independent monitor (healthchecks.io)") because it can't
+  verify *which* check the badge tracks. The badge reflects whatever check you point it at — if you
+  pass the **backup** check's badge (§9.2), it shows backup status, not API uptime. For a genuine
+  API-uptime badge, add an optional **heartbeat** check: a new healthchecks check (e.g.
+  `doppel-heartbeat`, period 5 min, grace 5 min) pinged by a cron that probes `/health` —
+  `*/5 * * * * curl -fsS http://127.0.0.1:8000/health && curl -fsS https://hc-ping.com/<heartbeat-uuid>`
+  — then use *that* check's badge URL here. (The panel's API tile is already driven by the stats
+  feed's own `/health` probe, so the heartbeat check is for independent alerting + the badge; it's
+  not required for the tile.)
+
+Set both in Vercel → Project → Settings → Environment Variables, then redeploy. These are
+public-by-design (the badge is read-only, the stats URL serves public data), but they are
+infrastructure identifiers — they live in Vercel env, never committed to this public repo.
+
 ## 10. Operate
 
 ```bash
