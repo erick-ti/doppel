@@ -46,6 +46,15 @@ export interface OpsStats {
   usage: { queries_total: number; queries_completed: number };
   api: { status: "up" | "down" };
   backup: { last_success_at: string | null };
+  /** Phase-4 host vitals — OPTIONAL: push_stats.sh omits the block when /proc is unreadable, so the
+   *  panel must treat its absence as normal (no vitals row), never an error. */
+  host?: {
+    uptime_seconds: number;
+    load_1m: number;
+    load_5m: number;
+    load_15m: number;
+    mem_used_pct: number;
+  };
 }
 
 /**
@@ -103,13 +112,25 @@ function isOpsStats(v: unknown): v is OpsStats {
   const usage = o.usage as Record<string, unknown> | undefined;
   const api = o.api as Record<string, unknown> | undefined;
   const backup = o.backup as Record<string, unknown> | undefined;
+  // `host` is OPTIONAL — absent is valid (the VPS omits it when /proc is unreadable). If present it
+  // must be complete + numeric, else the whole feed is rejected (the producer only ever emits a full
+  // block, never a partial — matching the strict checks above).
+  const host = o.host as Record<string, unknown> | undefined;
+  const hostOk =
+    host === undefined ||
+    (count(host.uptime_seconds) &&
+      count(host.load_1m) &&
+      count(host.load_5m) &&
+      count(host.load_15m) &&
+      count(host.mem_used_pct));
   return (
     o.schema_version === 1 &&
     typeof o.generated_at === "string" &&
     !!corpus && count(corpus.tracks) && count(corpus.embeddings) && typeof corpus.model_version === "string" &&
     !!usage && count(usage.queries_total) && count(usage.queries_completed) &&
     !!api && (api.status === "up" || api.status === "down") &&
-    !!backup && (backup.last_success_at === null || typeof backup.last_success_at === "string")
+    !!backup && (backup.last_success_at === null || typeof backup.last_success_at === "string") &&
+    hostOk
   );
 }
 
@@ -182,4 +203,16 @@ export function relativeAge(ageMs: number): string {
 
 export function formatCount(n: number): string {
   return n.toLocaleString("en-US");
+}
+
+/** "3d 4h" / "5h 12m" / "8m" / "<1m" — compact uptime label from a seconds count. */
+export function formatUptime(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return "—";
+  const d = Math.floor(seconds / 86_400);
+  const h = Math.floor((seconds % 86_400) / 3_600);
+  const m = Math.floor((seconds % 3_600) / 60);
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m`;
+  return "<1m";
 }

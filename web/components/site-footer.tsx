@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export function SiteFooter() {
   return (
     <footer className="border-border/60 mt-20 border-t">
@@ -13,6 +15,14 @@ export function SiteFooter() {
         <p className="mt-3 font-mono">
           Doppel — hybrid retrieve-then-rerank · cultural recall + CLAP audio
           rerank + LLM rationale.
+        </p>
+        <p className="mt-3">
+          <Link
+            href="/status"
+            className="hover:text-foreground underline-offset-4 transition-colors hover:underline"
+          >
+            System status
+          </Link>
         </p>
       </div>
     </footer>

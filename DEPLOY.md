@@ -362,6 +362,9 @@ assembles it (container-side `psql` + the loopback `/health` + the newest backup
 `rclone copyto`s it to the bucket. A stale file is the honest "VPS may be down" signal the panel
 renders; healthchecks.io still owns the actual alerting (§9.2).
 
+**Prerequisite:** the VPS working tree must be at a commit that includes `scripts/push_stats.sh` (added
+in the Phase-3 PR #30) — `git pull` on the box if it's behind, or the cron has nothing to run.
+
 **1. A SEPARATE public R2 bucket.** Do **not** reuse the encrypted backup bucket (§9.1) — that one is
 private ciphertext. Create a second R2 bucket (e.g. `doppel-stats`), enable **public read** (R2 → the
 bucket → Settings → Public access → allow, via the `r2.dev` URL or a custom domain), and add a **CORS**
@@ -371,9 +374,24 @@ rule allowing `GET` from the Vercel origin (or `*` — the file is public read-o
 [ { "AllowedOrigins": ["*"], "AllowedMethods": ["GET"], "AllowedHeaders": ["*"] } ]
 ```
 
-Add an rclone remote pointing at it (an `s3`/`Cloudflare` remote like §9.1's `r2-base`, but this one
-is **not** wrapped in `crypt` — the stats file ships in the clear). The public read URL of the object
-is then e.g. `https://<hash>.r2.dev/stats.json`.
+Add an rclone remote pointing at it — an `s3`/`Cloudflare` remote, **not** wrapped in `crypt` (the stats
+file ships in the clear). **Use a dedicated, least-privilege R2 API token — not the backup token.** A
+properly-scoped backup token (`r2-base`/`r2-crypt` here) only has access to the *backups* bucket and will
+return `403 AccessDenied` on the stats bucket. In Cloudflare → R2 → **Manage R2 API Tokens**, create an
+**Account API token** with **Object Read & Write** scoped to **this bucket only**, then add the remote on
+the VPS (so the secret never leaves the box):
+
+```bash
+rclone config create r2-stats s3 \
+  provider=Cloudflare \
+  access_key_id='<ACCESS_KEY_ID>' \
+  secret_access_key='<SECRET_ACCESS_KEY>' \
+  endpoint='https://<ACCOUNT_ID>.r2.cloudflarestorage.com' \
+  acl=private no_check_bucket=true
+```
+
+The endpoint takes **no** bucket suffix — the bucket lives in the remote path (`r2-stats:doppel-stats/…`).
+The public read URL of the object is then e.g. `https://<hash>.r2.dev/stats.json`.
 
 **The script enforces the separation, but keep it obviously-correct anyway.** `push_stats.sh` refuses
 to push when `STATS_REMOTE` (a) shares an rclone alias with `BACKUP_REMOTE`, (b) is a `crypt` remote, or
@@ -405,13 +423,17 @@ numbers):
   (`hc-ping.com/<uuid>`) — that's a credential a per-visitor GET would spoof. `safeStatsUrl` (lib/ops.ts)
   fails closed: a non-`https`, non-`.json`, or healthchecks-host URL is rejected and the panel never
   fetches it (a rejection is logged in the Vercel build output).
-- `NEXT_PUBLIC_HEALTHCHECK_BADGE_URL` *(optional)* — a healthchecks.io **badge** URL: the read-only
-  SVG, shaped `https://healthchecks.io/badge/<…>.svg`. **NEVER the ping URL** (`https://hc-ping.com/<uuid>`
+- `NEXT_PUBLIC_HEALTHCHECK_BADGE_URL` *(optional)* — a healthchecks.io **badge** URL: the read-only SVG.
+  Healthchecks serves these in two shapes — the long `https://healthchecks.io/badge/<key>/<sig>/<tag>.svg`
+  and the short `https://healthchecks.io/b/<n>/<uuid>.svg` that the per-check **Badge** page hands out;
+  `safeBadgeUrl` accepts **both** (PR #31). Copy the bare **Badge URL** field — *not* the HTML or Markdown
+  snippet healthchecks also displays. **NEVER the ping URL** (`https://hc-ping.com/<uuid>`
   from §9.2) — that one is a credential, and `NEXT_PUBLIC_*` is **inlined into the public JS bundle**,
   so pasting it here both exposes it AND makes every visitor's browser GET it (spoofing a "success"
   ping and silencing real backup alerts). The frontend fails closed — `safeBadgeUrl` (lib/ops.ts)
   renders nothing unless the value matches the badge shape — but treat that as a backstop, not a
-  licence: only ever put a `/badge/….svg` URL in this var.
+  licence: only ever put a healthchecks.io `/badge/…` or `/b/…` **`.svg`** URL in this var, never an
+  `hc-ping.com` URL.
 
   The panel labels this badge neutrally ("Independent monitor (healthchecks.io)") because it can't
   verify *which* check the badge tracks. The badge reflects whatever check you point it at — if you
