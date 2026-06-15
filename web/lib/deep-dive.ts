@@ -1,48 +1,24 @@
 /**
- * Config + script for the /deep-dive route (v1.1 Phase 4).
+ * Config + script for the /deep-dive route — a written, act-by-act walkthrough of what the live run
+ * shows (the data below). The interactive replay console (recorded telemetry) carries the "it really
+ * runs" proof; this page is the prose narration of the cold→warm story behind it.
  *
- * The recorded screencast is the LAST step of the project — recorded once, against the final system,
- * so it never has to be reshot for an interim change. Until then the page stands on its own as a
- * written, act-by-act walkthrough of what the live run shows (the data below), with a clearly-labelled
- * video slot.
- *
- * THE ONE-LINE SWAP: when the screencast exists, set `DEEP_DIVE_VIDEO` to a `DeepDiveVideo` object
- * (provider + id/src + poster). The page flips from the "planned" placeholder to the real embed with
- * no other change. Leave it `null` until then — the page is honest in that state, not a broken stub.
- *
- * Every number in the script is verified against src/doppel/config.py: two async gates
- * (GATE1_ASYNC_THRESHOLD=5 uncached lookups → defer resolution; GATE2_ASYNC_THRESHOLD=10 found-but-
- * unembedded → defer embedding), RESOLVE_CANDIDATE_LIMIT=75, WORKER_MAX_JOBS=1, RRF_K=60,
- * AUDIO_SIM_WEIGHT=0.7 / VIBE_TEXT_WEIGHT=0.3, RECOMMENDATION_LIMIT=10. Latency: warm ~12s (the median
- * `latency_ms` across the frozen exports); cold ≈ 701s ≈ ~12 min END-TO-END, measured in prod on
- * 2026-05-27 (DECISIONS.md / ROADMAP.md). The MusicBrainz resolve is the bulk of that — cap-bounded at
- * ~75×7s ≈ 9 min (RESOLVE_CANDIDATE_LIMIT × COLD_RESOLVE_SECONDS_PER_CANDIDATE, matching DEPLOY.md's
- * "~N×7s") — with embedding, scoring, and the rationale on top. Narrated as approximate.
+ * Every number is verified against src/doppel/config.py: two async gates (GATE1_ASYNC_THRESHOLD=5
+ * uncached lookups → defer resolution; GATE2_ASYNC_THRESHOLD=10 found-but-unembedded → defer
+ * embedding), RESOLVE_CANDIDATE_LIMIT=75, WORKER_MAX_JOBS=1, RRF_K=60, AUDIO_SIM_WEIGHT=0.7 /
+ * VIBE_TEXT_WEIGHT=0.3, RECOMMENDATION_LIMIT=10. Latency: warm ~12s (the median `latency_ms` across
+ * the frozen exports); cold ≈ 701s ≈ ~12 min END-TO-END, measured in prod on 2026-05-27 (DECISIONS.md
+ * / ROADMAP.md). The MusicBrainz resolve is the bulk of that — cap-bounded at ~75×7s ≈ 9 min
+ * (RESOLVE_CANDIDATE_LIMIT × COLD_RESOLVE_SECONDS_PER_CANDIDATE, matching DEPLOY.md's "~N×7s") — with
+ * embedding, scoring, and the rationale on top. Narrated as approximate.
  */
-
-export interface DeepDiveVideo {
-  /** "youtube" | "mp4" — drives how VideoSlot embeds it. */
-  provider: "youtube" | "mp4";
-  /** YouTube video id (provider="youtube") or a self-hosted file URL (provider="mp4"). */
-  src: string;
-  /** Poster frame shown before play (never autoplay). */
-  poster: string;
-  /** Total runtime, e.g. "7:24" — shown next to the title. */
-  duration?: string;
-}
-
-/**
- * null until the screencast is recorded (the project's final step). Flip to a DeepDiveVideo to ship
- * the embed — that is the entire change needed on the video side.
- */
-export const DEEP_DIVE_VIDEO: DeepDiveVideo | null = null;
 
 export interface Act {
   n: number;
   title: string;
   /** Approx on-camera duration, e.g. "~90s". */
   duration: string;
-  /** What the act demonstrates, in plain prose (the written stand-in until the video lands). */
+  /** What the act demonstrates, in plain prose. */
   beats: string[];
 }
 
@@ -65,7 +41,7 @@ export const ACTS: readonly Act[] = [
       "POST a never-seen seed and the API returns 202 JobAccepted with a queued job handle and a status URL, rather than blocking the request. That's Gate 1: at 5 or more uncached candidate lookups (the ones that hit MusicBrainz at ~1 req/s), resolution is deferred to the async worker up front.",
       "The whole cold request took about 701 seconds (~12 minutes) end to end in production — most of it the ARQ worker grinding MusicBrainz at roughly one request a second, about 7 seconds per candidate. That's bounded on purpose: RESOLVE_CANDIDATE_LIMIT=75 caps the resolve at ~75×7s ≈ 9 minutes (embedding, scoring, and the rationale make up the rest), and WORKER_MAX_JOBS=1 because cold work is MusicBrainz-bound — concurrency would buy no throughput, only multiply latency.",
       "Polling the status URL returns 202 while it runs, then flips to 200 with the full recommendation response, degradation block and all. The job handle is a plain sequential id — non-enumerable tokens and auth are a named, deferred item, not a gap being hidden (it's why there's no public live endpoint).",
-      "Re-run the exact same seed and it returns a warm 200 in ~12 seconds, now with a high embeddings-cache-hit count. That's the lazy-corpus payoff on camera: the first run grew the pgvector cache, so the second skips the embedding work entirely.",
+      "Re-run the exact same seed and it returns a warm 200 in ~12 seconds, now with a high embeddings-cache-hit count. That's the lazy-corpus payoff: the first run grew the pgvector cache, so the second skips the embedding work entirely.",
     ],
   },
   {
