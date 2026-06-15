@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { ArchitectureDag } from "@/components/how-it-works/architecture-dag";
 import { EvalEvidence } from "@/components/how-it-works/eval-evidence";
 import { Narrative } from "@/components/how-it-works/narrative";
+import { SeamRule } from "@/components/seam-rule";
 
 export const metadata: Metadata = {
   title: "How it works",
@@ -23,7 +24,7 @@ export default function HowItWorks() {
           <ArrowLeft className="size-4" aria-hidden />
           All seeds
         </Link>
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">How it works</h1>
+        <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">How it works</h1>
         <p className="text-muted-foreground max-w-2xl text-lg leading-relaxed">
           Doppel matches the <span className="text-audio">vibe</span> of a seed track by combining cultural
           retrieval with audio-embedding rerank. Here&rsquo;s the reasoning behind that design, the pipeline
@@ -32,7 +33,9 @@ export default function HowItWorks() {
       </header>
 
       <Narrative />
+      <SeamRule />
       <ArchitectureDag />
+      <SeamRule />
       <EvalEvidence />
     </div>
   );

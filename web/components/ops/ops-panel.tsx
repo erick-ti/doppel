@@ -99,9 +99,12 @@ export function OpsPanel() {
   const live = !!stats && !stale && stats.api.status === "up";
 
   return (
-    <section aria-label="Live system status" className="bg-card/40 rounded-xl border p-5">
-      <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span className="text-foreground inline-flex items-center gap-1.5 font-mono text-xs font-semibold tracking-wide uppercase">
+    <section aria-label="Live system status" className="bg-card/30 overflow-hidden rounded-2xl border">
+      {/* Telemetry-readout header — a sibling instrument to the convergence bench, but kept in the
+          system-status register (--ok / --warning), never the cultural/audio/seam retrieval accents,
+          so "live" stays visually distinct from the "recorded" replays (the juxtaposition is the point). */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b px-4 py-2.5">
+        <span className="text-foreground inline-flex items-center gap-1.5 font-mono text-[11px] font-semibold tracking-[0.16em] uppercase">
           <Radio
             className={cn(
               "size-3.5",
@@ -109,11 +112,16 @@ export function OpsPanel() {
             )}
             aria-hidden
           />
-          Live
+          Live · engine telemetry
         </span>
-        <span className="text-muted-foreground text-sm">the production engine, right now</span>
         <span className="ml-auto font-mono text-[11px] tabular-nums">{feedStamp(feed)}</span>
       </div>
+
+      <div className="p-5">
+        <p className="text-muted-foreground mb-4 text-sm">
+          The production engine, right now — the real system, deliberately distinct from the recorded
+          replays.
+        </p>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Tile
@@ -193,7 +201,8 @@ export function OpsPanel() {
         </div>
       )}
 
-      <p className="text-muted-foreground/70 mt-4 font-mono text-[11px] leading-relaxed">{feedNote(feed)}</p>
+        <p className="text-muted-foreground/70 mt-4 font-mono text-[11px] leading-relaxed">{feedNote(feed)}</p>
+      </div>
     </section>
   );
 }

@@ -10,13 +10,24 @@ import type { TraceStage } from "@/types/trace";
 const LEG_RING: Record<StageLeg, string> = {
   cultural: "border-cultural/40 bg-cultural/5",
   audio: "border-audio/40 bg-audio/5",
+  fused: "border-seam/40 bg-seam/5",
   neutral: "border-border bg-card/40",
 };
 
 const LEG_FILL: Record<StageLeg, string> = {
   cultural: "bg-cultural",
   audio: "bg-audio",
+  fused: "bg-seam",
   neutral: "bg-muted-foreground",
+};
+
+/** A solid left rail per row in the leg's full color — the list performs the convergence: warm
+ *  cultural rows and cool audio rows resolve to the --seam rail at the fused "Score, fuse + rank" row. */
+const LEG_LEFT: Record<StageLeg, string> = {
+  cultural: "border-l-cultural",
+  audio: "border-l-audio",
+  fused: "border-l-seam",
+  neutral: "border-l-border",
 };
 
 type Status = "pending" | "running" | "done";
@@ -59,8 +70,9 @@ function StageRow({ stage, t }: { stage: TraceStage; t: number }) {
   return (
     <li
       className={cn(
-        "rounded-lg border p-3 transition-opacity",
+        "rounded-lg border border-l-[3px] p-3 transition-opacity",
         LEG_RING[spec.leg],
+        LEG_LEFT[spec.leg],
         status === "pending" && "opacity-40",
       )}
       aria-current={status === "running" ? "step" : undefined}

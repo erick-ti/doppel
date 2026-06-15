@@ -1,9 +1,12 @@
 import Link from "next/link";
 
+import { SeamRule } from "@/components/seam-rule";
+
 export function SiteFooter() {
   return (
-    <footer className="border-border/60 mt-20 border-t">
+    <footer className="mt-20">
       <div className="text-muted-foreground mx-auto w-full max-w-6xl px-5 py-8 text-xs leading-relaxed">
+        <SeamRule className="mb-8" />
         <p className="max-w-3xl">
           The recommendations shown are serializations of <strong>real</strong>{" "}
           pipeline output — derived CLAP audio scores, Deezer track-page links,

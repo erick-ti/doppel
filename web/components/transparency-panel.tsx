@@ -22,16 +22,16 @@ function StatusRow({
     <div className="flex items-center justify-between gap-3 py-1.5">
       <div className="flex items-center gap-2">
         {ok ? (
-          <Check className="size-4 text-emerald-400" aria-hidden />
+          <Check className="text-ok size-4" aria-hidden />
         ) : (
-          <CircleAlert className="text-cultural size-4" aria-hidden />
+          <CircleAlert className="text-muted-foreground size-4" aria-hidden />
         )}
         <span className="text-sm">{label}</span>
       </div>
       <span
         className={cn(
           "font-mono text-sm tabular-nums",
-          ok ? "text-foreground" : "text-cultural",
+          ok ? "text-foreground" : "text-muted-foreground",
         )}
       >
         {value}
@@ -91,7 +91,7 @@ export function TransparencyPanel({ doc }: { doc: SeedDocument }) {
             <dd>
               {m.git_sha}
               {m.git_dirty && (
-                <span className="text-cultural" title="Exported from a dirty working tree">
+                <span className="text-muted-foreground" title="Exported from a dirty working tree">
                   {" "}
                   (dirty)
                 </span>

@@ -46,7 +46,7 @@ function PanelShell({
     <div className="rounded-xl border p-5">
       <div className="mb-4 flex flex-col gap-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="font-semibold tracking-tight">{title}</h3>
+          <h3 className="font-display font-semibold tracking-tight">{title}</h3>
           <DiagnosticTag />
         </div>
         <p className="text-muted-foreground text-sm leading-relaxed">{blurb}</p>
@@ -95,7 +95,7 @@ function GenreRanges() {
 function BandSeparation() {
   const legs = [
     { label: "Audio cosine", band: AUDIO_BAND, cls: "bg-audio", note: "how alike two tracks sound" },
-    { label: "Vibe-text cosine", band: VIBE_BAND, cls: "bg-cultural", note: "text→audio match (deliberately weak leg)" },
+    { label: "Vibe-text cosine", band: VIBE_BAND, cls: "bg-audio-deep", note: "text→audio match (deliberately weak leg)" },
   ];
   return (
     <PanelShell
@@ -188,7 +188,7 @@ export function EvalEvidence() {
   return (
     <section className="flex flex-col gap-5">
       <div className="max-w-2xl">
-        <h2 className="text-2xl font-semibold tracking-tight">Does the audio leg earn its keep?</h2>
+        <h2 className="font-display text-2xl font-semibold tracking-tight">Does the audio leg earn its keep?</h2>
         <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
           These panels render straight from one frozen diagnostic run
           (<span className="font-mono text-xs">{EVAL_PROVENANCE.run}</span>) over the full{" "}

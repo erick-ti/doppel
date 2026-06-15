@@ -10,18 +10,19 @@ import {
 import { cn } from "@/lib/utils";
 import type { ResultItem } from "@/types/recommendation";
 
-/** Accent color classes per retrieval leg (the two-accent visual duality). */
+/** Accent color classes per retrieval leg (the two-accent duality + the fused --seam output). */
 const LEG_TEXT: Record<Leg, string> = {
   audio: "text-audio",
   cultural: "text-cultural",
-  fused: "text-foreground",
+  fused: "text-seam",
 };
 
 const LEG_BAR: Record<Leg, string> = {
   audio: "bg-audio",
   cultural: "bg-cultural",
-  // The fused axis IS the fusion of both legs — show it as a gradient between the two accents.
-  fused: "bg-gradient-to-r from-cultural to-audio",
+  // The fused axis IS the two legs resolving into one — a gradient from cultural through the --seam
+  // (the same fused color as the hero's convergence rail) to audio.
+  fused: "bg-gradient-to-r from-cultural via-seam to-audio",
 };
 
 function AxisRow({

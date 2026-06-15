@@ -27,7 +27,7 @@ export default function StatusPage() {
           <ArrowLeft className="size-4" aria-hidden />
           All seeds
         </Link>
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">System status</h1>
+        <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">System status</h1>
         <p className="text-muted-foreground max-w-2xl text-lg leading-relaxed">
           The real production engine, live. These figures are pushed from the Hetzner VPS to a public
           Cloudflare R2 bucket every 15 minutes and fetched here client-side — sanitized counts and host

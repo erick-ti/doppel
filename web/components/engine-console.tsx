@@ -3,10 +3,12 @@
 import { useId, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CornerDownLeft, Search } from "lucide-react";
+import { ChevronRight, CornerDownLeft } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Fingerprint } from "@/components/fingerprint";
 import { cn } from "@/lib/utils";
+import type { FingerprintData } from "@/lib/fingerprint";
 
 /** Compact seed facts the server page passes down (lib/seeds is server-only). */
 export interface ConsoleSeed {
@@ -15,21 +17,17 @@ export interface ConsoleSeed {
   artist: string;
   genre: string;
   vibe: string | null;
+  /** The seed's earned signal fingerprint, precomputed server-side for the option spark. */
+  fp: FingerprintData;
 }
 
 /**
- * The active curated picker — the inversion of the old disabled seed box (same silhouette, real
- * input). Honest by design: picking a seed REPLAYS the recorded pipeline run for that exact request
- * (`/run/[slug]`, real persisted telemetry); free-text stays a filter over the analyzed library, not
- * a live request — there is still no public live endpoint, and the copy says so.
+ * The curated picker — the instrument's input slot. Each option carries its own signal-fingerprint
+ * spark, so choosing a run is choosing between visibly distinct waveforms. Honest by design: picking
+ * a seed REPLAYS the recorded pipeline run for that exact request (`/run/[slug]`, real persisted
+ * telemetry); free-text stays a filter over the analyzed library — there is no public live endpoint.
  */
-export function EngineConsole({
-  seeds,
-  latestCapture,
-}: {
-  seeds: ConsoleSeed[];
-  latestCapture: string | null;
-}) {
+export function EngineConsole({ seeds }: { seeds: ConsoleSeed[] }) {
   const router = useRouter();
   const listId = useId();
   const [query, setQuery] = useState("");
@@ -51,7 +49,6 @@ export function EngineConsole({
 
   const reveal = (i: number) => {
     setActive(i);
-    // Keep the keyboard-highlighted option visible inside the max-h listbox.
     document.getElementById(`${listId}-${matches[i]?.slug}`)?.scrollIntoView({ block: "nearest" });
   };
 
@@ -75,31 +72,24 @@ export function EngineConsole({
   };
 
   return (
-    <div className="mt-10 max-w-xl">
-      {/* Console status line — every fact is real and frozen (no live backend to poll). */}
-      <div className="text-muted-foreground mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px]">
-        {/* motion-safe: the ping collapses to the static dot under prefers-reduced-motion */}
-        <span className="relative flex size-2" aria-hidden>
-          <span className="bg-audio/60 absolute inline-flex h-full w-full rounded-full opacity-60 motion-safe:animate-ping" />
-          <span className="bg-audio relative inline-flex size-2 rounded-full" />
-        </span>
-        <span className="text-foreground/80">replay console</span>
+    <div className="mt-8 max-w-2xl">
+      <div className="text-muted-foreground mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] tracking-[0.16em] uppercase">
+        <span className="bg-seam size-1.5 rounded-full" aria-hidden />
+        <label htmlFor={`${listId}-input`} className="text-seam/90">
+          seed input
+        </label>
         <span className="text-muted-foreground/50">·</span>
-        <span>{seeds.length} recorded runs</span>
-        {latestCapture && (
-          <>
-            <span className="text-muted-foreground/50">·</span>
-            <span>latest capture {latestCapture.slice(0, 10)}</span>
-          </>
-        )}
-        <span className="text-muted-foreground/50">·</span>
-        <span>no live backend</span>
+        <span className="tracking-normal normal-case">replay any of {seeds.length} recorded runs</span>
       </div>
 
       <div className="relative">
-        <div className="bg-card/40 focus-within:border-audio/40 flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors">
-          <Search className="text-muted-foreground size-4 shrink-0" aria-hidden />
+        <div className="bg-card/50 focus-within:border-seam/60 focus-within:ring-ring/50 border-seam/25 flex items-center gap-3 rounded-xl border px-4 py-3.5 transition-colors focus-within:ring-[3px]">
+          {/* the ignition glyph — the seam motif marking the engine's input slot */}
+          <span className="bg-seam/15 text-seam inline-flex size-6 shrink-0 items-center justify-center rounded">
+            <ChevronRight className="size-4" aria-hidden />
+          </span>
           <input
+            id={`${listId}-input`}
             type="text"
             role="combobox"
             aria-label="Search the analyzed seed library"
@@ -144,7 +134,7 @@ export function EngineConsole({
                 role="option"
                 aria-selected={i === active}
                 className={cn(
-                  "flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm",
+                  "flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-sm",
                   i === active && "bg-accent",
                 )}
                 onMouseEnter={() => setActive(i)}
@@ -153,10 +143,13 @@ export function EngineConsole({
                   go(s.slug);
                 }}
               >
-                <span className="truncate">
+                <span className="bg-background/40 shrink-0 overflow-hidden rounded border">
+                  <Fingerprint data={s.fp} variant="spark" />
+                </span>
+                <span className="min-w-0 flex-1 truncate">
                   {s.title} <span className="text-muted-foreground">— {s.artist}</span>
                 </span>
-                <span className="ml-auto flex shrink-0 items-center gap-1.5">
+                <span className="flex shrink-0 items-center gap-1.5">
                   {s.vibe && (
                     <Badge variant="audio" className="font-mono text-[10px]">
                       vibe

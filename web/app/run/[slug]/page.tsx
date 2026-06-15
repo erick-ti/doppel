@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ReplayPlayer } from "@/components/replay/replay-player";
+import { SeamRule } from "@/components/seam-rule";
 import { SeedHeader } from "@/components/seed-header";
 import { getSeedBySlug } from "@/lib/seeds";
 import { getAllTraceSlugs, getTraceBySlug } from "@/lib/traces";
@@ -36,6 +37,7 @@ export default async function RunPage({ params }: Params) {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-5 py-10">
       <SeedHeader doc={doc} />
+      <SeamRule />
       <ReplayPlayer doc={doc} trace={trace} />
       <p className="text-muted-foreground text-sm">
         Prefer it static?{" "}

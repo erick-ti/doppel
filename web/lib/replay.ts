@@ -9,8 +9,9 @@
 import type { ExportMeta } from "@/types/recommendation";
 import type { RunTrace, TraceStage } from "@/types/trace";
 
-/** Same Leg vocabulary as architecture-dag: cultural = recall, audio = CLAP/vector, neutral = glue. */
-export type StageLeg = "cultural" | "audio" | "neutral";
+/** Same Leg vocabulary as architecture-dag: cultural = recall, audio = CLAP/vector, fused = the
+ *  --seam output (score/fuse/rank), neutral = glue. */
+export type StageLeg = "cultural" | "audio" | "fused" | "neutral";
 
 export interface StageSpec {
   id: string;
@@ -79,7 +80,7 @@ export const STAGE_SPECS: readonly StageSpec[] = [
   {
     id: "results",
     label: "Score, fuse + rank",
-    leg: "audio",
+    leg: "fused",
     describe: (c) => `top ${n(c.top)} · ${n(c.audio_scored)} audio-scored · ${n(c.backfill)} backfill`,
   },
   {

@@ -24,7 +24,7 @@
 import { useId, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { Play, Wand2 } from "lucide-react";
+import { Play, SlidersHorizontal } from "lucide-react";
 
 import { CoverageStrip } from "@/components/coverage-strip";
 import { ResultCard } from "@/components/result-card";
@@ -168,7 +168,7 @@ export function VibeSteer({
       <CoverageStrip coverage={active.coverage} meta={active.meta} />
 
       <section className="flex flex-col gap-5">
-        <h2 className="flex items-baseline gap-2 text-xl font-semibold tracking-tight">
+        <h2 className="font-display flex items-baseline gap-2 text-xl font-semibold tracking-tight">
           Recommendations
           <span className="text-muted-foreground text-sm font-normal">
             top {results.length}, audio-scored first
@@ -196,7 +196,7 @@ export function VibeSteer({
               controls={listId}
               ariaLabel={`Show the vibe-steered run: ${vibeText}`}
             >
-              <Wand2 className="size-3.5" aria-hidden />
+              <SlidersHorizontal className="size-3.5" aria-hidden />
               Vibe-steered
             </ToggleButton>
           </div>

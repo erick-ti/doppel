@@ -10,6 +10,7 @@ import {
 } from "motion/react";
 import { RotateCcw, SkipForward } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Coverage, ExportMeta } from "@/types/recommendation";
 
@@ -48,8 +49,15 @@ const RUN = 0.7; // per-stage count-up + bar-grow duration (s)
 const STAGE_COUNT = 4;
 const TOTAL_MS = (STAGGER * (STAGE_COUNT - 1) + RUN) * 1000 + 80;
 
-type Leg = "cultural" | "audio";
+type Leg = "cultural" | "audio" | "fused";
 type Status = "idle" | "running" | "done";
+
+const LEG_BAR: Record<Leg, string> = { cultural: "bg-cultural", audio: "bg-audio", fused: "bg-seam" };
+const LEG_TEXT: Record<Leg, string> = {
+  cultural: "text-cultural",
+  audio: "text-audio",
+  fused: "text-seam",
+};
 
 interface Stage {
   value: number;
@@ -124,10 +132,7 @@ function StageBar({
   return (
     <div className="bg-muted/50 h-2.5 w-full overflow-hidden rounded-full">
       <motion.div
-        className={cn(
-          "h-full rounded-full",
-          leg === "audio" ? "bg-audio" : "bg-cultural",
-        )}
+        className={cn("h-full rounded-full", LEG_BAR[leg])}
         style={{ width: `${pct}%`, scaleX, originX: 0 }}
         aria-hidden
       />
@@ -226,7 +231,7 @@ export function CoverageStrip({
           value: coverage.audio_scored,
           label: "audio-reranked",
           note: audioNote,
-          leg: "audio",
+          leg: "fused",
         }
       : {
           // No audio path — the final stage is the cultural backfill that filled the list instead.
@@ -254,8 +259,9 @@ export function CoverageStrip({
           Retrieve → rerank funnel
         </h2>
         {showControls && (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={status === "done" ? replay : skip}
             aria-controls={stagesId}
             aria-label={
@@ -263,7 +269,7 @@ export function CoverageStrip({
                 ? "Replay the funnel animation"
                 : "Skip the funnel animation"
             }
-            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 -mr-1 inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium outline-none transition-colors focus-visible:ring-[3px]"
+            className="text-muted-foreground -mr-1"
           >
             {status === "done" ? (
               <>
@@ -276,7 +282,7 @@ export function CoverageStrip({
                 Skip
               </>
             )}
-          </button>
+          </Button>
         )}
       </div>
 
@@ -293,7 +299,7 @@ export function CoverageStrip({
                 <span
                   className={cn(
                     "font-mono text-2xl font-semibold tabular-nums leading-none",
-                    stage.leg === "audio" ? "text-audio" : "text-cultural",
+                    LEG_TEXT[stage.leg],
                   )}
                 >
                   <StageCount

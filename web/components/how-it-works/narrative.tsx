@@ -66,26 +66,40 @@ const PIVOTS: Pivot[] = [
   },
 ];
 
+/** Per-pivot accent: the dead ends fade, the surviving "wedge" carries the --seam rail, the
+ *  shippability pivot the cool audio rail — so the arc reads as designs dying into the one that won. */
+function pivotAccent(tag: string): { rail: string; faded: boolean } {
+  if (tag.startsWith("Dead end")) return { rail: "border-l-border", faded: true };
+  if (tag === "The wedge") return { rail: "border-l-seam", faded: false };
+  return { rail: "border-l-audio", faded: false };
+}
+
 function Arc() {
   return (
     <section className="flex flex-col gap-5">
       <div className="max-w-2xl">
-        <h2 className="text-2xl font-semibold tracking-tight">Two designs died first</h2>
+        <h2 className="font-display text-2xl font-semibold tracking-tight">Two designs died first</h2>
         <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
           The architecture is the residue of killing two reasonable-looking approaches — one that broke on
           external reality, one that broke on real users — and keeping what each failure taught.
         </p>
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {PIVOTS.map((p) => (
-          <div key={p.title} className="rounded-xl border p-5">
-            <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-              {p.tag}
-            </span>
-            <h3 className="mt-1 font-semibold tracking-tight">{p.title}</h3>
-            <p className="text-muted-foreground mt-2 text-sm leading-relaxed">{p.body}</p>
-          </div>
-        ))}
+        {PIVOTS.map((p) => {
+          const a = pivotAccent(p.tag);
+          return (
+            <div
+              key={p.title}
+              className={`rounded-xl border border-l-[3px] p-5 ${a.rail} ${a.faded ? "opacity-70" : ""}`}
+            >
+              <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                {p.tag}
+              </span>
+              <h3 className="font-display mt-1 font-semibold tracking-tight">{p.title}</h3>
+              <p className="text-muted-foreground mt-2 text-sm leading-relaxed">{p.body}</p>
+            </div>
+          );
+        })}
       </div>
     </section>
   );
@@ -104,7 +118,7 @@ function Wedge() {
   return (
     <section className="flex flex-col gap-5">
       <div className="max-w-2xl">
-        <h2 className="text-2xl font-semibold tracking-tight">The four-way combination</h2>
+        <h2 className="font-display text-2xl font-semibold tracking-tight">The four-way combination</h2>
         <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
           The wedge is doing four things at once that no single tool does together: cultural recall,
           perceptual audio scoring, controllable text vibe-steering, and a grounded rationale.
@@ -177,7 +191,7 @@ function Decisions() {
   return (
     <section className="flex flex-col gap-5">
       <div className="max-w-2xl">
-        <h2 className="text-2xl font-semibold tracking-tight">Decisions, with the road not taken</h2>
+        <h2 className="font-display text-2xl font-semibold tracking-tight">Decisions, with the road not taken</h2>
         <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
           Each of these is a fork where the rejected option was reasonable — the note is why the other branch
           won.
@@ -185,7 +199,7 @@ function Decisions() {
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {DECISIONS.map((d) => (
-          <div key={d.chose} className="flex flex-col gap-2 rounded-xl border p-4">
+          <div key={d.chose} className="border-l-seam/40 flex flex-col gap-2 rounded-xl border border-l-2 p-4">
             <div className="flex flex-col gap-0.5">
               <span className="text-audio text-sm font-semibold">{d.chose}</span>
               <span className="text-muted-foreground text-xs">
@@ -213,7 +227,7 @@ function Deferred() {
   return (
     <section className="flex flex-col gap-5">
       <div className="max-w-2xl">
-        <h2 className="text-2xl font-semibold tracking-tight">What&rsquo;s deferred, named not hidden</h2>
+        <h2 className="font-display text-2xl font-semibold tracking-tight">What&rsquo;s deferred, named not hidden</h2>
         <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
           Most of these fall out of the static-showcase architecture: with no public live backend, a whole
           class of hardening is scoped as deliberate judgment rather than built. Listing where the system
