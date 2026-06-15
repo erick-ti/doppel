@@ -1,38 +1,31 @@
 import Link from "next/link";
-import { Wand2 } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Fingerprint } from "@/components/fingerprint";
+import { fingerprintData } from "@/lib/fingerprint";
 import { isVibeSteered } from "@/lib/seeds";
 import type { SeedDocument } from "@/types/recommendation";
 
-/** Consistent two-leg gradient "cover" (cultural -> audio) — branded, art-free, invariant-safe. */
-const COVER_STYLE: React.CSSProperties = {
-  background:
-    "linear-gradient(135deg, color-mix(in oklab, var(--cultural) 26%, var(--card)), color-mix(in oklab, var(--audio) 26%, var(--card)))",
-};
-
-/** A gallery tile. Clicking navigates instantly to the frozen results view (no round-trip). */
+/** A gallery tile. The "cover" is the seed's earned signal fingerprint (lib/fingerprint.ts) — its
+ *  real audio/cultural/fused telemetry rendered as the convergence motif, so every tile is distinct
+ *  and the imagery is earned by the engine, not a letter on a generic gradient. */
 export function SeedCard({ doc }: { doc: SeedDocument }) {
   const vibe = isVibeSteered(doc);
-  const initial = doc.seed.title.trim().charAt(0).toUpperCase() || "?";
+  const fp = fingerprintData(doc);
 
   return (
     <Link
       href={`/seed/${doc.meta.slug}`}
       className="group focus-visible:ring-ring rounded-xl focus-visible:ring-2 focus-visible:outline-none"
     >
-      <Card className="hover:border-foreground/25 gap-0 overflow-hidden py-0 transition-colors">
-        <div
-          className="relative flex aspect-[16/10] items-center justify-center"
-          style={COVER_STYLE}
-        >
-          <span className="font-sans text-6xl font-bold text-white/85 mix-blend-overlay select-none">
-            {initial}
-          </span>
+      <Card className="hover:border-seam/40 gap-0 overflow-hidden py-0 transition-colors">
+        <div className="bg-background/40 relative aspect-[16/10] overflow-hidden border-b">
+          <Fingerprint data={fp} variant="cover" />
           <Badge
             variant="muted"
-            className="bg-background/70 absolute top-3 left-3 backdrop-blur"
+            className="bg-background/70 absolute top-3 left-3 font-mono text-[10px] backdrop-blur"
           >
             {doc.meta.genre}
           </Badge>
@@ -41,14 +34,14 @@ export function SeedCard({ doc }: { doc: SeedDocument }) {
               variant="audio"
               className="bg-background/70 absolute top-3 right-3 backdrop-blur"
             >
-              <Wand2 aria-hidden />
+              <SlidersHorizontal aria-hidden />
               vibe-steered
             </Badge>
           )}
         </div>
 
         <div className="flex flex-col gap-1 p-4">
-          <h3 className="group-hover:text-audio truncate font-semibold tracking-tight transition-colors">
+          <h3 className="group-hover:text-seam truncate font-display font-semibold tracking-tight transition-colors">
             {doc.seed.title}
           </h3>
           <p className="text-muted-foreground truncate text-sm">
