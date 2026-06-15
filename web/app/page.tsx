@@ -1,23 +1,14 @@
-import { EngineConsole } from "@/components/engine-console";
+import { ConvergenceHero } from "@/components/hero/convergence-hero";
 import { HeroArc } from "@/components/hero-arc";
 import { OpsPanel } from "@/components/ops/ops-panel";
 import { SeedCard } from "@/components/seed-card";
-import { getGenreHeroes, getVibeVariants } from "@/lib/seeds";
-import { getAllTraceSlugs, getLatestCaptureDate } from "@/lib/traces";
+import { SeamRule } from "@/components/seam-rule";
+import { fingerprintData } from "@/lib/fingerprint";
+import { getGenreHeroes, getSeedBySlug, getVibeVariants } from "@/lib/seeds";
+import { getAllTraceSlugs, getLatestCaptureDate, getTraceBySlug } from "@/lib/traces";
 
-/** The four-way wedge — the combination no single competitor does. */
-const WEDGE = [
-  { label: "cultural recall", leg: "cultural" as const },
-  { label: "perceptual audio rerank", leg: "audio" as const },
-  { label: "text vibe-steering", leg: "audio" as const },
-  { label: "grounded rationale", leg: "neutral" as const },
-];
-
-const DOT: Record<string, string> = {
-  audio: "bg-audio",
-  cultural: "bg-cultural",
-  neutral: "bg-muted-foreground",
-};
+/** The featured run wired through the hero seam — a recognizable, clean, warm capture. */
+const PREFERRED_FEATURED = "midnight-city";
 
 export default async function Home() {
   const [heroes, variants, latestCapture, traceSlugs] = await Promise.all([
@@ -26,10 +17,9 @@ export default async function Home() {
     getLatestCaptureDate(),
     getAllTraceSlugs(),
   ]);
-  // Compact, client-safe facts for the picker (lib/seeds itself is server-only). Intersected with
-  // the trace sidecars BY CONSTRUCTION: the picker links /run/[slug], which only static-generates
-  // for doc∩trace — a doc-without-trace seed in this list would 404 on the static export, and the
-  // "N recorded runs" count would overclaim.
+
+  // Compact, client-safe facts for the picker (lib/seeds is server-only). Intersected with the trace
+  // sidecars BY CONSTRUCTION: the picker links /run/[slug], which only static-generates for doc∩trace.
   const withTrace = new Set(traceSlugs);
   const consoleSeeds = [...heroes, ...variants]
     .filter((doc) => withTrace.has(doc.meta.slug))
@@ -39,93 +29,77 @@ export default async function Home() {
       artist: doc.seed.artist,
       genre: doc.meta.genre,
       vibe: doc.vibe,
+      fp: fingerprintData(doc),
     }));
 
+  // Pick the featured run: the preferred seed if it has a trace, else the first hero that does.
+  const featuredSlug = withTrace.has(PREFERRED_FEATURED)
+    ? PREFERRED_FEATURED
+    : (heroes.find((h) => withTrace.has(h.meta.slug))?.meta.slug ?? PREFERRED_FEATURED);
+  const [featuredDoc, featuredTrace] = await Promise.all([
+    getSeedBySlug(featuredSlug),
+    getTraceBySlug(featuredSlug),
+  ]);
+
   return (
-    <div className="mx-auto w-full max-w-6xl px-5">
-      {/* Hero */}
-      <section className="py-12 sm:py-24">
-        <h1 className="max-w-3xl text-4xl leading-tight font-bold tracking-tight sm:text-5xl">
-          Find songs that <span className="text-audio">sound</span> like the one
-          you love — not just what other listeners clicked.
-        </h1>
-        <p className="text-muted-foreground mt-6 max-w-2xl text-lg">
-          Doppel is a hybrid retrieve-then-rerank engine: cultural sources
-          surface candidates, CLAP audio embeddings rerank them by how they
-          actually sound, and an LLM explains the picks — but never ranks them.
-        </p>
+    <>
+      {featuredDoc && featuredTrace && (
+        <ConvergenceHero
+          seeds={consoleSeeds}
+          featuredDoc={featuredDoc}
+          featuredTrace={featuredTrace}
+          latestCapture={latestCapture}
+        />
+      )}
 
-        <div className="bg-card/50 mt-8 inline-flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border px-4 py-2 font-mono text-sm">
-          <span className="font-semibold tabular-nums">19/19</span>
-          <span className="text-muted-foreground">
-            benchmark seeds audio-scored across 8 genres
-          </span>
-          <span className="text-muted-foreground/50">·</span>
-          <span className="text-muted-foreground">median resolve found-ratio</span>
-          <span className="font-semibold tabular-nums">0.987</span>
-        </div>
+      <div className="mx-auto w-full max-w-6xl px-5">
+        {/* LIVE register — the real production system right now, deliberately distinct from the
+            RECORDED replays the console links to (the juxtaposition is the point). */}
+        <section className="py-8">
+          <OpsPanel />
+        </section>
 
-        <div className="mt-6 flex flex-wrap gap-2">
-          {WEDGE.map((w) => (
-            <span
-              key={w.label}
-              className="border-border text-foreground/80 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm"
-            >
-              <span
-                className={`size-1.5 rounded-full ${DOT[w.leg]}`}
-                aria-hidden
-              />
-              {w.label}
+        {/* The problem -> dead-ends -> wedge -> evidence narrative */}
+        <HeroArc />
+
+        {/* Gallery — genre heroes */}
+        <section id="seed-gallery" className="scroll-mt-20 pb-8">
+          <div className="mb-5 flex items-baseline justify-between">
+            <h2 className="font-display text-xl font-semibold tracking-tight">Seed gallery</h2>
+            <span className="text-muted-foreground text-sm">
+              {heroes.length} genres · click any seed
             </span>
-          ))}
-        </div>
-
-        <EngineConsole seeds={consoleSeeds} latestCapture={latestCapture} />
-      </section>
-
-      {/* LIVE register — the real production system right now, deliberately distinct from the
-          RECORDED replays the console links to (the juxtaposition is the point). */}
-      <section className="pb-8">
-        <OpsPanel />
-      </section>
-
-      {/* The problem -> dead-ends -> wedge -> evidence narrative */}
-      <HeroArc />
-
-      {/* Gallery — genre heroes */}
-      <section id="seed-gallery" className="scroll-mt-20 pb-8">
-        <div className="mb-5 flex items-baseline justify-between">
-          <h2 className="text-xl font-semibold tracking-tight">Seed gallery</h2>
-          <span className="text-muted-foreground text-sm">
-            {heroes.length} genres · click any seed
-          </span>
-        </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {heroes.map((doc) => (
-            <SeedCard key={doc.meta.slug} doc={doc} />
-          ))}
-        </div>
-      </section>
-
-      {/* Gallery — vibe-steered variants */}
-      {variants.length > 0 && (
-        <section className="pb-12">
-          <div className="mb-5">
-            <h2 className="text-xl font-semibold tracking-tight">
-              Vibe-steered runs
-            </h2>
-            <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
-              The same seed, reshaped by a free-text mood. Directional steering,
-              not a hard filter — the text encoder is a deliberately weak leg.
-            </p>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {variants.map((doc) => (
+            {heroes.map((doc) => (
               <SeedCard key={doc.meta.slug} doc={doc} />
             ))}
           </div>
         </section>
-      )}
-    </div>
+
+        {/* Gallery — vibe-steered variants */}
+        {variants.length > 0 && (
+          <>
+            <SeamRule className="mb-10" />
+            <section className="pb-12">
+            <div className="mb-5">
+              <h2 className="font-display text-xl font-semibold tracking-tight">
+                Vibe-steered runs
+              </h2>
+              <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
+                The same seed, reshaped by a free-text mood. Directional steering, not a hard filter —
+                the text encoder is a deliberately weak leg.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {variants.map((doc) => (
+                <SeedCard key={doc.meta.slug} doc={doc} />
+              ))}
+            </div>
+            </section>
+          </>
+        )}
+      </div>
+    </>
   );
 }
