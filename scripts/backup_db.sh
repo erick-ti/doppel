@@ -98,13 +98,36 @@ fi
 mv "$tmp" "$out"
 echo "backup_db: wrote $out ($(du -h "$out" | cut -f1))"
 
-# Retention: keep the $KEEP most-recent archives, delete older ones. A plain pipe (no `mapfile`)
-# stays portable to the macOS bash 3.2 used for dev testing; `|| true` absorbs the empty-glob exit
-# under `set -o pipefail`.
-ls -1t "$BACKUP_DIR"/doppel-*.dump 2>/dev/null | tail -n +"$((KEEP + 1))" | while read -r old; do
-    echo "backup_db: pruning $old"
-    rm -f "$old"
-done || true
+# Retention: keep the $KEEP most-recent archives, prune the rest. The dump filenames embed a
+# zero-padded UTC timestamp; we sort them EXPLICITLY under a fixed (C) collation so the prune order is
+# chronological (oldest first) and CANNOT depend on the shell's glob sort — bash 5.3+
+# `GLOBSORT=-mtime`/`nosort` could otherwise reorder the array and delete the NEWEST dumps (incl. the
+# one just written). FAILS CLOSED two ways, because for a backup a silently-skipped prune that fills the
+# disk is worse than a loud abort: (1) a non-readable / non-traversable BACKUP_DIR is caught by an
+# explicit preflight — a bare glob would expand to EMPTY there (the dir can't be listed) and skip
+# pruning behind a green healthcheck; (2) a real `rm` error sets `prune_failed`. `nullglob` builds the
+# array (empty dir → empty array, no error) — no list/sort/tail pipeline with a `|| true` to swallow a
+# failure. Both set `prune_failed` and fail closed at the END (deferred past the off-box mirror, so a
+# local-prune problem can't also skip off-box durability). bash-3.2-portable.
+prune_failed=0
+if [[ ! -r "$BACKUP_DIR" || ! -x "$BACKUP_DIR" ]]; then
+    echo "backup_db: BACKUP_DIR '$BACKUP_DIR' is not readable+traversable — cannot enumerate archives to prune; failing closed" >&2
+    prune_failed=1
+else
+    shopt -s nullglob
+    _dumps=("$BACKUP_DIR"/doppel-*.dump)
+    shopt -u nullglob
+    if (( ${#_dumps[@]} > KEEP )); then
+        # Re-sort by filename under a FIXED collation so deletion order is deterministic regardless of
+        # the shell's glob sort (GLOBSORT) or locale; oldest first, so we prune the leading count-KEEP.
+        _sorted=()
+        while IFS= read -r _d; do _sorted+=("$_d"); done < <(printf '%s\n' "${_dumps[@]}" | LC_ALL=C sort)
+        for (( _i = 0; _i < ${#_sorted[@]} - KEEP; _i++ )); do
+            echo "backup_db: pruning ${_sorted[_i]}"
+            rm -f "${_sorted[_i]}" || { echo "backup_db: failed to prune ${_sorted[_i]}" >&2; prune_failed=1; }
+        done
+    fi
+fi
 
 # Off-box mirror (opt-in, gated on $BACKUP_REMOTE). All off-box validation lives in this block — NOT
 # as a pre-flight before the dump — so a misconfigured optional add-on (typo'd OFFSITE_KEEP_DAYS,
@@ -137,6 +160,14 @@ if [[ -n "$BACKUP_REMOTE" ]]; then
         echo "backup_db: rclone remote prune on $BACKUP_REMOTE failed (upload succeeded)" >&2
         exit 1
     fi
+fi
+
+# Fail CLOSED if the local retention prune hit a real error earlier (deferred to here so the off-box
+# mirror still ran). The new dump and any off-box copy are intact; only the LOCAL prune is stuck, so old
+# archives could pile up — surface it instead of reporting success. exit 1 → the EXIT trap pings /fail.
+if (( prune_failed )); then
+    echo "backup_db: retention prune failed — failing closed (new dump + off-box mirror OK; local prune needs attention)" >&2
+    exit 1
 fi
 
 # Final success ping. Reaching this means: local dump landed + pruned, and (if BACKUP_REMOTE is

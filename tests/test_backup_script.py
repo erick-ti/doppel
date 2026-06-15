@@ -414,3 +414,120 @@ def test_healthcheck_url_is_not_echoed_in_logs(tmp_path):
     assert result.returncode == 0, result.stderr
     assert unique_marker not in result.stdout, "URL token must not be echoed to stdout"
     assert unique_marker not in result.stderr, "URL token must not be echoed to stderr"
+
+
+# ---- Retention prune: keep newest $KEEP, and FAIL CLOSED when the dir can't be enumerated ----------
+# (Codex adversarial review, 2026-06-14: the earlier `ls … | sort | tail || true` masked ANY listing
+# failure, not just the empty-glob case — an unreadable BACKUP_DIR would skip pruning behind a green
+# healthcheck. The prune now builds a nullglob array behind an explicit readability preflight.)
+
+
+def test_retention_keeps_newest_and_prunes_older(tmp_path):
+    """A normal run keeps the newest $KEEP archives and prunes the older ones."""
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    _make_docker_dump_stub(bindir)
+    backups = tmp_path / "backups"
+    backups.mkdir()
+    # Five pre-existing archives, oldest→newest by their embedded timestamp.
+    for i in range(1, 6):  # 01..05
+        (backups / f"doppel-2026010{i}-000000.dump").write_bytes(b"PGDMP-fake")
+
+    result = _run({"KEEP": "2"}, repo_dir=tmp_path, backup_dir=backups, bindir=bindir)
+
+    assert result.returncode == 0, result.stderr
+    # The fresh dump (today's date) sorts newest; with KEEP=2 it plus doppel-20260105 survive, and the
+    # four oldest pre-existing archives are pruned — exactly two archives remain.
+    remaining = sorted(p.name for p in backups.glob("doppel-*.dump"))
+    assert len(remaining) == 2, f"KEEP=2 should leave exactly 2 archives, got: {remaining}"
+    assert (backups / "doppel-20260105-000000.dump").exists()  # 2nd-newest kept
+    for i in range(1, 5):  # 01..04 pruned
+        assert not (backups / f"doppel-2026010{i}-000000.dump").exists()
+
+
+def test_unreadable_backup_dir_fails_closed(tmp_path):
+    """A writable-but-unreadable BACKUP_DIR can't be enumerated to prune. The new dump still lands, but
+    the prune must FAIL CLOSED (exit non-zero + /fail ping) rather than silently skip pruning behind a
+    green healthcheck — a bare glob would expand to empty there and report success while old dumps pile
+    up to disk-full (Codex adversarial review, 2026-06-14)."""
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    _make_docker_dump_stub(bindir)
+    log = tmp_path / "curl.log"
+    _make_curl_logging_stub(bindir, log)
+    backups = tmp_path / "backups"
+    backups.mkdir()
+    # More archives than KEEP, so a working prune WOULD delete some — proving the skip would be real.
+    for i in range(1, 4):
+        (backups / f"doppel-2026010{i}-000000.dump").write_bytes(b"PGDMP-fake")
+    url = "https://hc-ping.example/abc-123"
+    # 0o300 = write+execute, NO read: creating the dump succeeds, but globbing the dir to prune fails.
+    backups.chmod(0o300)
+    try:
+        result = _run(
+            {"BACKUP_HEALTHCHECK_URL": url, "KEEP": "1"},
+            repo_dir=tmp_path,
+            backup_dir=backups,
+            bindir=bindir,
+        )
+    finally:
+        backups.chmod(0o700)  # restore so the assertions below (and pytest cleanup) can read the dir
+
+    assert result.returncode != 0, (
+        f"unreadable BACKUP_DIR must fail closed, not report success; "
+        f"stdout={result.stdout!r} stderr={result.stderr!r}"
+    )
+    assert "enumerate" in result.stderr, f"expected the preflight message, got: {result.stderr!r}"
+    # The healthcheck goes red: /start then /fail (the success ping is never reached).
+    pings = [line for line in log.read_text().splitlines() if line]
+    assert any("/fail" in p for p in pings), f"expected a /fail ping, got: {pings}"
+    # The dump still landed (write succeeds on a write+exec dir) and nothing was pruned.
+    assert len(list(backups.glob("doppel-*.dump"))) == 4
+
+
+def _bash_minor_version() -> tuple[int, int]:
+    """(major, minor) of the bash the tests shell out to — GLOBSORT lands in bash 5.3."""
+    if shutil.which("bash") is None:
+        return (0, 0)
+    out = subprocess.run(
+        ["bash", "-c", 'printf "%s %s" "${BASH_VERSINFO[0]:-0}" "${BASH_VERSINFO[1]:-0}"'],
+        capture_output=True,
+        text=True,
+    ).stdout.split()
+    return (int(out[0]), int(out[1])) if len(out) == 2 else (0, 0)
+
+
+@pytest.mark.skipif(
+    _bash_minor_version() < (5, 3),
+    reason="GLOBSORT is bash 5.3+; dev runs 3.2, prod runs 5.2 — the explicit sort is a no-op there",
+)
+def test_retention_order_independent_of_globsort(tmp_path):
+    """Deletion order must come from an explicit filename sort, not the shell's glob order. Under
+    GLOBSORT=-mtime (newest-mtime-first), a position-based prune over raw glob order would delete the
+    name-newest dumps — including the freshly written one. The explicit LC_ALL=C sort keeps the
+    name-newest $KEEP regardless (Codex adversarial review, 2026-06-14)."""
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    _make_docker_dump_stub(bindir)
+    backups = tmp_path / "backups"
+    backups.mkdir()
+    # Names oldest→newest, but give the NAME-OLDEST the NEWEST mtime, so GLOBSORT=-mtime orders the glob
+    # roughly the REVERSE of name order — a position-prune over it would delete the name-newest dumps.
+    base = 1_700_000_000
+    for offset in range(5):  # 01..05
+        p = backups / f"doppel-2026010{offset + 1}-000000.dump"
+        p.write_bytes(b"PGDMP-fake")
+        os.utime(p, (base - offset, base - offset))  # 01 newest mtime … 05 oldest mtime
+
+    result = _run({"KEEP": "2", "GLOBSORT": "-mtime"}, repo_dir=tmp_path, backup_dir=backups, bindir=bindir)
+
+    assert result.returncode == 0, result.stderr
+    # 6 archives (5 + the fresh dump), KEEP=2 → keep the two name-newest: the fresh dump + doppel-20260105.
+    # Without the explicit sort, GLOBSORT=-mtime would instead keep 04/05 and delete the fresh dump.
+    remaining = sorted(p.name for p in backups.glob("doppel-*.dump"))
+    assert len(remaining) == 2, f"KEEP=2 should leave exactly 2, got: {remaining}"
+    assert (backups / "doppel-20260105-000000.dump").exists()  # name-newest pre-existing kept
+    for i in range(1, 5):  # 01..04 pruned by NAME, not by mtime
+        assert not (backups / f"doppel-2026010{i}-000000.dump").exists()
+    fresh = [n for n in remaining if not n.startswith("doppel-2026010")]
+    assert len(fresh) == 1, f"the freshly-written dump must survive; remaining={remaining}"
