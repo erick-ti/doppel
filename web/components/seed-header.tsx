@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, Wand2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, SlidersHorizontal } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import type { SeedDocument } from "@/types/recommendation";
@@ -31,14 +31,14 @@ export function SeedHeader({ doc }: { doc: SeedDocument }) {
         <Badge variant="muted">{doc.meta.genre}</Badge>
         {vibe && (
           <Badge variant="audio">
-            <Wand2 aria-hidden />
+            <SlidersHorizontal aria-hidden />
             vibe-steered
           </Badge>
         )}
       </div>
 
       <div>
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+        <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
           {doc.seed.title}
         </h1>
         <p className="text-muted-foreground mt-1 text-lg">{doc.seed.artist}</p>

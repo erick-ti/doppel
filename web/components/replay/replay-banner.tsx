@@ -22,7 +22,7 @@ export function ReplayBanner({
   return (
     <div className="bg-card/40 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl border px-4 py-2.5 font-mono text-xs">
       <span className="text-foreground inline-flex items-center gap-1.5 font-semibold tracking-wide uppercase">
-        <CircleDot className="text-audio size-3.5" aria-hidden />
+        <CircleDot className="text-seam size-3.5" aria-hidden />
         Recorded run
       </span>
       {/* outline, not a leg accent — cold/warm is a cache state, not the cultural/audio duality */}

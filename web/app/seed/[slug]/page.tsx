@@ -93,7 +93,7 @@ export default async function SeedPage({ params }: Params) {
         <>
           <CoverageStrip coverage={doc.coverage} meta={doc.meta} />
           <section>
-            <h2 className="mb-4 flex items-baseline gap-2 text-xl font-semibold tracking-tight">
+            <h2 className="font-display mb-4 flex items-baseline gap-2 text-xl font-semibold tracking-tight">
               Recommendations
               <span className="text-muted-foreground text-sm font-normal">
                 top {doc.results.length}, audio-scored first

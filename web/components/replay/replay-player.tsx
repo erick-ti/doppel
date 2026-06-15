@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Pause, Play, RotateCcw, SkipForward } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 
+import { Button } from "@/components/ui/button";
 import { ReplayBanner } from "@/components/replay/replay-banner";
 import { ResultsCascade } from "@/components/replay/results-cascade";
 import { StageFlow } from "@/components/replay/stage-flow";
@@ -86,9 +87,6 @@ export function ReplayPlayer({ doc, trace }: { doc: SeedDocument; trace: RunTrac
   const done = t >= total;
   const provenance = pairProvenance(doc.meta, trace);
 
-  const btn =
-    "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-accent focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none disabled:opacity-40 disabled:pointer-events-none";
-
   return (
     <motion.div
       className="flex flex-col gap-6"
@@ -110,22 +108,20 @@ export function ReplayPlayer({ doc, trace }: { doc: SeedDocument; trace: RunTrac
       {reduce === false && started && (
         <div className="bg-card/40 flex flex-col gap-3 rounded-xl border px-4 py-3">
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              className={btn}
+            <Button
+              variant="outline"
               onClick={() => (done ? restart() : setPlaying((p) => !p))}
               aria-label={done ? "Replay" : playing ? "Pause" : "Play"}
             >
               {playing ? <Pause className="size-3.5" aria-hidden /> : <Play className="size-3.5" aria-hidden />}
               {done ? "Replay" : playing ? "Pause" : "Play"}
-            </button>
-            <button type="button" className={btn} onClick={restart} aria-label="Restart replay">
+            </Button>
+            <Button variant="outline" onClick={restart} aria-label="Restart replay">
               <RotateCcw className="size-3.5" aria-hidden />
               Restart
-            </button>
-            <button
-              type="button"
-              className={btn}
+            </Button>
+            <Button
+              variant="outline"
               onClick={() => {
                 setPlaying(false);
                 seek(total);
@@ -135,7 +131,7 @@ export function ReplayPlayer({ doc, trace }: { doc: SeedDocument; trace: RunTrac
             >
               <SkipForward className="size-3.5" aria-hidden />
               Skip to results
-            </button>
+            </Button>
             <span className="text-muted-foreground ml-auto font-mono text-xs tabular-nums">
               {formatClock(t)} / {formatClock(total)}
             </span>
@@ -169,7 +165,7 @@ export function ReplayPlayer({ doc, trace }: { doc: SeedDocument; trace: RunTrac
                 setPlaying(false);
                 seek(Number(e.target.value));
               }}
-              className="accent-audio w-full"
+              className="accent-seam w-full"
               aria-label="Replay timeline"
               aria-valuetext={`${formatClock(t)} of ${formatClock(total)}`}
             />
@@ -190,7 +186,7 @@ export function ReplayPlayer({ doc, trace }: { doc: SeedDocument; trace: RunTrac
 
       {done && (
         <section aria-label="Recommendations">
-          <h2 className="mb-4 flex items-baseline gap-2 text-xl font-semibold tracking-tight">
+          <h2 className="font-display mb-4 flex items-baseline gap-2 text-xl font-semibold tracking-tight">
             Recommendations
             <span className="text-muted-foreground text-sm font-normal">top {doc.results.length}</span>
           </h2>

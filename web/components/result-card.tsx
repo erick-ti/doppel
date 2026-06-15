@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, ExternalLink, Sparkles } from "lucide-react";
+import { ArrowDown, ArrowUp, AudioLines, ExternalLink } from "lucide-react";
 
 import { RawJsonDialog } from "@/components/raw-json-dialog";
 import { ScoreBreakdown } from "@/components/score-breakdown";
@@ -12,7 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import type { RankDelta } from "@/lib/rank-delta";
-import type { BatchStats } from "@/lib/scores";
+import { axisFill, axisValue, type AxisKey, type BatchStats } from "@/lib/scores";
 import { cn } from "@/lib/utils";
 import type { ResultItem } from "@/types/recommendation";
 
@@ -55,7 +55,7 @@ function RankDeltaBadge({ delta }: { delta: RankDelta }) {
       title={label}
       className={cn(
         "inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 font-mono text-[11px] font-medium tabular-nums",
-        up ? "bg-emerald-500/15 text-emerald-400" : "bg-muted text-muted-foreground",
+        up ? "bg-seam/15 text-seam" : "bg-muted text-muted-foreground",
       )}
     >
       {up ? (
@@ -65,6 +65,37 @@ function RankDeltaBadge({ delta }: { delta: RankDelta }) {
       )}
       <span aria-hidden>{delta.by}</span>
     </span>
+  );
+}
+
+/** A compact per-row score profile — the row's own axes (audio · vibe · fused · cultural) as tiny
+ *  leg-colored bars from the real values, so every result carries an earned glyph (the fingerprint
+ *  motif at row scale), not just the seed gallery. */
+function RowSpark({ item, batch }: { item: ResultItem; batch: BatchStats }) {
+  const bars: { key: AxisKey; cls: string }[] = [
+    { key: "audio", cls: "bg-audio" },
+    ...(item.vibe_text_score != null ? [{ key: "vibe" as const, cls: "bg-audio-deep" }] : []),
+    { key: "combined", cls: "bg-seam" },
+    { key: "cultural", cls: "bg-cultural" },
+  ];
+  return (
+    <div className="flex h-7 items-end gap-[3px]" aria-hidden title="Score profile — audio · fused · cultural">
+      {bars.map((b) => {
+        const f = axisFill(b.key, axisValue(item, b.key), batch);
+        // A null axis (audio/fused on a cultural-backfill row) has NO real value — render a faint
+        // neutral stub, never a colored bar, so the glyph can't imply a score that doesn't exist.
+        if (f == null) {
+          return <div key={b.key} className="bg-muted-foreground/25 h-[6%] w-[3px] rounded-full" />;
+        }
+        return (
+          <div
+            key={b.key}
+            className={cn("w-[3px] rounded-full", b.cls)}
+            style={{ height: `${Math.max(10, f * 100)}%` }}
+          />
+        );
+      })}
+    </div>
   );
 }
 
@@ -103,16 +134,17 @@ export function ResultCard({
           </div>
 
           <div className="min-w-0 flex-1">
-            <h3 className="leading-tight font-semibold tracking-tight">
+            <h3 className="font-display leading-tight font-semibold tracking-tight">
               {item.title}
             </h3>
             <p className="text-muted-foreground text-sm">{item.artist}</p>
           </div>
 
-          <div className="flex shrink-0 items-start gap-1.5 max-sm:basis-full sm:flex-col sm:items-end">
+          <div className="flex shrink-0 items-center gap-2 max-sm:basis-full sm:flex-col sm:items-end sm:gap-1.5">
+            <RowSpark item={item} batch={batch} />
             {item.was_audio_scored ? (
               <Badge variant="audio" title="Reranked by the CLAP audio embedding">
-                <Sparkles aria-hidden />
+                <AudioLines aria-hidden />
                 CLAP-reranked
               </Badge>
             ) : (
