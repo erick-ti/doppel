@@ -4,12 +4,18 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Dark, type-forward editorial theme ("music-magazine meets ML-dashboard").
- * Two consistent leg accents carried everywhere:
- *   --audio    (cool) -> the audio / CLAP-rerank leg
- *   --cultural (warm) -> the cultural / recall leg
- * The base palette is shadcn "neutral". The app is always dark (`.dark` on <html>);
- * the :root light values are kept only as a sane fallback.
+ * Signal-Convergence theme — an authored, off-neutral dark identity (not shadcn "neutral").
+ *
+ * The canvas is a WARM CHARCOAL (hue ~60, faint chroma) so the page has a deliberate cultural
+ * temperature; the cool AUDIO leg then reads as the colder signal the seam fuses. The two retrieval
+ * legs are the loudest hues on the page — they ARE the identity, not hairlines:
+ *   --cultural (warm amber)  -> the cultural / recall leg
+ *   --audio    (cool cyan)   -> the audio / CLAP-rerank leg
+ *   --audio-deep             -> the HNSW "global vibe" secondary cool signal
+ *   --seam     (near-white teal) -> the FUSED output: the authored color of "the legs became one".
+ *       Hue 200 sits between amber(72) and cyan(232) and is kept hue-distinct from --ok green(150)
+ *       so fusion never reads as a live-status indicator.
+ * The app is always dark (`.dark` on <html>); the :root light values are a sane fallback only.
  */
 
 :root {
@@ -36,8 +42,11 @@
 
   --audio: oklch(0.72 0.13 233);
   --audio-foreground: oklch(0.18 0 0);
+  --audio-deep: oklch(0.6 0.15 248);
   --cultural: oklch(0.8 0.135 78);
   --cultural-foreground: oklch(0.18 0 0);
+  --seam: oklch(0.72 0.11 200);
+  --seam-foreground: oklch(0.16 0 0);
 
   /* System-status tokens (v1.2 ops panel) — NOT retrieval legs: --ok = live/up, --warning = stale. */
   --ok: oklch(0.7 0.15 150);
@@ -45,29 +54,35 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.185 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.249 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.249 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  /* Warm-charcoal authored darks (hue ~60, faint chroma) — a real temperature, not camera-grey. */
+  --background: oklch(0.155 0.012 60);
+  --foreground: oklch(0.965 0.006 70);
+  --card: oklch(0.195 0.013 58);
+  --card-foreground: oklch(0.965 0.006 70);
+  --popover: oklch(0.215 0.014 58);
+  --popover-foreground: oklch(0.965 0.006 70);
+  --primary: oklch(0.965 0.006 70);
+  --primary-foreground: oklch(0.205 0.013 58);
+  --secondary: oklch(0.235 0.012 60);
+  --secondary-foreground: oklch(0.965 0.006 70);
+  --muted: oklch(0.235 0.012 60);
+  --muted-foreground: oklch(0.705 0.014 65);
+  --accent: oklch(0.275 0.014 60);
+  --accent-foreground: oklch(0.965 0.006 70);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --border: oklch(0.97 0.01 70 / 9%);
+  --input: oklch(0.97 0.01 70 / 14%);
+  --ring: oklch(0.62 0.06 230);
 
-  --audio: oklch(0.74 0.13 233);
-  --audio-foreground: oklch(0.16 0 0);
-  --cultural: oklch(0.82 0.14 78);
-  --cultural-foreground: oklch(0.16 0 0);
+  /* Retrieval legs — chroma bumped so the streams glow against the warm canvas. */
+  --audio: oklch(0.76 0.14 232);
+  --audio-foreground: oklch(0.16 0.01 232);
+  --audio-deep: oklch(0.62 0.15 248);
+  --cultural: oklch(0.82 0.15 72);
+  --cultural-foreground: oklch(0.16 0.01 72);
+  /* The fused output — the highest-luminance, signature band on the page. */
+  --seam: oklch(0.88 0.09 200);
+  --seam-foreground: oklch(0.16 0.01 200);
 
   /* System-status tokens (v1.2 ops panel) — NOT retrieval legs: --ok = live/up, --warning = stale. */
   --ok: oklch(0.74 0.15 150);
@@ -101,13 +116,18 @@
 
   --color-audio: var(--audio);
   --color-audio-foreground: var(--audio-foreground);
+  --color-audio-deep: var(--audio-deep);
   --color-cultural: var(--cultural);
   --color-cultural-foreground: var(--cultural-foreground);
+  --color-seam: var(--seam);
+  --color-seam-foreground: var(--seam-foreground);
   --color-ok: var(--ok);
   --color-warning: var(--warning);
 
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, monospace;
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-fraunces), ui-serif, Georgia, serif;
 
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
@@ -142,5 +162,26 @@
   /* Editorial tabular numbers for the score grids. */
   .tabular-nums {
     font-variant-numeric: tabular-nums;
+  }
+}
+
+/*
+ * Signal-Convergence idle motion — the "engine idle" breathing of the seam streams. Gated to
+ * motion-safe so the reduced-motion / no-JS resting state is the still, complete welded instrument
+ * (the app-wide idle=final invariant). The "wake" animation is driven separately by a JS RAF clock.
+ */
+/* The idle "alive" motion animates ONLY transform (scale) — never opacity. Opacity on the seam SVG is
+ * state-bearing (RAF-derived `ignite`, the degraded-audio-leg dimming), so it must stay React/clock-
+ * authoritative for recorded-replay honesty; a CSS opacity animation would override it and pulse the
+ * node before ignition / un-dim a degraded leg (Codex review). */
+@keyframes seam-glow {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .seam-node-glow {
+    animation: seam-glow 4.5s ease-in-out infinite;
+    transform-origin: center;
+    transform-box: fill-box;
   }
 }
