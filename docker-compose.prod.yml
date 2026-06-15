@@ -27,6 +27,11 @@
 #   * Long-lived services restart unless explicitly stopped, so the stack survives a VPS reboot or
 #     crash. `migrate` keeps the base's `restart: "no"` (a one-shot must stay exited 0) — its only
 #     change here is the DATABASE_URL password.
+#   * Doppel's CLAP-holding app/worker are biased AWAY from the kernel's OOM killer
+#     (`oom_score_adj: -500`, range -1000..1000). The box is memory-bound (the ~1 GB+ resident CLAP
+#     model); a co-tenant's unbounded build spike could trip the global OOM killer, which targets the
+#     largest-RSS process — i.e. Doppel. -500 strongly deprioritizes Doppel as the victim while leaving
+#     it killable as a last resort, and is inert until real memory contention. (DEPLOY.md coexistence.)
 #
 # Requires Compose v2.24+ for the `!reset` / `!override` merge tags. Secrets (POSTGRES_PASSWORD,
 # ANTHROPIC_API_KEY, LASTFM_API_KEY) come from the gitignored host `.env`, never committed.
@@ -60,12 +65,14 @@ services:
     ports: !override
       - "127.0.0.1:${DOPPEL_APP_PORT:-8000}:8000"
     restart: unless-stopped
+    oom_score_adj: -500
 
   worker:
     environment:
       DATABASE_URL: postgresql://doppel@postgres:5432/doppel
       DB_PASSWORD: ${POSTGRES_PASSWORD:?required for the prod overlay; set it in .env}
     restart: unless-stopped
+    oom_score_adj: -500
 
 # Named volume for the persisted Redis AOF (merges with the base file's doppel_pgdata).
 volumes:
