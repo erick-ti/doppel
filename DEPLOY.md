@@ -10,6 +10,17 @@ over an SSH tunnel. Postgres/Redis publish no host ports at all (compose-network
 auth or TLS in v1 (a Non-Goal); a public, authenticated edge is the separate Phase-C hardening pass.
 The security boundary is the SSH-gated VPS, not the app.
 
+**Coexistence (multi-tenant box).** This VPS is being set up to also host a second app behind a public
+Caddy edge on 80/443. Doppel is unaffected by design: its API stays bound to `127.0.0.1:8000` and is
+**never** added to a reverse proxy (it is unauthenticated and spends Anthropic budget — public exposure
+is gated on the Phase-C auth + rate-limit review). Once the box answers a public DNS name its IP is no
+longer unadvertised, but Doppel's boundary is unchanged: loopback API, no DB/Redis host ports, key-only
+SSH + fail2ban. Doppel runs as the `deploy` user (home `/home/deploy`, `sudo` + `docker` groups; owns
+`~/doppel`, `~/doppel-backups`, its crontab, and `~/.config/rclone/rclone.conf`); the co-tenant runs as
+a separate non-`sudo` Linux user. Keep their crontabs and rclone remotes fully separate — `docker`-group
+membership is root-equivalent, so this is operational isolation, not a security boundary, and a shared
+crontab would let the co-tenant inherit Doppel's R2 buckets.
+
 **Security invariants — do not violate (the deploy's safety rests on these):**
 - **Always run with *both* compose files** (the `dc` alias below bakes them in). **Never** run bare
   `docker compose up` / base-only on the VPS: the dev base initializes Postgres with the *public* dev
@@ -54,7 +65,9 @@ sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd
 sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
 systemctl restart ssh
 
-# Firewall: allow SSH only. The API port is NEVER opened — it's loopback-only.
+# Firewall: allow SSH only at box setup. (Coexistence: when a co-tenant app's public edge ships, 80/443
+# are opened at the Hetzner Cloud Firewall for ITS Caddy — see "Coexistence" above. Docker bypasses ufw,
+# so the cloud firewall is the real gate. Doppel's API port is NEVER opened or proxied — still loopback.)
 ufw allow OpenSSH
 ufw --force enable
 
