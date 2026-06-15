@@ -98,13 +98,22 @@ fi
 mv "$tmp" "$out"
 echo "backup_db: wrote $out ($(du -h "$out" | cut -f1))"
 
-# Retention: keep the $KEEP most-recent archives, delete older ones. A plain pipe (no `mapfile`)
-# stays portable to the macOS bash 3.2 used for dev testing; `|| true` absorbs the empty-glob exit
-# under `set -o pipefail`.
-ls -1t "$BACKUP_DIR"/doppel-*.dump 2>/dev/null | tail -n +"$((KEEP + 1))" | while read -r old; do
+# Retention: keep the $KEEP most-recent archives, prune the rest. Filenames are timestamped
+# (doppel-YYYYMMDD-HHMMSS.dump), so a reverse lexical sort is newest-first; `tail -n +N` (BSD-portable,
+# unlike `head -n -N`) drops the newest $KEEP. Stays bash-3.2-portable (no `mapfile`; the `<<<`
+# here-string keeps the loop in the MAIN shell, so a failed prune is observable, not lost in a pipe
+# subshell). The `|| true` is scoped to the LISTING only (an empty glob is benign under pipefail); a
+# real `rm` failure sets `prune_failed` and FAILS CLOSED at the end of the script — a stuck prune must
+# trip the /fail healthcheck, never fill the disk behind a green check. The fail-close is deferred past
+# the off-box mirror so a local-prune problem can't also skip off-box durability (same isolation
+# discipline as the mirror block below).
+listing="$(ls -1 "$BACKUP_DIR"/doppel-*.dump 2>/dev/null | sort -r | tail -n +"$((KEEP + 1))" || true)"
+prune_failed=0
+while IFS= read -r old; do
+    [[ -n "$old" ]] || continue
     echo "backup_db: pruning $old"
-    rm -f "$old"
-done || true
+    rm -f "$old" || { echo "backup_db: failed to prune $old" >&2; prune_failed=1; }
+done <<< "$listing"
 
 # Off-box mirror (opt-in, gated on $BACKUP_REMOTE). All off-box validation lives in this block — NOT
 # as a pre-flight before the dump — so a misconfigured optional add-on (typo'd OFFSITE_KEEP_DAYS,
@@ -137,6 +146,14 @@ if [[ -n "$BACKUP_REMOTE" ]]; then
         echo "backup_db: rclone remote prune on $BACKUP_REMOTE failed (upload succeeded)" >&2
         exit 1
     fi
+fi
+
+# Fail CLOSED if the local retention prune hit a real error earlier (deferred to here so the off-box
+# mirror still ran). The new dump and any off-box copy are intact; only the LOCAL prune is stuck, so old
+# archives could pile up — surface it instead of reporting success. exit 1 → the EXIT trap pings /fail.
+if (( prune_failed )); then
+    echo "backup_db: retention prune failed — failing closed (new dump + off-box mirror OK; local prune needs attention)" >&2
+    exit 1
 fi
 
 # Final success ping. Reaching this means: local dump landed + pruned, and (if BACKUP_REMOTE is
