@@ -98,7 +98,7 @@ export function ReplayPlayer({ doc, trace }: { doc: SeedDocument; trace: RunTrac
         mode={trace.mode}
         // A speed claim is only honest while playback exists; the static/no-JS/reduced-motion page
         // states the recorded span instead.
-        speedLabel={started ? speedLabel(speed) : `recorded span ${formatClock(total)}`}
+        speedLabel={started ? speedLabel(speed) : `${formatClock(total)} long`}
       />
 
       {/* Controls — gated on `started` so SSR and the first client render agree (hydration), and
@@ -107,53 +107,66 @@ export function ReplayPlayer({ doc, trace }: { doc: SeedDocument; trace: RunTrac
           complete final state, matching the app-wide collapse-to-instant rule. */}
       {reduce === false && started && (
         <div className="bg-card/40 flex flex-col gap-3 rounded-xl border px-4 py-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() => (done ? restart() : setPlaying((p) => !p))}
-              aria-label={done ? "Replay" : playing ? "Pause" : "Play"}
-            >
-              {playing ? <Pause className="size-3.5" aria-hidden /> : <Play className="size-3.5" aria-hidden />}
-              {done ? "Replay" : playing ? "Pause" : "Play"}
-            </Button>
-            <Button variant="outline" onClick={restart} aria-label="Restart replay">
-              <RotateCcw className="size-3.5" aria-hidden />
-              Restart
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setPlaying(false);
-                seek(total);
-              }}
-              disabled={done}
-              aria-label="Skip to results"
-            >
-              <SkipForward className="size-3.5" aria-hidden />
-              Skip to results
-            </Button>
-            <span className="text-muted-foreground ml-auto font-mono text-xs tabular-nums">
-              {formatClock(t)} / {formatClock(total)}
-            </span>
-            <div className="flex items-center gap-1" role="group" aria-label="Playback speed">
-              {speedOptions(trace.mode).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setSpeed(s)}
-                  className={cn(
-                    "focus-visible:ring-ring/50 rounded-md border px-2 py-1 font-mono text-[11px] tabular-nums transition-colors focus-visible:ring-[3px] focus-visible:outline-none",
-                    s === speed ? "border-audio/40 bg-audio/15 text-audio" : "hover:bg-accent",
-                  )}
-                  aria-pressed={s === speed}
-                >
-                  {s}×
-                </button>
-              ))}
+          {/* Mobile: transport buttons on one row, the time readout + speed group on a second (so
+              nothing strands the way a single flex-wrap row did). From sm up it collapses back to one
+              row with the time+speed group pushed right. */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => (done ? restart() : setPlaying((p) => !p))}
+                aria-label={done ? "Replay" : playing ? "Pause" : "Play"}
+              >
+                {playing ? <Pause className="size-3.5" aria-hidden /> : <Play className="size-3.5" aria-hidden />}
+                {done ? "Replay" : playing ? "Pause" : "Play"}
+              </Button>
+              <Button variant="outline" onClick={restart} aria-label="Restart replay">
+                <RotateCcw className="size-3.5" aria-hidden />
+                Restart
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  // Skip fast-forwards the PIPELINE replay, not the RESULT reveal — bump runId so the
+                  // results cascade still plays its entrance stagger instead of popping in fully formed.
+                  setRunId((id) => id + 1);
+                  setPlaying(false);
+                  seek(total);
+                }}
+                disabled={done}
+                aria-label="Skip to results"
+              >
+                <SkipForward className="size-3.5" aria-hidden />
+                Skip to results
+              </Button>
+            </div>
+            <div className="flex items-center justify-between gap-2 sm:ml-auto">
+              <span className="text-muted-foreground font-mono text-xs tabular-nums">
+                {formatClock(t)} / {formatClock(total)}
+              </span>
+              <div className="flex items-center gap-1" role="group" aria-label="Playback speed">
+                {speedOptions(trace.mode).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setSpeed(s)}
+                    className={cn(
+                      "focus-visible:ring-ring/50 inline-flex min-h-9 items-center justify-center rounded-md border px-2.5 font-mono text-[11px] tabular-nums transition-[color,background-color,transform] focus-visible:ring-[3px] focus-visible:outline-none motion-safe:active:scale-[0.97]",
+                      s === speed
+                        ? "border-audio/40 bg-audio/15 text-audio"
+                        : "hover:bg-accent hover:text-foreground",
+                    )}
+                    aria-pressed={s === speed}
+                  >
+                    {s}×
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Scrubber over the trace's real timeline, with stage-boundary tick marks. */}
+          {/* Scrubber over the trace's real timeline, with stage-boundary tick marks overlaid on the
+              seam rail the thumb travels (not detached below it). */}
           <div className="relative">
             <input
               type="range"
@@ -165,15 +178,18 @@ export function ReplayPlayer({ doc, trace }: { doc: SeedDocument; trace: RunTrac
                 setPlaying(false);
                 seek(Number(e.target.value));
               }}
-              className="accent-seam w-full"
+              className="seam-range focus-visible:ring-ring/50 focus-visible:ring-offset-background w-full rounded focus-visible:ring-[3px] focus-visible:ring-offset-2 focus-visible:outline-none"
               aria-label="Replay timeline"
               aria-valuetext={`${formatClock(t)} of ${formatClock(total)}`}
             />
-            <div className="pointer-events-none absolute inset-x-0 top-full flex h-1.5" aria-hidden>
+            <div
+              className="pointer-events-none absolute inset-x-0 top-1/2 flex h-1.5 -translate-y-1/2"
+              aria-hidden
+            >
               {trace.stages.map((s) => (
                 <span
                   key={s.stage}
-                  className="bg-border absolute h-1.5 w-px"
+                  className="bg-foreground/30 absolute h-1.5 w-px"
                   style={{ left: `${(s.t0_ms / total) * 100}%` }}
                 />
               ))}
@@ -185,9 +201,9 @@ export function ReplayPlayer({ doc, trace }: { doc: SeedDocument; trace: RunTrac
       <StageFlow stages={trace.stages} t={t} />
 
       {done && (
-        <section aria-label="Recommendations">
+        <section aria-label="The picks">
           <h2 className="font-display mb-4 flex items-baseline gap-2 text-xl font-semibold tracking-tight">
-            Recommendations
+            The picks
             <span className="text-muted-foreground text-sm font-normal">top {doc.results.length}</span>
           </h2>
           <ResultsCascade results={doc.results} runId={runId} animateIn={started} />

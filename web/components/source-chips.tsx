@@ -43,10 +43,10 @@ export function SourceChips({ sources }: { sources: string[] }) {
           <Badge
             key={s}
             variant="audio"
-            title="Retrieved by vibe/acoustic similarity across the whole library — not cultural co-listening"
+            title="Pulled in because its sound fits the mood you typed, not because of who listens to it"
           >
             <Globe aria-hidden />
-            global vibe match
+            mood match
           </Badge>
         ) : (
           <Badge key={s} variant="cultural">
@@ -58,10 +58,10 @@ export function SourceChips({ sources }: { sources: string[] }) {
         <Badge
           variant="cultural"
           className="bg-cultural/25"
-          title="Surfaced by both cultural sources — strong cross-source listener agreement"
+          title="Both sources paired these two, so a lot of people treat them as a match"
         >
           <Users aria-hidden />
-          high consensus
+          widely paired
         </Badge>
       )}
     </div>

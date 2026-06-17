@@ -62,12 +62,13 @@ export default async function Home() {
         {/* The problem -> dead-ends -> wedge -> evidence narrative */}
         <HeroArc />
 
-        {/* Gallery — genre heroes */}
-        <section id="seed-gallery" className="scroll-mt-20 pb-8">
+        {/* Gallery — genre heroes. pb matches the vibe-steered gallery below so the two galleries
+            bracket the column with equal bottom space (consistent vertical rhythm). */}
+        <section id="seed-gallery" className="scroll-mt-20 pb-12">
           <div className="mb-5 flex items-baseline justify-between">
-            <h2 className="font-display text-xl font-semibold tracking-tight">Seed gallery</h2>
+            <h2 className="font-display text-xl font-semibold tracking-tight">Browse the songs</h2>
             <span className="text-muted-foreground text-sm">
-              {heroes.length} genres · click any seed
+              {heroes.length} genres · tap any one
             </span>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -84,11 +85,11 @@ export default async function Home() {
             <section className="pb-12">
             <div className="mb-5">
               <h2 className="font-display text-xl font-semibold tracking-tight">
-                Vibe-steered runs
+                Steer it with a mood
               </h2>
               <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
-                The same seed, reshaped by a free-text mood. Directional steering, not a hard filter —
-                the text encoder is a deliberately weak leg.
+                The same starting song, nudged by a few words about the feel you want. It leans the
+                results that way. It won&rsquo;t force them.
               </p>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

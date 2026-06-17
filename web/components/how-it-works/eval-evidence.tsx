@@ -28,7 +28,7 @@ const pct = (v: number) =>
 function DiagnosticTag() {
   return (
     <span className="border-border text-muted-foreground inline-flex w-fit items-center rounded-full border px-2 py-0.5 font-mono text-[10px] tracking-wide uppercase">
-      diagnostic · no ground truth
+      a real test run, not a scoreboard
     </span>
   );
 }
@@ -60,14 +60,14 @@ function PanelShell({
 function GenreRanges() {
   return (
     <PanelShell
-      title="Audio similarity holds across the whole map"
-      blurb="Raw CLAP audio cosine for each genre's top-10 neighbours. Jazz clusters tightest and highest; electronic spreads lowest — but every genre lands well inside the music band, which is the cross-genre coverage claim."
+      title="It works across every genre"
+      blurb="How close the top matches sound, broken out by genre. Jazz clusters tightest, electronic spreads widest, but every genre lands solidly in range. So it isn't only good at one kind of music."
     >
       <div className="flex flex-col gap-2.5">
         {GENRE_BANDS.map((g) => (
           <div
             key={g.genre}
-            className="grid grid-cols-[5.5rem_1fr_auto] items-center gap-x-3"
+            className="flex flex-col gap-1.5 sm:grid sm:grid-cols-[5.5rem_1fr_auto] sm:items-center sm:gap-x-3"
             title={`${g.label}: ${g.seeds.join(", ")}`}
           >
             <span className="text-sm font-medium">{g.label}</span>
@@ -85,7 +85,7 @@ function GenreRanges() {
         ))}
       </div>
       <p className="text-muted-foreground mt-3 font-mono text-[11px]">
-        axis: cosine 0.30 → 1.00 · the perceptual music band
+        scale: 0.30 to 1.00, the range real music falls in
       </p>
     </PanelShell>
   );
@@ -94,17 +94,20 @@ function GenreRanges() {
 /** Panel 2: the two legs' bands on one axis — visibly disjoint, so fusion must normalize first. */
 function BandSeparation() {
   const legs = [
-    { label: "Audio cosine", band: AUDIO_BAND, cls: "bg-audio", note: "how alike two tracks sound" },
-    { label: "Vibe-text cosine", band: VIBE_BAND, cls: "bg-audio-deep", note: "text→audio match (deliberately weak leg)" },
+    { label: "How alike they sound", band: AUDIO_BAND, cls: "bg-audio", note: "the main signal" },
+    { label: "Mood match", band: VIBE_BAND, cls: "bg-audio-deep", note: "a lighter touch on purpose" },
   ];
   return (
     <PanelShell
-      title="The two legs live in different ranges"
-      blurb="Audio cosine clusters high; the text encoder is a deliberately weak signal that clusters low. They barely overlap — which is exactly why fusion min-max-normalizes each leg within the batch before weighting (α=0.7 / β=0.3). You can't fuse raw values on different scales."
+      title="Sound and mood live on different scales"
+      blurb="Sound scores cluster high, mood scores cluster low, and they barely overlap. That's exactly why the two get put on the same scale before they're blended. You can't fairly add up numbers that mean different things."
     >
       <div className="flex flex-col gap-4">
         {legs.map((l) => (
-          <div key={l.label} className="grid grid-cols-[7rem_1fr_auto] items-center gap-x-3">
+          <div
+            key={l.label}
+            className="flex flex-col gap-1.5 sm:grid sm:grid-cols-[7rem_1fr_auto] sm:items-center sm:gap-x-3"
+          >
             <span className="text-sm font-medium">{l.label}</span>
             <div className="bg-muted/50 relative h-2.5 w-full overflow-hidden rounded-full">
               <div
@@ -120,7 +123,8 @@ function BandSeparation() {
         ))}
       </div>
       <p className="text-muted-foreground mt-3 text-xs">
-        Same 0.30–1.00 axis. The gap between the bars is the whole argument for normalize-then-fuse.
+        Same 0.30 to 1.00 scale. The gap between the bars is the whole reason for putting them on one
+        scale first.
       </p>
     </PanelShell>
   );
@@ -130,16 +134,16 @@ function BandSeparation() {
 function Ablation() {
   return (
     <PanelShell
-      title="CLAP reshuffles the cultural shortlist"
-      blurb={`Comparing the pure cultural (RRF) order to the CLAP-reranked order at k=${ABLATION.k}: the two share a median of just ${ABLATION.overlapMedian.toFixed(1)} of their top ${ABLATION.k} (range ${ABLATION.overlapMin.toFixed(1)}–${ABLATION.overlapMax.toFixed(1)}), with a median rank displacement of ${ABLATION.displacementMedian.toFixed(1)} places (range ${ABLATION.displacementMin.toFixed(1)}–${ABLATION.displacementMax.toFixed(1)}). The audio leg is doing real work — it isn't a pass-through of the cultural ranking.`}
+      title="Listening really changes the order"
+      blurb={`Line up the crowd's order against the order after listening (top ${ABLATION.k}): they share only about ${Math.round(ABLATION.overlapMedian * ABLATION.k)} of the ${ABLATION.k} (between ${Math.round(ABLATION.overlapMin * ABLATION.k)} and ${Math.round(ABLATION.overlapMax * ABLATION.k)}), and the typical song moves about ${ABLATION.displacementMedian.toFixed(1)} places (up to ${ABLATION.displacementMax.toFixed(1)}). The listening is doing real work, not just rubber-stamping the crowd.`}
     >
       <div className="mb-4 flex flex-wrap gap-3">
         <div className="bg-muted/40 flex-1 rounded-lg border p-3">
           <div className="text-audio font-mono text-2xl font-semibold tabular-nums">
-            {ABLATION.overlapMedian.toFixed(1)}
+            ~{Math.round(ABLATION.overlapMedian * ABLATION.k)}
           </div>
           <div className="text-muted-foreground text-xs">
-            median top-{ABLATION.k} overlap · RRF vs CLAP order
+            of the top {ABLATION.k} stay, after listening
           </div>
         </div>
         <div className="bg-muted/40 flex-1 rounded-lg border p-3">
@@ -147,14 +151,14 @@ function Ablation() {
             {ABLATION.displacementMedian.toFixed(1)}
           </div>
           <div className="text-muted-foreground text-xs">
-            median rank displacement · places moved
+            places the typical song moves
           </div>
         </div>
       </div>
 
       <div className="flex flex-col gap-3">
         {ABLATION_EXAMPLES.map((ex) => {
-          const [title, artist] = ex.seed.split(" — ");
+          const [title, artist] = ex.seed.split(" by ");
           return (
             <div key={ex.seed} className="border-border/60 rounded-lg border p-3">
               <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
@@ -163,7 +167,7 @@ function Ablation() {
                   <span className="text-muted-foreground font-normal"> · {artist}</span>
                 </span>
                 <span className="text-muted-foreground font-mono text-[11px] tabular-nums">
-                  overlap {ex.overlap.toFixed(1)} · disp {ex.displacement}
+                  kept {Math.round(ex.overlap * ABLATION.k)}/{ABLATION.k} · moved {ex.displacement}
                 </span>
               </div>
               <ol className="text-muted-foreground mt-1.5 flex flex-col gap-0.5 text-sm">
@@ -188,23 +192,23 @@ export function EvalEvidence() {
   return (
     <section className="flex flex-col gap-5">
       <div className="max-w-2xl">
-        <h2 className="font-display text-2xl font-semibold tracking-tight">Does the audio leg earn its keep?</h2>
+        <h2 className="font-display text-2xl font-semibold tracking-tight">Does the listening actually help?</h2>
         <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-          These panels render straight from one frozen diagnostic run
-          (<span className="font-mono text-xs">{EVAL_PROVENANCE.run}</span>) over the full{" "}
-          {EVAL_HEADLINE.seedsTotal}-seed benchmark set. It is a coverage-and-behaviour run, not
-          precision/recall — there is no ground-truth &ldquo;good vibe match&rdquo; label, so nothing here
-          measures or claims to beat any competitor. It only shows what the engine does.
+          These charts come straight from one real test run
+          (<span className="font-mono text-xs">{EVAL_PROVENANCE.run}</span>) over every one of the{" "}
+          {EVAL_HEADLINE.seedsTotal} benchmark songs. It&rsquo;s a check on what the engine does, not a
+          scoreboard. There&rsquo;s no official &ldquo;right answer&rdquo; to grade against, so nothing here
+          claims to beat anyone. It just shows the behavior.
         </p>
         <div className="bg-card/50 mt-4 inline-flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border px-4 py-2 font-mono text-sm">
           <span className="font-semibold tabular-nums">
             {EVAL_HEADLINE.seedsAudioScored}/{EVAL_HEADLINE.seedsTotal}
           </span>
           <span className="text-muted-foreground">
-            seeds audio-scored across {EVAL_HEADLINE.genres} genres
+            songs scored by sound, across {EVAL_HEADLINE.genres} genres
           </span>
           <span className="text-muted-foreground/50">·</span>
-          <span className="text-muted-foreground">median resolve found-ratio</span>
+          <span className="text-muted-foreground">typically found this share</span>
           <span className="font-semibold tabular-nums">
             {EVAL_HEADLINE.foundRatioMedian.toFixed(3)}
           </span>

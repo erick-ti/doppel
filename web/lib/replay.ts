@@ -30,64 +30,64 @@ const n = (v: number | string | boolean | undefined): number => (typeof v === "n
 export const STAGE_SPECS: readonly StageSpec[] = [
   {
     id: "aggregate",
-    label: "Cultural retrieval",
+    label: "Find songs the crowd pairs",
     leg: "cultural",
-    describe: (c) => `${n(c.candidates)} candidates · Last.fm + ListenBrainz`,
+    describe: (c) => `${n(c.candidates)} from Last.fm + ListenBrainz, merged by rank`,
   },
   {
     id: "gate1",
-    label: "Gate 1 — resolve budget",
+    label: "Quick path or slow path?",
     leg: "neutral",
-    describe: (c) => `${n(c.uncached)} uncached vs threshold ${n(c.threshold)} → ${String(c.verdict ?? "?")}`,
+    describe: (c) => `${n(c.uncached)} new to look up, so going ${String(c.verdict ?? "?")}`,
   },
   {
     id: "seed",
-    label: "Seed resolve + embed",
+    label: "Listen to your song",
     leg: "audio",
     describe: (c) =>
-      `${c.audio_scored ? "seed audio-scored" : "no usable preview — cultural-only"}${c.vibe_present ? " · vibe embedded" : ""}`,
+      `${c.audio_scored ? "CLAP listened to it" : "no preview to listen to"}${c.vibe_present ? " · mood added" : ""}`,
   },
   {
     id: "resolve",
-    label: "Resolve candidates (MusicBrainz)",
+    label: "Look each one up",
     leg: "cultural",
     describe: (c) => {
       const live = n(c.attempted) - n(c.cache_hits);
-      return `${n(c.attempted)} attempted · ${n(c.cache_hits)} cached · ${live} live${live > 0 ? " (~1 req/s)" : ""} · ${n(c.found)} found`;
+      return `${n(c.attempted)} looked up · ${n(c.cache_hits)} already known · ${live} fresh · ${n(c.found)} found`;
     },
   },
   {
     id: "gate2",
-    label: "Gate 2 — embed budget",
+    label: "Listen now or later?",
     leg: "neutral",
-    describe: (c) => `${n(c.missing)} unembedded vs threshold ${n(c.threshold)} → ${String(c.verdict ?? "?")}`,
+    describe: (c) => `${n(c.missing)} still to hear, so going ${String(c.verdict ?? "?")}`,
   },
   {
     id: "embed",
-    label: "Embed previews (CLAP)",
+    label: "Listen to each one",
     leg: "audio",
     describe: (c) =>
       n(c.attempted) === 0
-        ? "0 to embed — every candidate already in the corpus cache"
-        : `${n(c.computed)} embedded · ${n(c.failed)} previews failed${n(c.failed) > 0 ? " (degrade, never sink)" : ""}`,
+        ? "already knew them all, nothing new to hear"
+        : `CLAP listened to ${n(c.computed)}${n(c.failed) > 0 ? ` · ${n(c.failed)} had no preview` : ""}`,
   },
   {
     id: "hnsw_lane",
-    label: "Vibe lane (HNSW over corpus)",
+    label: "Search by your mood",
     leg: "audio",
-    describe: (c) => `knn(vibe) k=${n(c.k)} → ${n(c.hydrated)} corpus tracks join scoring`,
+    describe: (c) => `matched your mood against the library, pulled in ${n(c.hydrated)} more`,
   },
   {
     id: "results",
-    label: "Score, fuse + rank",
+    label: "Put the list together",
     leg: "fused",
-    describe: (c) => `top ${n(c.top)} · ${n(c.audio_scored)} audio-scored · ${n(c.backfill)} backfill`,
+    describe: (c) => `top ${n(c.top)} · ${n(c.audio_scored)} scored by sound`,
   },
   {
     id: "explain",
-    label: "Explain (LLM — never ranks)",
+    label: "Write the why",
     leg: "neutral",
-    describe: (c) => (c.rationales_available ? "one batched call · a rationale per row" : "degraded — results without rationales"),
+    describe: (c) => (c.rationales_available ? "one LLM call, a note per pick" : "skipped the notes this time"),
   },
 ] as const;
 
@@ -129,10 +129,13 @@ export interface PairProvenance {
   sameCapture: boolean;
   docSha: string;
   docDirty: boolean;
-  docDate: string; // YYYY-MM-DD
+  docDate: string; // YYYY-MM-DD (UTC-sliced — drives sameCapture; display uses docIso in local TZ)
+  /** Raw ISO instants, so the display can render them in the viewer's timezone (<LocalStamp>). */
+  docIso: string;
   traceSha: string;
   traceDirty: boolean;
-  traceDate: string; // YYYY-MM-DD
+  traceDate: string; // YYYY-MM-DD (UTC-sliced)
+  traceIso: string;
 }
 
 /**
@@ -157,9 +160,11 @@ export function pairProvenance(meta: ExportMeta, trace: RunTrace): PairProvenanc
     docSha: meta.git_sha,
     docDirty: meta.git_dirty,
     docDate,
+    docIso: meta.exported_at,
     traceSha: trace.git_sha,
     traceDirty: trace.git_dirty,
     traceDate,
+    traceIso: trace.captured_at,
   };
 }
 

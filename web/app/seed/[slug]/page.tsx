@@ -27,10 +27,10 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
   const doc = await getSeedBySlug(slug);
   if (!doc) return { title: "Seed not found" };
-  const vibePart = doc.vibe ? ` · vibe: "${doc.vibe}"` : "";
+  const vibePart = doc.vibe ? ` · mood: "${doc.vibe}"` : "";
   return {
-    title: `${doc.seed.title} — ${doc.seed.artist}`,
-    description: `Top ${doc.results.length} vibe-matched recommendations for ${doc.seed.title} by ${doc.seed.artist}${vibePart}, scored by CLAP audio embeddings.`,
+    title: `${doc.seed.title} by ${doc.seed.artist}`,
+    description: `The top ${doc.results.length} songs that sound like ${doc.seed.title} by ${doc.seed.artist}${vibePart}.`,
   };
 }
 
@@ -76,7 +76,7 @@ export default async function SeedPage({ params }: Params) {
           className="text-muted-foreground hover:text-foreground -mt-4 inline-flex w-fit items-center gap-1.5 font-mono text-xs transition-colors"
         >
           <Play className="size-3" aria-hidden />
-          watch this seed&rsquo;s recorded run replayed stage-by-stage
+          watch this run play back, step by step
         </Link>
       )}
       {steer ? (
@@ -94,9 +94,9 @@ export default async function SeedPage({ params }: Params) {
           <CoverageStrip coverage={doc.coverage} meta={doc.meta} />
           <section>
             <h2 className="font-display mb-4 flex items-baseline gap-2 text-xl font-semibold tracking-tight">
-              Recommendations
+              The picks
               <span className="text-muted-foreground text-sm font-normal">
-                top {doc.results.length}, audio-scored first
+                top {doc.results.length}, best sound matches first
               </span>
             </h2>
             <ResultList results={doc.results} />

@@ -41,11 +41,11 @@ const serif = Fraunces({
 
 export const metadata: Metadata = {
   title: {
-    default: "Doppel — vibe-matched song recommendations",
-    template: "%s — Doppel",
+    default: "Doppel · songs that sound like the one you love",
+    template: "%s · Doppel",
   },
   description:
-    "Find songs that sound like the one you love — a hybrid retrieve-then-rerank engine combining cultural recall, perceptual CLAP audio scoring, and grounded LLM rationales. A static showcase of real, frozen pipeline output.",
+    "Find songs that sound like the one you love. Doppel mixes what the crowd plays together with a model that actually listens, then explains each pick. A showcase of real, saved runs.",
 };
 
 export default function RootLayout({
@@ -59,8 +59,18 @@ export default function RootLayout({
       className={`dark ${sans.variable} ${mono.variable} ${display.variable} ${serif.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
+        {/* Bypass the sticky header's brand + nav (and, on the home page, the engine-console combobox)
+            on every route — visible only when focused (WCAG 2.4.1). */}
+        <a
+          href="#main"
+          className="focus:bg-card focus:ring-ring/50 sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:border focus:px-3 focus:py-1.5 focus:text-sm focus:ring-[3px] focus:outline-none"
+        >
+          Skip to content
+        </a>
         <SiteHeader />
-        <main className="flex-1">{children}</main>
+        <main id="main" tabIndex={-1} className="flex-1 outline-none">
+          {children}
+        </main>
         <SiteFooter />
         {/* Vercel Web Analytics + Speed Insights — privacy-friendly, no-op off Vercel. */}
         <Analytics />

@@ -7,6 +7,7 @@ import { SeamRule } from "@/components/seam-rule";
 import { SeedHeader } from "@/components/seed-header";
 import { getSeedBySlug } from "@/lib/seeds";
 import { getAllTraceSlugs, getTraceBySlug } from "@/lib/traces";
+import { cn, linkFocus } from "@/lib/utils";
 
 type Params = { params: Promise<{ slug: string }> };
 
@@ -24,8 +25,8 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const doc = await getSeedBySlug(slug);
   if (!doc) return { title: "Replay not found" };
   return {
-    title: `Replay: ${doc.seed.title} — ${doc.seed.artist}`,
-    description: `Stage-by-stage replay of the recorded pipeline run for ${doc.seed.title} — real persisted telemetry, not a live request.`,
+    title: `Replay: ${doc.seed.title} by ${doc.seed.artist}`,
+    description: `Watch the saved run for ${doc.seed.title} play back, step by step.`,
   };
 }
 
@@ -40,14 +41,14 @@ export default async function RunPage({ params }: Params) {
       <SeamRule />
       <ReplayPlayer doc={doc} trace={trace} />
       <p className="text-muted-foreground text-sm">
-        Prefer it static?{" "}
+        Want the quick version?{" "}
         <Link
           href={`/seed/${doc.meta.slug}`}
-          className="text-foreground underline decoration-dotted underline-offset-2"
+          className={cn("text-foreground underline decoration-dotted underline-offset-2", linkFocus)}
         >
-          The result sheet for this seed
+          The result page
         </Link>{" "}
-        has the full score breakdown, funnel, and raw JSON.
+        has the same picks without the playback.
       </p>
     </div>
   );

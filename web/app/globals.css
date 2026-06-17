@@ -20,6 +20,10 @@
 
 :root {
   --radius: 0.625rem;
+  /* The house deceleration curve — "fast out, gentle settle." Promoted from the coverage-strip so the
+     hand-rolled CSS reveals (hero rail/shortlist, seam) share one timing character with the Framer
+     spring instead of the generic CSS `ease`. */
+  --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
 
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -41,12 +45,9 @@
   --ring: oklch(0.708 0 0);
 
   --audio: oklch(0.72 0.13 233);
-  --audio-foreground: oklch(0.18 0 0);
   --audio-deep: oklch(0.6 0.15 248);
   --cultural: oklch(0.8 0.135 78);
-  --cultural-foreground: oklch(0.18 0 0);
   --seam: oklch(0.72 0.11 200);
-  --seam-foreground: oklch(0.16 0 0);
 
   /* System-status tokens (v1.2 ops panel) — NOT retrieval legs: --ok = live/up, --warning = stale. */
   --ok: oklch(0.7 0.15 150);
@@ -76,13 +77,10 @@
 
   /* Retrieval legs — chroma bumped so the streams glow against the warm canvas. */
   --audio: oklch(0.76 0.14 232);
-  --audio-foreground: oklch(0.16 0.01 232);
   --audio-deep: oklch(0.62 0.15 248);
   --cultural: oklch(0.82 0.15 72);
-  --cultural-foreground: oklch(0.16 0.01 72);
   /* The fused output — the highest-luminance, signature band on the page. */
   --seam: oklch(0.88 0.09 200);
-  --seam-foreground: oklch(0.16 0.01 200);
 
   /* System-status tokens (v1.2 ops panel) — NOT retrieval legs: --ok = live/up, --warning = stale. */
   --ok: oklch(0.74 0.15 150);
@@ -115,12 +113,9 @@
   --color-ring: var(--ring);
 
   --color-audio: var(--audio);
-  --color-audio-foreground: var(--audio-foreground);
   --color-audio-deep: var(--audio-deep);
   --color-cultural: var(--cultural);
-  --color-cultural-foreground: var(--cultural-foreground);
   --color-seam: var(--seam);
-  --color-seam-foreground: var(--seam-foreground);
   --color-ok: var(--ok);
   --color-warning: var(--warning);
 
@@ -155,14 +150,78 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* Defense-in-depth: per-component truncation is the primary guard against a wide mono/SVG string
+     pushing the viewport, but a single un-truncated future field shouldn't be able to introduce a
+     horizontal scrollbar on a phone. `clip` (not `hidden`) on purpose: `overflow-x: hidden` forces
+     overflow-y to `auto`, making body a scroll container and BREAKING the sticky header; `clip`
+     prevents the horizontal scroll without creating a scroll container, so the header still sticks. */
+  html,
+  body {
+    @apply overflow-x-clip;
+  }
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    /* --font-sans already carries the full Inter→generic fallback chain (see @theme inline). */
+    font-family: var(--font-sans);
   }
   /* Editorial tabular numbers for the score grids. */
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
+}
+
+/*
+ * The replay scrubber — the one control where a visitor physically grabs the seam rail, so it is
+ * authored to match it: a dim --seam track and a glowing --seam thumb with a hover/active grow. Only
+ * ever rendered with motion enabled (the player gates the controls on `started` + motion-safe), so the
+ * thumb transition needs no reduced-motion guard.
+ */
+.seam-range {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: grab;
+}
+.seam-range:active {
+  cursor: grabbing;
+}
+.seam-range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: color-mix(in oklch, var(--seam) 30%, transparent);
+}
+.seam-range::-moz-range-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: color-mix(in oklch, var(--seam) 30%, transparent);
+}
+.seam-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -4px; /* center the 14px thumb on the 6px track */
+  height: 14px;
+  width: 14px;
+  border-radius: 9999px;
+  background: var(--seam);
+  box-shadow: 0 0 10px var(--seam);
+  transition: transform 0.15s var(--ease-settle);
+}
+.seam-range::-moz-range-thumb {
+  height: 14px;
+  width: 14px;
+  border: none;
+  border-radius: 9999px;
+  background: var(--seam);
+  box-shadow: 0 0 10px var(--seam);
+  transition: transform 0.15s var(--ease-settle);
+}
+.seam-range:hover::-webkit-slider-thumb,
+.seam-range:active::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+.seam-range:hover::-moz-range-thumb,
+.seam-range:active::-moz-range-thumb {
+  transform: scale(1.15);
 }
 
 /*
@@ -183,5 +242,36 @@
     animation: seam-glow 4.5s ease-in-out infinite;
     transform-origin: center;
     transform-box: fill-box;
+  }
+}
+
+/*
+ * The masthead's "feeling" — a warm, on-fire glow in the cultural (amber) register that pulses
+ * OUTWARD like a sound wave: the blur radii swell then settle each beat. Reduced-motion / no-JS keeps
+ * a tasteful STATIC glow (the resting ember) so it never looks broken; only the wave is gated to
+ * motion-safe. The glow rides text-shadow only (no transform), so it never shifts the headline's layout.
+ */
+.feeling-glow {
+  text-shadow:
+    0 0 10px color-mix(in oklch, var(--cultural) 60%, transparent),
+    0 0 26px color-mix(in oklch, var(--cultural) 35%, transparent);
+}
+@keyframes feeling-pulse {
+  0%,
+  100% {
+    text-shadow:
+      0 0 8px color-mix(in oklch, var(--cultural) 55%, transparent),
+      0 0 20px color-mix(in oklch, var(--cultural) 28%, transparent);
+  }
+  50% {
+    text-shadow:
+      0 0 14px color-mix(in oklch, var(--cultural) 85%, transparent),
+      0 0 34px color-mix(in oklch, var(--cultural) 55%, transparent),
+      0 0 62px color-mix(in oklch, var(--cultural) 28%, transparent);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .feeling-glow {
+    animation: feeling-pulse 2.2s ease-in-out infinite;
   }
 }

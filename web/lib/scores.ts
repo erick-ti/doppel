@@ -35,35 +35,35 @@ export interface AxisSpec {
 export const AXES: readonly AxisSpec[] = [
   {
     key: "audio",
-    label: "Audio similarity",
-    unit: "cosine",
+    label: "How alike it sounds",
+    unit: "sound",
     leg: "audio",
     caption:
-      "Raw CLAP audio cosine in [-1, 1] — how alike the two tracks actually sound. Music clusters around 0.5-0.96, so a plain 0-100% bar would mislead; the bar maps a 0.30-1.0 band.",
+      "How close this song is to your pick in pure sound, on a 0 to 1 scale. Most music lands between about 0.5 and 0.96, so the bar uses that range instead of a flat 0 to 100 percent.",
   },
   {
     key: "vibe",
-    label: "Vibe-text match",
-    unit: "cosine",
+    label: "Mood match",
+    unit: "mood",
     leg: "audio",
     caption:
-      "Raw text->audio cosine — how well the track matches your free-text vibe. The text leg is a deliberately weak signal (~0.15-0.37); the bar maps a 0-0.5 band. Null when no vibe was given.",
+      "How well this song fits the mood words you typed. It's a light touch on purpose, so the scores stay low (around 0.15 to 0.37). Blank when you didn't add a mood.",
   },
   {
     key: "combined",
-    label: "Fused rerank",
-    unit: "fused",
+    label: "Final score",
+    unit: "blend",
     leg: "fused",
     caption:
-      "Within-batch fused rerank score in [0, 1] — each leg is min-max-normalized within this query's batch, then alpha/beta weighted. Relative to THIS query's batch, not comparable across seeds; the top row nears 1.0, but sits lower when vibe-steering splits the legs or a near-duplicate of the seed was suppressed.",
+      "The sound and mood scores blended into one, after each is put on the same scale for this set of results. The top pick sits near 1. It drops when a mood splits the results, or when a near-copy of your song got filtered out.",
   },
   {
     key: "cultural",
-    label: "Cultural consensus",
-    unit: "RRF k=60",
+    label: "How often they're paired",
+    unit: "agreement",
     leg: "cultural",
     caption:
-      "Reciprocal-Rank-Fusion consensus score (k=60) — unbounded, NOT a percentage. Higher means stronger cross-source listener agreement; the bar is relative to the top consensus in this set.",
+      "How strongly the music sources agree these two go together. It isn't a percentage. Higher means more people treat them as a match. The bar is relative to the strongest pairing in this set.",
   },
 ] as const;
 
@@ -100,6 +100,10 @@ export function batchStats(results: ResultItem[]): BatchStats {
 /**
  * Bar fill fraction in [0, 1] for an axis, or null if the value is null (render "n/a").
  * Each axis uses its own honest mapping — never a uniform percentage.
+ *
+ * NOTE: `batch` is consulted by the `cultural` axis ONLY (its bar is relative to this query's max
+ * RRF consensus). The audio/vibe/combined axes use fixed bands/clamps and ignore it — callers still
+ * thread a BatchStats through for a single uniform signature.
  */
 export function axisFill(
   key: AxisKey,

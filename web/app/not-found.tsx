@@ -26,17 +26,17 @@ export default function NotFound() {
         404 · no signal
       </p>
       <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-        This seed never reached the engine
+        We don&rsquo;t have that one
       </h1>
       <p className="text-muted-foreground max-w-md leading-relaxed">
-        That run isn&rsquo;t in the analyzed library — the two retrieval legs never converged on it.
-        Pick a recorded seed from the console and watch the rail light up instead.
+        That song isn&rsquo;t one we&rsquo;ve analyzed. Pick one from the homepage and watch it run
+        instead.
       </p>
       <Link
         href="/"
         className="text-seam hover:text-seam/80 inline-flex items-center gap-1.5 font-mono text-sm transition-colors"
       >
-        ← back to the console
+        ← back home
       </Link>
     </div>
   );

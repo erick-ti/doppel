@@ -104,23 +104,35 @@ export function OpsPanel() {
           system-status register (--ok / --warning), never the cultural/audio/seam retrieval accents,
           so "live" stays visually distinct from the "recorded" replays (the juxtaposition is the point). */}
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b px-4 py-2.5">
-        <span className="text-foreground inline-flex items-center gap-1.5 font-mono text-[11px] font-semibold tracking-[0.16em] uppercase">
-          <Radio
-            className={cn(
-              "size-3.5",
-              live ? "text-ok" : stats && stats.api.status === "down" ? "text-destructive" : "text-muted-foreground",
-            )}
-            aria-hidden
-          />
-          Live · engine telemetry
-        </span>
+        {/* A real h2 (not a styled span) so the live panel — the page's only live surface — appears in
+            the heading outline a screen-reader user navigates by, instead of being skipped. */}
+        <h2 className="text-foreground inline-flex items-center gap-1.5 font-mono text-[11px] font-semibold tracking-[0.16em] uppercase">
+          {/* The genuinely-live surface owns the strongest live cue: a green (--ok) pulsing broadcast
+              marker, shown ONLY when the feed is fresh + the API is up. The recorded surfaces' subtler
+              --seam pulses never out-rank this (invariant #8 — green/pulse here is correct, it IS live). */}
+          {live ? (
+            <span className="relative inline-flex size-3.5 items-center justify-center" aria-hidden>
+              <span className="bg-ok/40 absolute inline-flex size-full rounded-full motion-safe:animate-ping" />
+              <Radio className="text-ok relative size-3.5" />
+            </span>
+          ) : (
+            <Radio
+              className={cn(
+                "size-3.5",
+                stats && stats.api.status === "down" ? "text-destructive" : "text-muted-foreground",
+              )}
+              aria-hidden
+            />
+          )}
+          Live · the real engine
+        </h2>
         <span className="ml-auto font-mono text-[11px] tabular-nums">{feedStamp(feed)}</span>
       </div>
 
       <div className="p-5">
         <p className="text-muted-foreground mb-4 text-sm">
-          The production engine, right now — the real system, deliberately distinct from the recorded
-          replays.
+          The real engine, right now. This part is live, unlike the saved runs everywhere else on the
+          site.
         </p>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -132,20 +144,20 @@ export function OpsPanel() {
           // scopes the claim honestly: this is an HTTP **liveness** probe (/health is a static 200),
           // not a dependency-aware health check (Redis/worker not verified) — Codex review 2026-06-13.
           value={stats ? (stats.api.status === "up" ? "online" : "offline") : "—"}
-          sub={stats ? (stale ? `as of ${relativeAge(ok!.ageMs)}` : "liveness probe") : undefined}
+          sub={stats ? (stale ? `as of ${relativeAge(ok!.ageMs)}` : "responding") : undefined}
           tone={stats ? (stale ? "idle" : stats.api.status === "up" ? "good" : "bad") : "idle"}
         />
         <Tile
           icon={<Database className="size-4" aria-hidden />}
-          label="Corpus"
+          label="Songs known"
           value={stats ? formatCount(stats.corpus.embeddings) : "—"}
-          sub={stats ? "embeddings" : undefined}
+          sub={stats ? "heard so far" : undefined}
         />
         <Tile
           icon={<Activity className="size-4" aria-hidden />}
-          label="Queries served"
+          label="Searches run"
           value={stats ? formatCount(stats.usage.queries_completed) : "—"}
-          sub={stats ? `of ${formatCount(stats.usage.queries_total)} logged` : undefined}
+          sub={stats ? `of ${formatCount(stats.usage.queries_total)} started` : undefined}
         />
         <Tile
           icon={<HardDriveDownload className="size-4" aria-hidden />}
@@ -154,22 +166,22 @@ export function OpsPanel() {
           // The feed reports the newest LOCAL dump's mtime — written before the optional offsite
           // mirror, so this is "a local pg_dump ran", not "mirrored offsite" (the offsite path is
           // covered by the §9.2 healthchecks check). Don't imply object-store success here.
-          sub={stats?.backup.last_success_at ? "local pg_dump" : undefined}
+          sub={stats?.backup.last_success_at ? "saved locally" : undefined}
         />
       </div>
 
       {/* Phase-4 host vitals — only when the feed carries the optional `host` block (post §9.3 update);
           absent on older feeds or a non-Linux box, so the panel renders fine without this row. */}
       {stats?.host && (
-        <div className="mt-3 grid grid-cols-3 gap-3">
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Tile
             icon={<Clock className="size-4" aria-hidden />}
-            label="Host uptime"
+            label="Uptime"
             value={formatUptime(stats.host.uptime_seconds)}
           />
           <Tile
             icon={<Gauge className="size-4" aria-hidden />}
-            label="Load avg"
+            label="Load"
             value={stats.host.load_1m.toFixed(2)}
             sub={`${stats.host.load_5m.toFixed(2)} · ${stats.host.load_15m.toFixed(2)} · 5m/15m`}
           />
@@ -183,8 +195,8 @@ export function OpsPanel() {
       )}
 
       {stats && (
-        <p className="text-muted-foreground/70 mt-3 font-mono text-[11px]">
-          CLAP contract: <span className="text-muted-foreground">{stats.corpus.model_version}</span>
+        <p className="text-muted-foreground mt-3 font-mono text-[11px]">
+          Audio model: <span className="text-foreground">{stats.corpus.model_version}</span>
         </p>
       )}
 
@@ -201,7 +213,7 @@ export function OpsPanel() {
         </div>
       )}
 
-        <p className="text-muted-foreground/70 mt-4 font-mono text-[11px] leading-relaxed">{feedNote(feed)}</p>
+        <p className="text-muted-foreground mt-4 font-mono text-[11px] leading-relaxed">{feedNote(feed)}</p>
       </div>
     </section>
   );
@@ -237,7 +249,7 @@ function Tile({
       >
         {value}
       </div>
-      {sub && <div className="text-muted-foreground/70 text-[11px]">{sub}</div>}
+      {sub && <div className="text-muted-foreground text-[11px]">{sub}</div>}
     </div>
   );
 }
@@ -261,9 +273,9 @@ function feedStamp(feed: FeedState): React.ReactNode {
     case "loading":
       return <span className="text-muted-foreground/80">connecting…</span>;
     case "error":
-      return <span className="text-warning">feed unavailable</span>;
+      return <span className="text-warning">can’t reach it</span>;
     case "unconfigured":
-      return <span className="text-muted-foreground/80">feed not configured</span>;
+      return <span className="text-muted-foreground/80">not set up here</span>;
   }
 }
 
@@ -271,13 +283,13 @@ function feedNote(feed: FeedState): string {
   switch (feed.kind) {
     case "ok":
       return feed.stale
-        ? `Pushed from the Hetzner VPS every ${STATS_CADENCE_MIN} min via Cloudflare R2 — this snapshot is overdue, so the box may be offline (staleness is the signal, not freshness).`
-        : `Pushed from the Hetzner VPS every ${STATS_CADENCE_MIN} min via Cloudflare R2 — sanitized counts only, no request-time inference.`;
+        ? `Sent from the server every ${STATS_CADENCE_MIN} minutes, but this one is overdue, so the server may be down.`
+        : `Sent from the server every ${STATS_CADENCE_MIN} minutes. Just counts, nothing private.`;
     case "loading":
-      return "Fetching the latest snapshot the VPS pushed to Cloudflare R2…";
+      return "Getting the latest numbers the server sent…";
     case "error":
-      return "The live snapshot couldn't be fetched — the VPS may be offline, or the feed isn't reachable from here. The recorded replays below are unaffected.";
+      return "Couldn't reach the live numbers. The server may be down, or just not reachable from here. The saved runs below are fine either way.";
     case "unconfigured":
-      return "Live feed not configured for this deployment. The recorded replays below are the engine's real output regardless.";
+      return "The live numbers aren't set up for this build. The saved runs below are the engine's real output either way.";
   }
 }

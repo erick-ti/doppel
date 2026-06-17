@@ -13,24 +13,24 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import type { RankDelta } from "@/lib/rank-delta";
 import { axisFill, axisValue, type AxisKey, type BatchStats } from "@/lib/scores";
-import { cn } from "@/lib/utils";
+import { cn, linkFocus } from "@/lib/utils";
 import type { ResultItem } from "@/types/recommendation";
 
 /**
- * How this row moved versus the plain run — shown only on the vibe-steered side of the toggle.
- * The visible glyph is aria-hidden; the full phrase rides on role="img" + aria-label so screen
- * readers announce e.g. "Up 6 places versus the plain run" rather than a bare "6".
+ * How this row moved once you add a mood — shown only on the mood side of the toggle. The visible
+ * glyph is aria-hidden; the full phrase rides on role="img" + aria-label so screen readers announce
+ * e.g. "Up 6 places with the mood" rather than a bare "6".
  */
 function RankDeltaBadge({ delta }: { delta: RankDelta }) {
   if (delta.kind === "same") {
     return (
       <span
         role="img"
-        aria-label="Same rank as the plain run"
-        title="Same rank as the plain run"
+        aria-label="Same spot, with or without the mood"
+        title="Same spot, with or without the mood"
         className="text-muted-foreground inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-mono text-[11px] tabular-nums"
       >
-        <span aria-hidden>— even</span>
+        <span aria-hidden>no change</span>
       </span>
     );
   }
@@ -38,8 +38,8 @@ function RankDeltaBadge({ delta }: { delta: RankDelta }) {
     return (
       <span
         role="img"
-        aria-label="New under this vibe — absent from the plain run"
-        title="New under this vibe — absent from the plain run"
+        aria-label="New when you add the mood"
+        title="New when you add the mood"
         className="bg-audio/15 text-audio inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold tracking-wide uppercase"
       >
         <span aria-hidden>New</span>
@@ -47,7 +47,7 @@ function RankDeltaBadge({ delta }: { delta: RankDelta }) {
     );
   }
   const up = delta.kind === "up";
-  const label = `${up ? "Up" : "Down"} ${delta.by} ${delta.by === 1 ? "place" : "places"} vs the plain run`;
+  const label = `${up ? "Up" : "Down"} ${delta.by} ${delta.by === 1 ? "place" : "places"} with the mood`;
   return (
     <span
       role="img"
@@ -79,7 +79,7 @@ function RowSpark({ item, batch }: { item: ResultItem; batch: BatchStats }) {
     { key: "cultural", cls: "bg-cultural" },
   ];
   return (
-    <div className="flex h-7 items-end gap-[3px]" aria-hidden title="Score profile — audio · fused · cultural">
+    <div className="flex h-7 items-end gap-[3px]" aria-hidden title="Sound, blend, and crowd scores">
       {bars.map((b) => {
         const f = axisFill(b.key, axisValue(item, b.key), batch);
         // A null axis (audio/fused on a cultural-backfill row) has NO real value — render a faint
@@ -143,16 +143,16 @@ export function ResultCard({
           <div className="flex shrink-0 items-center gap-2 max-sm:basis-full sm:flex-col sm:items-end sm:gap-1.5">
             <RowSpark item={item} batch={batch} />
             {item.was_audio_scored ? (
-              <Badge variant="audio" title="Reranked by the CLAP audio embedding">
+              <Badge variant="audio" title="Ranked by how it actually sounds">
                 <AudioLines aria-hidden />
-                CLAP-reranked
+                scored by sound
               </Badge>
             ) : (
               <Badge
                 variant="muted"
-                title="Surfaced by cultural retrieval only — not audio-reranked"
+                title="A pick from the crowd that we couldn't score by sound"
               >
-                cultural backfill
+                crowd pick
               </Badge>
             )}
             {delta && <RankDeltaBadge delta={delta} />}
@@ -169,7 +169,7 @@ export function ResultCard({
           </p>
         ) : (
           <p className="text-muted-foreground text-sm italic">
-            No rationale generated for this row.
+            No write-up for this one.
           </p>
         )}
 
@@ -179,14 +179,18 @@ export function ResultCard({
             href={item.deezer_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="border-border hover:border-audio/60 hover:text-audio inline-flex w-fit items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors"
+            className={cn(
+              linkFocus,
+              "border-border hover:border-audio/60 hover:text-audio inline-flex w-fit items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
+            )}
           >
             Listen on Deezer
+            <span className="sr-only"> (opens in a new tab)</span>
             <ExternalLink className="size-3.5" aria-hidden />
           </a>
         ) : (
           <span className="text-muted-foreground text-xs">
-            No Deezer link available for this track.
+            No Deezer link for this one.
           </span>
         )}
       </div>
@@ -195,14 +199,14 @@ export function ResultCard({
       <div className="border-border bg-background/40 border-t px-5">
         <Accordion type="single" collapsible>
           <AccordionItem value="scores" className="border-b-0">
-            <AccordionTrigger>Score breakdown</AccordionTrigger>
+            <AccordionTrigger>See the numbers</AccordionTrigger>
             <AccordionContent>
               <ScoreBreakdown item={item} batch={batch} />
               <div className="mt-4 flex justify-end">
                 <RawJsonDialog
                   data={item}
-                  title={`${item.title} — ${item.artist}`}
-                  description="The raw ResultItem row from the recommendation response — every rendered number is a field here."
+                  title={`${item.title} by ${item.artist}`}
+                  description="The raw data behind this row. Every number you see comes from here."
                 />
               </div>
             </AccordionContent>

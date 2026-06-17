@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Snowflake, Zap } from "lucide-react";
+import { ArrowRight, Snowflake, Zap } from "lucide-react";
 
+import { BackLink } from "@/components/back-link";
 import { SeamRule } from "@/components/seam-rule";
 import { ACTS } from "@/lib/deep-dive";
 import { cn } from "@/lib/utils";
@@ -9,7 +10,7 @@ import { cn } from "@/lib/utils";
 export const metadata: Metadata = {
   title: "Deep dive",
   description:
-    "A walkthrough of Doppel running for real: the warm ~12s path, the cold 202→poll→200 cliff and why it's bounded by design, the lazy-corpus payoff, and the telemetry behind it — driven against the live backend over an SSH tunnel.",
+    "A walkthrough of Doppel running for real: the warm ~12s path, the cold 202→poll→200 cliff and why it's capped by design, the lazy-corpus payoff, and the telemetry behind it. Driven against the live backend over an SSH tunnel.",
 };
 
 /** One half of the same-code-path latency readout — warm (cache hit) vs cold (cache miss). */
@@ -45,20 +46,14 @@ export default function DeepDive() {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-12 px-5 py-12 sm:py-16">
       <header className="flex flex-col gap-4">
-        <Link
-          href="/"
-          className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1.5 text-sm transition-colors"
-        >
-          <ArrowLeft className="size-4" aria-hidden />
-          All seeds
-        </Link>
+        <BackLink label="Home" />
         <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">Watch it run cold</h1>
         <p className="text-muted-foreground max-w-2xl text-lg leading-relaxed">
-          The rest of this site serves <em>frozen</em> pipeline output for speed and safety. This page
-          is the other half of the proof: the engine driven live — a warm ~12&nbsp;second answer, the
-          ~12&nbsp;minute cold path and why it&rsquo;s bounded by design, and the cache payoff that makes
-          both coexist. It&rsquo;s run against the real backend over an SSH tunnel — never linked from this
-          site or exposed to the internet — and walked through act by act below.
+          The rest of this site serves <em>saved</em> runs, for speed and safety. This page is the other
+          half of the proof: the engine running live. A warm ~12&nbsp;second answer, the
+          ~12&nbsp;minute cold path and why it&rsquo;s capped by design, and the cache trick that lets both
+          coexist. It runs against the real backend over an SSH tunnel (never linked from this site or
+          exposed to the internet), walked through act by act below.
         </p>
       </header>
 
@@ -68,24 +63,26 @@ export default function DeepDive() {
           <span className="bg-seam size-1.5 rounded-full" aria-hidden />
           same code path · two latencies
         </div>
-        <div className="grid gap-px sm:grid-cols-2">
+        {/* An explicit divider so the warm/cold split is a real hairline on a phone (stacked: a
+            horizontal rule) and a vertical rule from sm — gap-px alone vanished on mobile. */}
+        <div className="grid divide-y divide-border sm:grid-cols-2 sm:divide-x sm:divide-y-0">
           <LatencyReadout
             tone="warm"
             icon={<Zap className="size-3.5" aria-hidden />}
             value="~12 s"
             label="warm · cache hit"
-            note="The median latency across the frozen exports — every candidate already embedded in the pgvector corpus, so the run skips embedding entirely."
+            note="The median latency across the saved runs. Every candidate is already in the pgvector cache, so the run skips embedding entirely."
           />
           <LatencyReadout
             tone="cold"
             icon={<Snowflake className="size-3.5" aria-hidden />}
             value="~12 min"
             label="cold · cache miss"
-            note="701 s end-to-end in prod — the ARQ worker grinding MusicBrainz at ~1 req/s, bounded at ~75×7s by the resolve cap (WORKER_MAX_JOBS=1; the work is I/O-bound, so concurrency would only multiply latency)."
+            note="701 s end-to-end in prod. The ARQ worker grinds MusicBrainz at ~1 req/s, capped at ~75×7s by the resolve limit (WORKER_MAX_JOBS=1; the work is I/O-bound, so concurrency would only multiply latency)."
           />
         </div>
         <div className="text-muted-foreground border-t px-4 py-3 text-sm leading-relaxed">
-          One <span className="font-mono text-xs">run_pipeline</span> coroutine serves both — the only
+          One <span className="font-mono text-xs">run_pipeline</span>{" "}coroutine serves both. The only
           difference is how many candidates miss the cache. The ~12&nbsp;min above is the full
           75-candidate production run; the recorded cold replay below is a shorter capture of the same
           shape (~3&nbsp;min, 60 uncached candidates).{" "}
@@ -106,8 +103,8 @@ export default function DeepDive() {
         <div className="max-w-2xl">
           <h2 className="font-display text-2xl font-semibold tracking-tight">What the run shows</h2>
           <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-            The live run, act by act, driven against the real backend over an SSH tunnel — the same
-            sequence the recorded replays animate from persisted telemetry.
+            The live run, act by act, driven against the real backend over an SSH tunnel. It&rsquo;s the
+            same sequence the saved replays animate from persisted telemetry.
           </p>
         </div>
 
@@ -124,7 +121,6 @@ export default function DeepDive() {
                     Act {act.n}
                   </span>
                   <h3 className="font-display text-lg font-semibold tracking-tight">{act.title}</h3>
-                  <span className="text-muted-foreground font-mono text-xs">{act.duration}</span>
                 </div>
                 <ul className="mt-3 flex flex-col gap-2.5">
                   {act.beats.map((beat, i) => (

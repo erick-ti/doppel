@@ -21,8 +21,10 @@ const buttonVariants = cva(
       },
       size: {
         default: "h-9 px-4 text-sm",
-        sm: "h-8 px-2.5 text-xs",
-        icon: "size-8",
+        // h-9/size-9 (36px) lifts the small + icon controls off the 32px floor toward the touch
+        // target minimum without distorting the dense desktop layout (WCAG 2.5.5).
+        sm: "h-9 px-2.5 text-xs",
+        icon: "size-9",
       },
     },
     defaultVariants: { variant: "outline", size: "sm" },

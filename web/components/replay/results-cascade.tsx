@@ -49,7 +49,7 @@ export function ResultsCascade({
         >
           <span className="bg-border h-px flex-1" aria-hidden />
           <span className="font-medium tracking-wide uppercase">
-            Cultural backfill — not audio-reranked
+            From the crowd, not scored by sound
           </span>
           <span className="bg-border h-px flex-1" aria-hidden />
         </motion.div>,
