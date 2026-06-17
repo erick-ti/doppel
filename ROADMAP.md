@@ -187,7 +187,35 @@ Done (build) = console-first landing on Vercel with a stage-by-stage replay for 
 LIVE ops panel rendering honestly; the VPS remains SSH-only and internet-private. Live ops data is flowing
 (operator-wiring complete 2026-06-14, PR #31).
 
+## v1.3 — Signal-Convergence UI Overhaul (COMPLETE — 2026-06-15; live at doppel.erickti.com via #34)
+
+A ground-up redesign of the `web/` showcase from the create-next-app/shadcn-default skin into an authored
+**"signal-convergence"** identity — the hybrid retrieve-then-rerank architecture made visible. Shipped as
+PR #34 (`a30145d`, squash-merged to `main`, auto-deployed on Vercel). Full design rationale: DECISIONS.md
+2026-06-15. A frontend milestone (the engine is untouched), and like v1.1/v1.2 a conscious crossing of the
+"Frontend or UI" Non-Goal for the public showcase.
+
+- **Design system**: an authored type system (Space Grotesk / IBM Plex Mono / Inter + one Fraunces
+  gesture), a warm-charcoal off-neutral palette, and a token register — retrieval legs
+  `--cultural`/`--audio`/`--audio-deep` + `--seam` (fused output) + `--ok`/`--warning` (ops-status only).
+- **The hero** is a signal-convergence instrument: warm cultural + cool audio streams braid into the fused
+  `--seam` rail; a folded mini-replay plays the real trace; the shortlist crystallizes once the recorded
+  results stage completes. The seed gallery's letter tiles became earned per-seed **fingerprints** from
+  real telemetry. The seam motif recurs across every route + the themed 404.
+- **Honesty made load-bearing site-wide** (the v1.2 cardinal rule, now CLAUDE.md invariant #8): idle=final,
+  labeled time-scaling, fused output gated on the real `results` stage (visually + in the a11y tree),
+  dual-stamped provenance. Also removed the never-recorded deep-dive screencast stub, reworking that page
+  into a cold/warm latency instrument.
+- **Reviewed** by a multi-agent adversarial pass + **6 Codex `/codex:adversarial-review` cycles** — every
+  finding a real recorded-replay-honesty or a11y edge, all fixed before merge.
+
+Done = the redesigned showcase live on Vercel; the engine/VPS untouched and SSH-only.
+
 ## Upcoming Milestones
+
+**v1.3 — Signal-Convergence UI Overhaul: COMPLETE (2026-06-15, #34)** — the showcase redesign shipped +
+auto-deployed (section above). A frontend milestone, not engine work; the next *engine* milestone is still
+unpicked (sessions 22–24 all diverted).
 
 **v2 — Deepen the Engine is COMPLETE (2026-05-31 → 2026-06-12)**: the HNSW vibe-retrieval lane shipped
 end-to-end — built flag-off, provenance-gated, 2×2 A/B-measured, enabled by default (β=0.3), and live in
@@ -204,7 +232,7 @@ corpus densification. Past v2: **LLM-reranking A/B** is **v3** and
 
 ## Non-Goals
 
-- Frontend or UI (API-first, validate with curl)
+- Frontend or UI (API-first, validate with curl) — consciously crossed for the public showcase (v1.1 / v1.2 / v1.3); the live backend stays API-first + SSH-only
 - SSE/WebSocket streaming
 - User accounts, auth, multi-tenancy
 - Spotify/Apple Music integration or in-app audio playback
