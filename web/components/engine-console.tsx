@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronRight, CornerDownLeft } from "lucide-react";
@@ -33,6 +33,9 @@ export function EngineConsole({ seeds }: { seeds: ConsoleSeed[] }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
+  // Holds the close-on-blur timer so re-focusing (before it fires) can cancel it — otherwise a late
+  // timer could close a list the user just re-opened.
+  const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -63,6 +66,12 @@ export function EngineConsole({ seeds }: { seeds: ConsoleSeed[] }) {
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       reveal(Math.max(active - 1, 0));
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      reveal(0);
+    } else if (e.key === "End") {
+      e.preventDefault();
+      reveal(Math.max(0, matches.length - 1));
     } else if (e.key === "Enter" && matches[active]) {
       e.preventDefault();
       go(matches[active].slug);
@@ -72,14 +81,17 @@ export function EngineConsole({ seeds }: { seeds: ConsoleSeed[] }) {
   };
 
   return (
-    <div className="mt-8 max-w-2xl">
-      <div className="text-muted-foreground mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] tracking-[0.16em] uppercase">
-        <span className="bg-seam size-1.5 rounded-full" aria-hidden />
+    <div className="mx-auto mt-8 max-w-2xl">
+      <div className="text-muted-foreground mb-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 font-mono text-[11px] tracking-[0.16em] uppercase">
+        <span className="relative inline-flex size-1.5" aria-hidden>
+          <span className="bg-seam/60 absolute inline-flex h-full w-full rounded-full motion-safe:animate-ping" />
+          <span className="bg-seam relative inline-flex size-1.5 rounded-full" />
+        </span>
         <label htmlFor={`${listId}-input`} className="text-seam/90">
-          seed input
+          pick a song
         </label>
         <span className="text-muted-foreground/50">·</span>
-        <span className="tracking-normal normal-case">replay any of {seeds.length} recorded runs</span>
+        <span className="tracking-normal normal-case">{seeds.length} saved runs to try</span>
       </div>
 
       <div className="relative">
@@ -92,12 +104,15 @@ export function EngineConsole({ seeds }: { seeds: ConsoleSeed[] }) {
             id={`${listId}-input`}
             type="text"
             role="combobox"
-            aria-label="Search the analyzed seed library"
-            aria-expanded={open}
-            aria-controls={listId}
+            aria-label="Search the saved songs"
+            // Only advertise an expanded, controlled listbox when one actually renders. With zero
+            // matches the listbox is replaced by a sibling role="status" message (announced on its
+            // own), so reporting "collapsed" here keeps aria-controls from dangling at a missing id.
+            aria-expanded={open && matches.length > 0}
+            aria-controls={open && matches.length > 0 ? listId : undefined}
             aria-autocomplete="list"
             aria-activedescendant={open && matches[active] ? `${listId}-${matches[active].slug}` : undefined}
-            placeholder="Pick a seed from the analyzed library…"
+            placeholder="Pick a song to play back…"
             className="placeholder:text-muted-foreground w-full bg-transparent text-sm outline-none"
             value={query}
             onChange={(e) => {
@@ -105,28 +120,38 @@ export function EngineConsole({ seeds }: { seeds: ConsoleSeed[] }) {
               setActive(0);
               setOpen(true);
             }}
-            onFocus={() => setOpen(true)}
-            onBlur={() => setTimeout(() => setOpen(false), 120)}
+            onFocus={() => {
+              if (blurTimer.current) clearTimeout(blurTimer.current);
+              setOpen(true);
+            }}
+            onBlur={() => {
+              blurTimer.current = setTimeout(() => setOpen(false), 120);
+            }}
             onKeyDown={onKeyDown}
           />
           <span className="text-muted-foreground/80 inline-flex items-center gap-1 rounded-md border px-2 py-0.5 font-mono text-[11px] whitespace-nowrap">
             <CornerDownLeft className="size-3" aria-hidden />
-            replay
+            play
           </span>
         </div>
 
-        {open && (
+        {/* z-50 so the open list wins over the sticky header (z-40); capped to ~half the viewport so
+            it never runs far below the fold on a phone (it scrolls internally). */}
+        {open && matches.length === 0 && (
+          <p
+            role="status"
+            className="bg-popover text-muted-foreground absolute z-50 mt-2 w-full rounded-xl border p-3 text-sm shadow-lg motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1 motion-safe:duration-150"
+          >
+            That song isn&rsquo;t saved here. Typing just filters the ones Doppel has already analyzed.
+          </p>
+        )}
+        {open && matches.length > 0 && (
           <ul
             id={listId}
             role="listbox"
-            aria-label="Analyzed seeds"
-            className="bg-popover absolute z-20 mt-2 max-h-80 w-full overflow-y-auto rounded-xl border p-1.5 shadow-lg"
+            aria-label="Saved songs"
+            className="bg-popover absolute z-50 mt-2 max-h-[min(20rem,55vh)] w-full overflow-y-auto rounded-xl border p-1.5 shadow-lg motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1 motion-safe:duration-150"
           >
-            {matches.length === 0 && (
-              <li className="text-muted-foreground px-3 py-2 text-sm" role="presentation">
-                Not in the analyzed library — free-text input stays offline (no public live endpoint).
-              </li>
-            )}
             {matches.map((s, i) => (
               <li
                 key={s.slug}
@@ -134,7 +159,7 @@ export function EngineConsole({ seeds }: { seeds: ConsoleSeed[] }) {
                 role="option"
                 aria-selected={i === active}
                 className={cn(
-                  "flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-sm",
+                  "flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-sm transition-colors hover:bg-accent/60",
                   i === active && "bg-accent",
                 )}
                 onMouseEnter={() => setActive(i)}
@@ -147,12 +172,12 @@ export function EngineConsole({ seeds }: { seeds: ConsoleSeed[] }) {
                   <Fingerprint data={s.fp} variant="spark" />
                 </span>
                 <span className="min-w-0 flex-1 truncate">
-                  {s.title} <span className="text-muted-foreground">— {s.artist}</span>
+                  {s.title} <span className="text-muted-foreground">by {s.artist}</span>
                 </span>
                 <span className="flex shrink-0 items-center gap-1.5">
                   {s.vibe && (
                     <Badge variant="audio" className="font-mono text-[10px]">
-                      vibe
+                      mood
                     </Badge>
                   )}
                   <Badge variant="muted" className="font-mono text-[10px]">
@@ -165,14 +190,14 @@ export function EngineConsole({ seeds }: { seeds: ConsoleSeed[] }) {
         )}
       </div>
 
-      <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
-        Picking a seed replays the <em>recorded</em> pipeline run for that exact request —
-        stage-by-stage, from real persisted telemetry. Arbitrary live input takes ~12&nbsp;min cold,
-        so the engine never runs on this site;{" "}
+      <p className="text-muted-foreground mt-2 text-center text-xs leading-relaxed">
+        Each song here is a real run you can play back, step by step. Running a fresh one makes a real
+        Anthropic API call, roughly a cent or two each, so these are saved playbacks rather than live
+        runs to keep the costs down.{" "}
         <Link href="/deep-dive" className="text-foreground underline decoration-dotted underline-offset-2">
-          the deep dive
+          The deep dive
         </Link>{" "}
-        walks the cold→warm story in prose.
+        has the details.
       </p>
     </div>
   );

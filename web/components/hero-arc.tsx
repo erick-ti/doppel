@@ -8,6 +8,7 @@
  */
 
 import { SeamRule } from "@/components/seam-rule";
+import { Term } from "@/components/term";
 import { cn } from "@/lib/utils";
 
 type Accent = "neutral" | "cultural" | "audio" | "both";
@@ -45,48 +46,46 @@ const BEATS: Beat[] = [
     accent: "neutral",
     body: (
       <>
-        “Play me something like this” usually resolves to collaborative
-        filtering, which drifts toward whatever is already popular — or to taste
-        graphs that never actually listen to the song.
+        “Play me something like this” usually just means “play me something
+        popular.” Most apps go by what other people clicked, not by what the
+        song actually sounds like.
       </>
     ),
   },
   {
     step: "02",
-    label: "Two dead ends",
+    label: "Why the easy fixes fall short",
     accent: "cultural",
     body: (
       <>
-        Asking an LLM to read a track’s BPM and key assumes it has{" "}
-        <em>heard</em> the song (it hasn’t), and Spotify closed those audio
-        endpoints to new apps in 2024. Pre-embedding a royalty-free corpus
-        satisfies the math but answers a chart hit with thirty tracks nobody has
-        heard of.
+        You can’t just ask a chatbot what a song sounds like, because it has
+        never heard it. And a fixed library of free-to-use tracks answers a hit
+        song with thirty tunes nobody knows.
       </>
     ),
   },
   {
     step: "03",
-    label: "The wedge",
+    label: "What Doppel does",
     accent: "both",
     body: (
       <>
-        The fix is to let each leg cover the other’s blind spot: cultural
-        sources know what listeners <em>treat</em> as similar, the audio model
-        knows what actually <em>sounds</em> similar. Neither is trustworthy
-        alone; together they are.
+        It uses both sides. The crowd is good at knowing which songs get played
+        together. <Term name="clap">A model that actually listens</Term> is good at
+        knowing which ones sound alike. Lean on each for what it does well, and the
+        picks get a lot better.
       </>
     ),
   },
   {
     step: "04",
-    label: "The evidence",
+    label: "Why you can trust it",
     accent: "audio",
     body: (
       <>
-        19/19 benchmark seeds audio-scored across 8 genres, and the rerank
-        visibly reshapes the cultural shortlist — the funnel on every result
-        page shows that narrowing on real numbers.
+        None of this is hand-waving. Every result page lets you watch the list
+        narrow down with the real numbers behind it, and see how much the
+        listening step reshuffles the crowd’s picks.
       </>
     ),
   },
@@ -101,8 +100,7 @@ export function HeroArc() {
           The short version
         </h2>
         <p className="text-muted-foreground mt-2 text-sm">
-          How a “find songs that sound alike” idea became a two-leg retrieve-then-rerank
-          pipeline.
+          Finding songs that genuinely sound alike is harder than it looks. Here&rsquo;s the idea.
         </p>
       </div>
 

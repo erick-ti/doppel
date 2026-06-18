@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { cn, linkFocus } from "@/lib/utils";
+
 /** The Doppel mark — the seam motif in miniature: two legs converging into a fused rail. */
 function SeamMark({ className }: { className?: string }) {
   return (
@@ -16,30 +18,51 @@ export function SiteHeader() {
   return (
     <header className="border-border/60 bg-background/80 sticky top-0 z-40 border-b backdrop-blur">
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-3 px-5">
-        <Link href="/" className="group flex items-center gap-2">
+        <Link href="/" className={cn("group flex items-center gap-2", linkFocus)}>
           <SeamMark className="size-4 shrink-0" />
-          <span className="font-display text-lg font-semibold tracking-tight">Doppel</span>
+          {/* Below 360px the brand wordmark + 3 nav links don't fit; drop to the mark only so no nav
+              link gets clipped (and unreachable, since the page is overflow-x:clip). */}
+          <span className="font-display text-lg font-semibold tracking-tight max-[359px]:hidden">
+            Doppel
+          </span>
           <span className="text-muted-foreground hidden font-mono text-xs sm:inline">
-            vibe-matched song recommendations
+            songs that feel like the one you love
           </span>
         </Link>
-        <nav className="flex items-center gap-3 sm:gap-4" aria-label="Primary">
+        <nav className="flex items-center gap-2.5 sm:gap-3" aria-label="Primary">
           <Link
             href="/how-it-works"
-            className="text-muted-foreground hover:text-foreground text-sm font-medium whitespace-nowrap transition-colors"
+            className={cn(
+              "text-muted-foreground hover:text-foreground text-sm font-medium whitespace-nowrap transition-colors",
+              linkFocus,
+            )}
           >
             How it works
           </Link>
+          <span className="text-muted-foreground/30 hidden select-none sm:inline" aria-hidden>
+            |
+          </span>
           <Link
             href="/deep-dive"
-            className="text-muted-foreground hover:text-foreground text-sm font-medium whitespace-nowrap transition-colors"
+            className={cn(
+              "text-muted-foreground hover:text-foreground text-sm font-medium whitespace-nowrap transition-colors",
+              linkFocus,
+            )}
           >
             Deep dive
           </Link>
-          <span className="text-muted-foreground hidden rounded-md border px-2 py-0.5 font-mono text-[11px] whitespace-nowrap md:inline">
-            static showcase
-            <span className="hidden lg:inline"> · no live backend</span>
+          <span className="text-muted-foreground/30 hidden select-none sm:inline" aria-hidden>
+            |
           </span>
+          <Link
+            href="/status"
+            className={cn(
+              "text-muted-foreground hover:text-foreground text-sm font-medium whitespace-nowrap transition-colors",
+              linkFocus,
+            )}
+          >
+            Status
+          </Link>
         </nav>
       </div>
     </header>

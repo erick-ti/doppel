@@ -1,18 +1,99 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+// Full `motion` bundle (vs LazyMotion + `m`) is a deliberate keep: adopting LazyMotion would shrink the
+// motion chunk but adds a provider + `strict` wiring, and `onViewportEnter` (the load-bearing wake/
+// autoplay trigger here and in the replay player) under `m` is exactly the kind of surface that breaks
+// SILENTLY — idle=final would still render, so a regressed wake wouldn't surface in a build/screenshot.
+// Defer until Speed Insights shows the motion chunk actually dominating (the auditor's own bar).
 import { motion, useReducedMotion } from "motion/react";
 import { RotateCcw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { EngineConsole, type ConsoleSeed } from "@/components/engine-console";
+import { LocalStamp } from "@/components/local-stamp";
 import { Seam } from "@/components/hero/seam";
 import { FoldedStages } from "@/components/hero/folded-stages";
-import { formatClock, pairProvenance, shaStamp } from "@/lib/replay";
-import { cn } from "@/lib/utils";
-import type { SeedDocument } from "@/types/recommendation";
+import { formatClock, pairProvenance } from "@/lib/replay";
+import { cn, linkFocus } from "@/lib/utils";
+import type { ResultItem, SeedDocument } from "@/types/recommendation";
 import type { RunTrace } from "@/types/trace";
+
+/**
+ * The fused shortlist rows, extracted + memoized so the per-frame RAF clock (which only flips
+ * `fusionReached` once, at the recorded results stage) doesn't re-map all five rows every frame.
+ * Keyed on `revealId` so a wake/replay remounts the rows and the staggered CSS reveal re-runs cleanly
+ * from opacity-0 instead of relying on a same-node transition that may not retrigger.
+ */
+const FusedShortlist = memo(function FusedShortlist({
+  top,
+  fusionReached,
+  started,
+  revealId,
+}: {
+  top: ResultItem[];
+  fusionReached: boolean;
+  started: boolean;
+  revealId: number;
+}) {
+  return (
+    // Gated from the a11y tree too (not just visually) until the recorded results stage completes — AT
+    // must not encounter the fused output before fusion. idle=final keeps it exposed for SSR / no-JS /
+    // reduced-motion (fusionReached is true there).
+    <ol
+      key={revealId}
+      aria-hidden={!fusionReached}
+      className="relative mx-auto flex max-w-2xl flex-col gap-2"
+    >
+      {top.map((r, i) => {
+        const revealed = fusionReached;
+        const isHnsw = r.sources.includes("hnsw");
+        return (
+          <li
+            key={r.position}
+            className={cn(
+              // Near-opaque so the seam rail reads as a thread BETWEEN the cards (in the gaps, with the
+              // beads) rather than a glow bleeding through the card faces.
+              "bg-card/95 relative flex items-center gap-3 rounded-lg border px-3 py-2 backdrop-blur-sm transition-all duration-500 [transition-timing-function:var(--ease-settle)]",
+              revealed ? "translate-y-0 opacity-100" : "translate-y-1.5 opacity-0",
+            )}
+            style={{ transitionDelay: revealed && started ? `${i * 70}ms` : "0ms" }}
+          >
+            {/* the bead on the rail */}
+            <span
+              className="bg-seam ring-background absolute -top-[5px] left-1/2 size-2 -translate-x-1/2 rounded-full ring-2"
+              aria-hidden
+            />
+            <span
+              className={cn(
+                "inline-flex size-5 shrink-0 items-center justify-center rounded font-mono text-[11px] tabular-nums",
+                i === 0 ? "bg-seam/20 text-seam" : "bg-muted text-muted-foreground",
+              )}
+            >
+              {r.position}
+            </span>
+            <span className="min-w-0 flex-1 truncate text-sm">
+              {r.title}{" "}
+              <span className="text-muted-foreground max-[400px]:hidden">by {r.artist}</span>
+            </span>
+            {r.audio_score != null && (
+              <span
+                className={cn(
+                  "shrink-0 font-mono text-[11px] tabular-nums",
+                  isHnsw ? "text-audio-deep" : "text-audio",
+                )}
+                title={isHnsw ? "Pulled in to match the mood you typed" : "How alike it sounds to your song"}
+              >
+                {r.audio_score.toFixed(3)}
+              </span>
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+});
 
 /**
  * The console-first landing hero. The signature SEAM instrument is the dominant object above the
@@ -56,6 +137,8 @@ export function ConvergenceHero({
   const [clockMs, setClockMs] = useState(teaserTotal); // idle = final (welded)
   const [playing, setPlaying] = useState(false);
   const [started, setStarted] = useState(false);
+  // Bumped on each wake/replay to remount the shortlist so its staggered reveal re-runs cleanly.
+  const [revealId, setRevealId] = useState(0);
   const clockRef = useRef(teaserTotal);
 
   const p = Math.min(1, clockMs / teaserTotal);
@@ -66,6 +149,7 @@ export function ConvergenceHero({
     if (startedOnce.current || reduce !== false) return;
     startedOnce.current = true;
     setStarted(true);
+    setRevealId((id) => id + 1);
     clockRef.current = 0;
     setClockMs(0);
     setPlaying(true);
@@ -73,6 +157,7 @@ export function ConvergenceHero({
 
   const replay = useCallback(() => {
     setStarted(true);
+    setRevealId((id) => id + 1);
     clockRef.current = 0;
     setClockMs(0);
     setPlaying(true);
@@ -98,7 +183,7 @@ export function ConvergenceHero({
     return () => cancelAnimationFrame(raf);
   }, [playing, speed, teaserTotal]);
 
-  const top = featuredDoc.results.slice(0, 5);
+  const top = useMemo(() => featuredDoc.results.slice(0, 5), [featuredDoc]);
   // The shortlist is the OUTPUT of the `results` (fuse + rank) stage — reveal it only once the
   // recorded clock reaches that stage's completion, NEVER before fusion happened (recorded-replay
   // honesty + the single-clock rule). The per-row stagger below is a pure CSS reveal flourish, not a
@@ -118,11 +203,14 @@ export function ConvergenceHero({
   return (
     <section className="border-b">
       <div className="mx-auto w-full max-w-6xl px-5 py-10 sm:py-14">
-        {/* honesty stamp — the recorded-run posture, stated up front */}
-        <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px]">
-          <span className="relative flex size-2" aria-hidden>
-            <span className="bg-audio/60 absolute inline-flex h-full w-full rounded-full opacity-60 motion-safe:animate-ping" />
-            <span className="bg-audio relative inline-flex size-2 rounded-full" />
+        {/* honesty stamp — the recorded-run posture, stated up front. The bead has a subtle --seam
+            pulse (an "engine idling" gesture), kept in the recorded/seam register. The genuinely-live
+            ops panel carries a STRONGER green (--ok) broadcast pulse, so the live surface still owns the
+            strongest "live" cue and these recorded beads never out-rank it (invariant #8). */}
+        <div className="text-muted-foreground flex flex-wrap items-center justify-center gap-x-2 gap-y-1 font-mono text-[11px]">
+          <span className="relative inline-flex size-2" aria-hidden>
+            <span className="bg-seam/60 absolute inline-flex h-full w-full rounded-full motion-safe:animate-ping" />
+            <span className="bg-seam relative inline-flex size-2 rounded-full" />
           </span>
           <span className="text-foreground/80">replay console</span>
           <span className="text-muted-foreground/50">·</span>
@@ -130,22 +218,26 @@ export function ConvergenceHero({
           {latestCapture && (
             <>
               <span className="text-muted-foreground/50">·</span>
-              <span>latest capture {latestCapture.slice(0, 10)}</span>
+              <span>
+                latest capture <LocalStamp iso={latestCapture} />
+              </span>
             </>
           )}
-          <span className="text-muted-foreground/50">·</span>
-          <span>no live backend</span>
         </div>
 
         {/* masthead — the one serif gesture: "feeling", the warm human note against the telemetry */}
-        <h1 className="font-display mt-6 max-w-3xl text-4xl font-semibold tracking-tight sm:text-6xl sm:leading-[1.04]">
-          Find the <span className="font-serif text-cultural text-[1.05em] italic">feeling</span> in the
-          track.
+        <h1 className="font-display mx-auto mt-6 max-w-4xl text-center text-4xl font-semibold tracking-tight sm:text-5xl sm:leading-[1.1]">
+          <span className="block">
+            Find the{" "}
+            <span className="font-serif text-cultural feeling-glow text-[1.05em] italic">feeling</span>{" "}in
+            the track.
+          </span>
           <span className="text-muted-foreground block">Not the crowd around it.</span>
         </h1>
-        <p className="text-muted-foreground mt-5 max-w-2xl text-base sm:text-lg">
-          A hybrid retrieve-then-rerank engine: cultural recall surfaces candidates, CLAP audio
-          embeddings rerank them by how they actually sound, and the two legs fuse into one shortlist.
+        <p className="text-muted-foreground mx-auto mt-5 max-w-2xl text-center text-base sm:text-lg">
+          Give it a song you love and it finds others that genuinely sound like it. It starts from the
+          songs listeners tend to play together, then listens to each one and reorders them by how they
+          actually sound.
         </p>
 
         {/* the ignition control — load a recorded run (the console input) */}
@@ -154,15 +246,15 @@ export function ConvergenceHero({
         {/* THE INSTRUMENT — the dominant seam, a featured recorded run wired through it */}
         <div className="bg-card/30 mt-9 overflow-hidden rounded-2xl border">
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b px-4 py-2.5 font-mono text-[11px]">
-            <span className="text-cultural">cultural recall</span>
+            <span className="text-cultural">the crowd</span>
             <span className="text-muted-foreground tabular-nums">
-              featured run ·{" "}
+              a saved run ·{" "}
               <span className="text-foreground">
-                {featuredDoc.seed.title} — {featuredDoc.seed.artist}
+                {featuredDoc.seed.title} by {featuredDoc.seed.artist}
               </span>{" "}
-              · {featuredTrace.mode} · recorded {formatClock(featuredTrace.total_ms)}
+              · {formatClock(featuredTrace.total_ms)}
             </span>
-            <span className="text-audio">audio rerank</span>
+            <span className="text-audio">the sound</span>
           </div>
 
           {/* folded pipeline strip — the mini-replay, driven by the same clock. The teaser animates
@@ -170,17 +262,23 @@ export function ConvergenceHero({
               fact, not animated — so the time-scaling is always explicit (v1.2 cardinal rule). */}
           <div className="border-b px-4 py-3">
             <div className="text-muted-foreground mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 font-mono text-[10px] tracking-[0.16em] uppercase">
-              <span>pipeline · folded</span>
-              <span>teaser · {teaserSpeedLabel} · explain not animated</span>
+              <span>how it runs</span>
+              <span>quick preview · {teaserSpeedLabel} · write-up not shown</span>
             </div>
             <FoldedStages stages={featuredTrace.stages} clockMs={clockMs} />
           </div>
 
           <motion.div onViewportEnter={wake} viewport={{ once: true, amount: 0.25 }}>
             {/* convergence stage — a tall vertical convergence on mobile, wide on desktop, so the
-                signature never letterboxes on a phone */}
+                signature never letterboxes on a phone. BOTH orientations render to the DOM (CSS toggles
+                visibility) deliberately: this is a static export, so a useMediaQuery pick would have
+                to choose one orientation server-side and risk a hydration mismatch / post-mount flash
+                — breaking idle=final. The hidden orientation only repaints during the one ~5s teaser
+                (idle holds p=1 with no RAF), a bounded cost we accept over the SSR-correctness loss. */}
             <div className="relative">
-              <div className="mx-auto block aspect-[4/5] max-h-[440px] max-w-[352px] sm:hidden">
+              {/* Fills the column up to the sm breakpoint (cap ~420px) so the signature stays dominant
+                  on larger phones instead of sitting in 20-40px gutters. */}
+              <div className="mx-auto block aspect-[4/5] w-full max-w-[420px] sm:hidden">
                 <Seam p={p} degraded={degraded} orientation="tall" railFormed={fusionReached} />
               </div>
               <div className="hidden sm:block sm:h-[280px]">
@@ -206,7 +304,7 @@ export function ConvergenceHero({
               <div
                 aria-hidden
                 className={cn(
-                  "bg-seam/45 absolute top-0 bottom-5 left-1/2 w-[2px] -translate-x-1/2 rounded-full transition-opacity duration-500",
+                  "bg-seam/45 absolute top-0 bottom-5 left-1/2 w-[2px] -translate-x-1/2 rounded-full transition-opacity duration-500 [transition-timing-function:var(--ease-settle)]",
                   fusionReached ? "opacity-100" : "opacity-0",
                 )}
                 style={{ boxShadow: "0 0 10px var(--seam)" }}
@@ -214,70 +312,60 @@ export function ConvergenceHero({
               <p
                 aria-hidden={!fusionReached}
                 className={cn(
-                  "text-seam relative mb-3 text-center font-mono text-[10px] tracking-[0.18em] uppercase transition-opacity duration-500",
+                  "text-seam relative mb-3 text-center font-mono text-[10px] tracking-[0.18em] uppercase transition-opacity duration-500 [transition-timing-function:var(--ease-settle)]",
                   fusionReached ? "opacity-100" : "opacity-0",
                 )}
               >
-                fused shortlist · top {top.length}
+                what it picked · top {top.length}
               </p>
-              {/* Gated from the a11y tree too (not just visually) until the recorded results stage
-                  completes — AT must not encounter the fused output before fusion. idle=final keeps it
-                  exposed for SSR / no-JS / reduced-motion (fusionReached is true there). */}
-              <ol aria-hidden={!fusionReached} className="relative mx-auto flex max-w-2xl flex-col gap-2">
-                {top.map((r, i) => {
-                  const revealed = fusionReached;
-                  const isHnsw = r.sources.includes("hnsw");
-                  return (
-                    <li
-                      key={r.position}
-                      className={cn(
-                        "bg-card/70 relative flex items-center gap-3 rounded-lg border px-3 py-2 backdrop-blur-sm transition-all duration-500",
-                        revealed ? "translate-y-0 opacity-100" : "translate-y-1.5 opacity-0",
-                      )}
-                      style={{ transitionDelay: revealed && started ? `${i * 70}ms` : "0ms" }}
-                    >
-                      {/* the bead on the rail */}
-                      <span
-                        className="bg-seam ring-background absolute -top-[5px] left-1/2 size-2 -translate-x-1/2 rounded-full ring-2"
-                        aria-hidden
-                      />
-                      <span
-                        className={cn(
-                          "inline-flex size-5 shrink-0 items-center justify-center rounded font-mono text-[11px] tabular-nums",
-                          i === 0 ? "bg-seam/20 text-seam" : "bg-muted text-muted-foreground",
-                        )}
-                      >
-                        {r.position}
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-sm">
-                        {r.title} <span className="text-muted-foreground">— {r.artist}</span>
-                      </span>
-                      {r.audio_score != null && (
-                        <span
-                          className={cn(
-                            "shrink-0 font-mono text-[11px] tabular-nums",
-                            isHnsw ? "text-audio-deep" : "text-audio",
-                          )}
-                          title={isHnsw ? "global vibe match (HNSW lane)" : "CLAP audio cosine"}
-                        >
-                          {r.audio_score.toFixed(3)}
+              <FusedShortlist
+                top={top}
+                fusionReached={fusionReached}
+                started={started}
+                revealId={revealId}
+              />
+              <div className="mt-4 text-center">
+                {/* Disclose a dirty (uncommitted) export, never silently present it as clean. Kept
+                    plain + neutral-muted (--warning is ops-only, never on this recorded surface); the
+                    full commit sha lives on the /run + result pages for anyone who wants it. */}
+                <p className="text-muted-foreground mb-1.5 font-mono text-[10px]">
+                  {provenance.sameCapture ? (
+                    <>
+                      recorded <LocalStamp iso={provenance.traceIso} />
+                      {provenance.traceDirty && (
+                        <span title="Saved from a work-in-progress build (uncommitted changes)">
+                          {" "}
+                          (work in progress)
                         </span>
                       )}
-                    </li>
-                  );
-                })}
-              </ol>
-              <div className="mt-4 text-center">
-                <p className="text-muted-foreground/70 mb-1.5 font-mono text-[10px]">
-                  {provenance.sameCapture
-                    ? `captured ${provenance.traceDate} · ${shaStamp(provenance.traceSha, provenance.traceDirty)}`
-                    : `results frozen ${provenance.docDate} (${shaStamp(provenance.docSha, provenance.docDirty)}) · telemetry captured ${provenance.traceDate} (${shaStamp(provenance.traceSha, provenance.traceDirty)})`}
+                    </>
+                  ) : (
+                    <>
+                      picks saved <LocalStamp iso={provenance.docIso} />
+                      {provenance.docDirty && (
+                        <span title="Saved from a work-in-progress build (uncommitted changes)">
+                          {" "}
+                          (work in progress)
+                        </span>
+                      )}
+                      , timings recorded <LocalStamp iso={provenance.traceIso} />
+                      {provenance.traceDirty && (
+                        <span title="Saved from a work-in-progress build (uncommitted changes)">
+                          {" "}
+                          (work in progress)
+                        </span>
+                      )}
+                    </>
+                  )}
                 </p>
                 <Link
                   href={`/run/${featuredDoc.meta.slug}`}
-                  className="text-foreground/80 hover:text-foreground inline-flex items-center gap-1 text-xs underline decoration-dotted underline-offset-2"
+                  className={cn(
+                    "text-foreground/80 hover:text-foreground inline-flex items-center gap-1 text-xs underline decoration-dotted underline-offset-2",
+                    linkFocus,
+                  )}
                 >
-                  replay this full run, stage by stage →
+                  watch the whole run, step by step →
                 </Link>
               </div>
             </div>

@@ -1,7 +1,8 @@
-import Link from "next/link";
-import { ArrowLeft, ExternalLink, SlidersHorizontal } from "lucide-react";
+import { ExternalLink, SlidersHorizontal } from "lucide-react";
 
+import { BackLink } from "@/components/back-link";
 import { Badge } from "@/components/ui/badge";
+import { cn, linkFocus } from "@/lib/utils";
 import type { SeedDocument } from "@/types/recommendation";
 
 /**
@@ -19,20 +20,14 @@ export function SeedHeader({ doc }: { doc: SeedDocument }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Link
-        href="/"
-        className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1.5 text-sm transition-colors"
-      >
-        <ArrowLeft className="size-4" aria-hidden />
-        All seeds
-      </Link>
+      <BackLink />
 
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="muted">{doc.meta.genre}</Badge>
         {vibe && (
           <Badge variant="audio">
             <SlidersHorizontal aria-hidden />
-            vibe-steered
+            with a mood
           </Badge>
         )}
       </div>
@@ -47,7 +42,7 @@ export function SeedHeader({ doc }: { doc: SeedDocument }) {
       {vibe && (
         <div className="border-audio/40 bg-audio/5 rounded-lg border-l-2 px-4 py-2">
           <span className="text-muted-foreground text-xs tracking-wide uppercase">
-            Vibe steer
+            Your mood
           </span>
           <p className="text-audio text-sm italic">&ldquo;{doc.vibe}&rdquo;</p>
         </div>
@@ -59,13 +54,14 @@ export function SeedHeader({ doc }: { doc: SeedDocument }) {
             href={mbUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-foreground inline-flex items-center gap-1.5 transition-colors"
+            className={cn("hover:text-foreground inline-flex items-center gap-1.5 transition-colors", linkFocus)}
           >
-            MusicBrainz recording
+            Find it on MusicBrainz
+            <span className="sr-only"> (opens in a new tab)</span>
             <ExternalLink className="size-3.5" aria-hidden />
           </a>
         ) : (
-          <span>No MBID resolved for the seed</span>
+          <span>No MusicBrainz match for this song</span>
         )}
       </div>
     </div>

@@ -178,10 +178,10 @@ export function CoverageStrip({
   // rejected = 68 found); "full coverage" only when neither dropped a candidate.
   const foundReasons: string[] = [];
   if (coverage.resolved_not_found > 0)
-    foundReasons.push(`${coverage.resolved_not_found} not found`);
+    foundReasons.push(`${coverage.resolved_not_found} we couldn't find`);
   if (coverage.resolved_rejected > 0)
-    foundReasons.push(`${coverage.resolved_rejected} rejected`);
-  const foundNote = foundReasons.length ? foundReasons.join(" · ") : "full coverage";
+    foundReasons.push(`${coverage.resolved_rejected} didn't match`);
+  const foundNote = foundReasons.length ? foundReasons.join(" · ") : "found them all";
 
   // Two distinct degraded signals, kept separate so the funnel never overclaims:
   //  - `audioStepRan` (embeddings_cache_hits !== null): did the embed step run AT ALL? Null only on a
@@ -201,23 +201,23 @@ export function CoverageStrip({
     (coverage.embeddings_cache_hits ?? 0) + (coverage.embeddings_computed ?? 0);
   const audioNote = !audioReranked
     ? audioStepRan
-      ? "no candidate embedded — cultural backfill only"
-      : "cultural-only — no usable seed preview, so no audio rerank"
+      ? "couldn't hear any of them, so these are the crowd's picks"
+      : "no preview to listen to, so these are the crowd's picks"
     : embedded < coverage.resolved_found
-      ? `CLAP-scored ${embedded} of ${coverage.resolved_found} found · top 10 kept`
-      : `CLAP-scored all ${coverage.resolved_found} found · top 10 kept`;
+      ? `listened to ${embedded} of ${coverage.resolved_found} · kept the top 10`
+      : `listened to all ${coverage.resolved_found} · kept the top 10`;
 
   const stages: Stage[] = [
     {
       value: coverage.candidate_count,
-      label: "cultural candidates",
-      note: "Last.fm + ListenBrainz, deduped + RRF-fused (k=60)",
+      label: "songs to consider",
+      note: "from Last.fm and ListenBrainz, combined",
       leg: "cultural",
     },
     {
       value: coverage.resolve_attempted,
-      label: "resolve attempts",
-      note: `top ${meta.resolve_candidate_limit} by rank · MusicBrainz + Deezer verify`,
+      label: "looked up",
+      note: `the top ${meta.resolve_candidate_limit}, checked against music databases`,
       leg: "cultural",
     },
     {
@@ -229,14 +229,14 @@ export function CoverageStrip({
     audioReranked
       ? {
           value: coverage.audio_scored,
-          label: "audio-reranked",
+          label: "scored by sound",
           note: audioNote,
           leg: "fused",
         }
       : {
-          // No audio path — the final stage is the cultural backfill that filled the list instead.
+          // No audio path — the final stage is the crowd's picks that filled the list instead.
           value: coverage.backfill,
-          label: "cultural backfill",
+          label: "from the crowd",
           note: audioNote,
           leg: "cultural",
         },
@@ -256,7 +256,7 @@ export function CoverageStrip({
         {/* h2: a top-level section of the results view, peer of the "Recommendations" h2 (avoids an
             h1 -> h3 outline skip). The small-caps styling is purely visual; the level is semantic. */}
         <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-          Retrieve → rerank funnel
+          How the list narrowed
         </h2>
         {showControls && (
           <Button
@@ -331,20 +331,16 @@ export function CoverageStrip({
       <div className="text-muted-foreground mt-4 border-t pt-3 font-mono text-[11px] tabular-nums">
         {audioStepRan ? (
           <>
-            {coverage.embeddings_cache_hits ?? 0} embeddings from cache ·{" "}
-            {coverage.embeddings_computed ?? 0} computed · {coverage.latency_ms} ms
-            total
-            <span className="text-muted-foreground">
-              {" "}
-              (cache-first: warm runs skip re-embedding)
-            </span>
+            {coverage.latency_ms} ms total · already knew {coverage.embeddings_cache_hits ?? 0},
+            listened to {coverage.embeddings_computed ?? 0} more
+            <span className="text-muted-foreground"> (it remembers, so repeats are fast)</span>
           </>
         ) : (
           <>
-            no embedding step · {coverage.latency_ms} ms total
+            {coverage.latency_ms} ms total
             <span className="text-muted-foreground">
               {" "}
-              (no usable seed preview — cultural recall only)
+              (no preview to listen to, so these are the crowd&rsquo;s picks)
             </span>
           </>
         )}

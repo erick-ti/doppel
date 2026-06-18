@@ -23,7 +23,7 @@ export function ResultList({ results }: { results: ResultItem[] }) {
             <div className="my-4 flex items-center gap-3">
               <div className="bg-border h-px flex-1" />
               <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                Cultural backfill — not audio-reranked
+                From the crowd, not scored by sound
               </span>
               <div className="bg-border h-px flex-1" />
             </div>

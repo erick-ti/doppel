@@ -112,24 +112,24 @@ export const ABLATION: AblationStats = {
 /** A few real seeds showing how far CLAP moves the order, with the reranked top 3. */
 export const ABLATION_EXAMPLES: readonly AblationExample[] = [
   {
-    seed: "Take Five — The Dave Brubeck Quartet",
+    seed: "Take Five by The Dave Brubeck Quartet",
     genre: "jazz",
     overlap: 0.4,
     displacement: 4,
-    clapTop3: ["Alphanumeric — Lee Konitz", "Red Pepper Blues — Art Pepper", "Three to Get Ready — Dave Brubeck"],
+    clapTop3: ["Alphanumeric by Lee Konitz", "Red Pepper Blues by Art Pepper", "Three to Get Ready by Dave Brubeck"],
   },
   {
-    seed: "HUMBLE. — Kendrick Lamar",
+    seed: "HUMBLE. by Kendrick Lamar",
     genre: "hip-hop",
     overlap: 0.3,
     displacement: 2.6,
-    clapTop3: ["DNA. — Kendrick Lamar", "Magnolia — Playboi Carti", "Stir Fry — Migos"],
+    clapTop3: ["DNA. by Kendrick Lamar", "Magnolia by Playboi Carti", "Stir Fry by Migos"],
   },
   {
-    seed: "Strobe — deadmau5",
+    seed: "Strobe by deadmau5",
     genre: "electronic",
     overlap: 0.3,
     displacement: 3.6,
-    clapTop3: ["Opus — Eric Prydz", "Create — OVERWERK", "Virus (How About Now) — Martin Garrix"],
+    clapTop3: ["Opus by Eric Prydz", "Create by OVERWERK", "Virus (How About Now) by Martin Garrix"],
   },
 ] as const;

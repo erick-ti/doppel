@@ -7,6 +7,8 @@
  * never the author or an audience. Every figure traces to CLAUDE.md / the eval run.
  */
 
+import { Term } from "@/components/term";
+
 /* ── The arc ─────────────────────────────────────────────────────────────────────────────────── */
 
 interface Pivot {
@@ -17,50 +19,50 @@ interface Pivot {
 
 const PIVOTS: Pivot[] = [
   {
-    tag: "Dead end 1",
-    title: "Let an LLM read the audio",
+    tag: "First try",
+    title: "Ask an AI to read the audio",
     body: (
       <>
-        The first design had an LLM analyse BPM, key, and Spotify audio features. Two problems killed it:
-        Spotify closed those audio endpoints to new apps in 2024, and more fundamentally, asking a language
-        model to judge instrumentation asks it to do something it can&rsquo;t — it has never{" "}
-        <em>heard</em> the song. That&rsquo;s the seed of the rule that survived to today:{" "}
-        <strong>the LLM explains, it never ranks.</strong>
+        The first version had an AI look at a song&rsquo;s tempo and key from Spotify&rsquo;s data. Two
+        things killed it. Spotify shut those numbers off to new apps in 2024, and more to the point, asking
+        an AI to judge how a song sounds asks it to do something it can&rsquo;t: it has never actually{" "}
+        <em>heard</em> the song. That&rsquo;s where today&rsquo;s rule came from:{" "}
+        <strong>the AI explains the picks, it never chooses them.</strong>
       </>
     ),
   },
   {
-    tag: "Dead end 2",
-    title: "Pre-embed a royalty-free corpus",
+    tag: "Second try",
+    title: "Build from a free music library",
     body: (
       <>
-        The next design pre-embedded a free-to-use catalogue (FMA/Jamendo) and matched against it. It was
-        algorithmically sound and a product failure: ask for something like a chart hit and you get thirty
-        tracks by artists nobody has heard of. It satisfied the math and failed the user.
+        The next version listened to a library of free-to-use songs ahead of time and matched against that.
+        The math worked and the product didn&rsquo;t: ask for something like a chart hit and you get thirty
+        songs by artists you&rsquo;ve never heard of. It was right and useless.
       </>
     ),
   },
   {
-    tag: "The wedge",
-    title: "Hybrid retrieve-then-rerank",
+    tag: "What stuck",
+    title: "Use the crowd and the sound",
     body: (
       <>
-        The answer was to make two weak signals cover each other. Cultural sources (Last.fm, ListenBrainz)
-        give cheap recall — what listeners <em>treat</em> as similar — and a CLAP audio model reranks for
-        what actually <em>sounds</em> similar. Cultural recall keeps the results recognisable; the audio
-        rerank keeps them perceptually honest. Neither leg is trustworthy alone.
+        The fix was to let two so-so signals cover for each other. The crowd (from Last.fm and ListenBrainz)
+        cheaply suggests songs people treat as similar, and{" "}
+        <Term name="clap">a model that listens</Term> re-sorts them by what actually sounds alike. The crowd
+        keeps the picks recognizable. The listening keeps them honest. Neither is good enough on its own.
       </>
     ),
   },
   {
-    tag: "What makes it shippable",
-    title: "Lazy, self-growing corpus",
+    tag: "Why it’s practical",
+    title: "It remembers what it hears",
     body: (
       <>
-        Rather than a weeks-long ETL, the engine embeds only the candidates a query actually surfaces
-        (capped at 75) and caches the vectors in pgvector, so the corpus grows itself. That single
-        cache-first decision is what lets a warm ~12s request and a cold ~12min one run on the exact same
-        code path — the difference is just the cache-miss count.
+        Instead of listening to a giant library up front, it only listens to the songs a search actually
+        turns up (at most 75), and <Term name="embedding">saves what it hears</Term>. So its memory grows on
+        its own. That one choice is why the same code answers a familiar song in about 12 seconds and a
+        brand-new one in about 12 minutes: the only difference is how much it already knew.
       </>
     ),
   },
@@ -69,8 +71,8 @@ const PIVOTS: Pivot[] = [
 /** Per-pivot accent: the dead ends fade, the surviving "wedge" carries the --seam rail, the
  *  shippability pivot the cool audio rail — so the arc reads as designs dying into the one that won. */
 function pivotAccent(tag: string): { rail: string; faded: boolean } {
-  if (tag.startsWith("Dead end")) return { rail: "border-l-border", faded: true };
-  if (tag === "The wedge") return { rail: "border-l-seam", faded: false };
+  if (tag === "First try" || tag === "Second try") return { rail: "border-l-border", faded: true };
+  if (tag === "What stuck") return { rail: "border-l-seam", faded: false };
   return { rail: "border-l-audio", faded: false };
 }
 
@@ -80,8 +82,8 @@ function Arc() {
       <div className="max-w-2xl">
         <h2 className="font-display text-2xl font-semibold tracking-tight">Two designs died first</h2>
         <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-          The architecture is the residue of killing two reasonable-looking approaches — one that broke on
-          external reality, one that broke on real users — and keeping what each failure taught.
+          Doppel is what&rsquo;s left after two reasonable-looking ideas didn&rsquo;t pan out. One broke on
+          the outside world, one broke on real people. It kept what each of them taught.
         </p>
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -108,20 +110,20 @@ function Arc() {
 /* ── Competitive wedge + honest positioning ──────────────────────────────────────────────────── */
 
 const COMPETITORS = [
-  { name: "Spotify / Apple", what: "collaborative filtering — drifts toward what's already popular" },
-  { name: "Last.fm", what: "taste-based neighbours, but no audio signal at all" },
-  { name: "Chosic / Spotalike", what: "thin wrappers over the Spotify graph" },
-  { name: "Maroofy", what: "audio ML, but opaque — no rationale, no controllable steering" },
+  { name: "Spotify / Apple", what: "go by what's already popular" },
+  { name: "Last.fm", what: "know your taste, but never listen to the song" },
+  { name: "Chosic / Spotalike", what: "thin wrappers over Spotify's data" },
+  { name: "Maroofy", what: "listen, but it's a black box: no reasons, no controls" },
 ];
 
 function Wedge() {
   return (
     <section className="flex flex-col gap-5">
       <div className="max-w-2xl">
-        <h2 className="font-display text-2xl font-semibold tracking-tight">The four-way combination</h2>
+        <h2 className="font-display text-2xl font-semibold tracking-tight">What makes it different</h2>
         <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-          The wedge is doing four things at once that no single tool does together: cultural recall,
-          perceptual audio scoring, controllable text vibe-steering, and a grounded rationale.
+          It does four things at once that no single tool does together: lean on the crowd, judge the
+          actual sound, let you nudge by mood, and explain each pick in plain words.
         </p>
       </div>
 
@@ -136,10 +138,10 @@ function Wedge() {
 
       <div className="border-audio/40 bg-audio/5 rounded-lg border-l-2 px-4 py-3">
         <p className="text-sm leading-relaxed">
-          <strong>Where it doesn&rsquo;t win:</strong> Doppel won&rsquo;t beat Spotify for casual &ldquo;play
-          me something similar.&rdquo; The wedge is deliberate discovery — &ldquo;I love this specific song,
-          what makes it feel this way, and what else shares that exact quality.&rdquo; Naming where a system
-          loses is part of describing what it&rsquo;s for.
+          <strong>Where it doesn&rsquo;t win:</strong> Doppel won&rsquo;t beat Spotify for a casual
+          &ldquo;play me something similar.&rdquo; It&rsquo;s built for the deliberate kind of digging:
+          &ldquo;I love this exact song, what gives it that feel, and what else has it.&rdquo; Saying where
+          it loses is part of saying what it&rsquo;s for.
         </p>
       </div>
     </section>
@@ -156,34 +158,34 @@ interface Decision {
 
 const DECISIONS: Decision[] = [
   {
-    chose: "RRF rank-fusion",
-    over: "raw-score fusion",
-    why: <>Last.fm&rsquo;s 0–1 match and ListenBrainz&rsquo;s integer score are uncalibrated, so fuse on rank alone — 1/(k+rank), k=60.</>,
+    chose: "Combine by rank",
+    over: "combine raw scores",
+    why: <>Last.fm&rsquo;s and ListenBrainz&rsquo;s scores aren&rsquo;t on the same scale, so it combines them by rank position instead of raw numbers.</>,
   },
   {
-    chose: "Learned CLAP embeddings",
-    over: "hand-crafted DSP features",
-    why: <>Two songs at identical BPM and key can feel nothing alike (deep house vs garage rock). A learned embedding captures texture a feature vector misses.</>,
+    chose: "A model that listens",
+    over: "hand-coded audio measurements",
+    why: <>Two songs at the same tempo and key can feel nothing alike (deep house vs garage rock). A model that learned from real audio catches texture that simple measurements miss.</>,
   },
   {
-    chose: "Recording-level canonicalization",
-    over: "work-level",
-    why: <>Collapsing a live or acoustic take into the studio master surfaces matches the user didn&rsquo;t mean. Only a same-master re-release is suppressed (audio ≥ 0.98 ∧ title token-set ≥ 0.90).</>,
+    chose: "Match the exact recording",
+    over: "match the song in general",
+    why: <>Folding a live or acoustic take into the studio version turns up matches you didn&rsquo;t mean. Only a true re-release of the same recording gets filtered out.</>,
   },
   {
-    chose: "Dual-key dedupe",
-    over: "MBID alone",
-    why: <>Verified MBID <em>and</em> the Deezer track id — because the same recording showed up twice under one Deezer id with different MBIDs.</>,
+    chose: "Check two IDs",
+    over: "trust one ID",
+    why: <>It checks both IDs, because the same recording once showed up twice under one Deezer id with two different MusicBrainz ids.</>,
   },
   {
-    chose: "Count-based gates",
-    over: "a work-budget estimator",
-    why: <>The cold/warm split is gated on the uncached-candidate count, deferring a fancier latency estimator until real query-log calibration data exists.</>,
+    chose: "Count, don’t guess",
+    over: "estimate the time up front",
+    why: <>It picks the fast path or slow path by simply counting how many songs it hasn&rsquo;t heard yet, rather than trying to guess how long the run will take.</>,
   },
   {
-    chose: "pgvector",
-    over: "a dedicated vector DB",
-    why: <>Postgres already holds the metadata, logs, and cache, so the vectors live there too — one datastore, no extra operational surface.</>,
+    chose: "Keep it in Postgres",
+    over: "add a separate vector database",
+    why: <>Postgres already holds the data and the logs, so the audio fingerprints live there too. One database, nothing extra to run.</>,
   },
 ];
 
@@ -191,10 +193,10 @@ function Decisions() {
   return (
     <section className="flex flex-col gap-5">
       <div className="max-w-2xl">
-        <h2 className="font-display text-2xl font-semibold tracking-tight">Decisions, with the road not taken</h2>
+        <h2 className="font-display text-2xl font-semibold tracking-tight">The calls behind it</h2>
         <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-          Each of these is a fork where the rejected option was reasonable — the note is why the other branch
-          won.
+          Each of these was a real fork in the road, where the option not taken was perfectly reasonable.
+          The note says why the other one won. This part is the engineering, if you want it.
         </p>
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -217,21 +219,21 @@ function Decisions() {
 /* ── Named deferred items ────────────────────────────────────────────────────────────────────── */
 
 const DEFERRED: { item: string; note: string }[] = [
-  { item: "Non-enumerable poll handles", note: "the live job handle is a sequential rec-<int>; opaque tokens are a known follow-up" },
-  { item: "API auth + inbound rate limiting", note: "there is no public endpoint today, so neither is built — they're scoped, not shipped" },
-  { item: "asyncpg connection-scoping", note: "needed for real request concurrency; the single-worker path doesn't yet" },
-  { item: "Cultural-only seed-equivalence", note: "same-artist neighbours (DNA. under HUMBLE.) can still appear — legitimately same-vibe by the recording-level design" },
+  { item: "Harder-to-guess job links", note: "the live job link is a simple counter today; making it unguessable is a known to-do" },
+  { item: "Login and rate limits on the API", note: "there's no public endpoint yet, so neither is built. Planned, not done." },
+  { item: "Per-request database connections", note: "needed once many people hit it at once; the single-worker setup doesn't need it yet" },
+  { item: "Same-artist near-matches", note: "a track by the same artist can still show up. By design, that's a fair match." },
 ];
 
 function Deferred() {
   return (
     <section className="flex flex-col gap-5">
       <div className="max-w-2xl">
-        <h2 className="font-display text-2xl font-semibold tracking-tight">What&rsquo;s deferred, named not hidden</h2>
+        <h2 className="font-display text-2xl font-semibold tracking-tight">What&rsquo;s not built yet</h2>
         <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-          Most of these fall out of the static-showcase architecture: with no public live backend, a whole
-          class of hardening is scoped as deliberate judgment rather than built. Listing where the system
-          isn&rsquo;t finished is part of describing it honestly.
+          Most of these come from the same choice to keep this a saved, no-live-backend showcase: a whole
+          batch of hardening is planned on purpose rather than built. Listing what isn&rsquo;t finished is
+          part of being straight about it.
         </p>
       </div>
       <ul className="flex flex-col gap-3">

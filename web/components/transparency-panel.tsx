@@ -1,13 +1,9 @@
 import { Check, CircleAlert } from "lucide-react";
 
+import { LocalStamp } from "@/components/local-stamp";
 import { RawJsonDialog } from "@/components/raw-json-dialog";
 import { cn } from "@/lib/utils";
 import type { SeedDocument } from "@/types/recommendation";
-
-/** Format the export timestamp deterministically (no locale/timezone drift on static build). */
-function formatExportedAt(iso: string): string {
-  return iso.replace("T", " ").replace("+00:00", " UTC").replace("Z", " UTC");
-}
 
 function StatusRow({
   ok,
@@ -22,7 +18,10 @@ function StatusRow({
     <div className="flex items-center justify-between gap-3 py-1.5">
       <div className="flex items-center gap-2">
         {ok ? (
-          <Check className="text-ok size-4" aria-hidden />
+          // --seam (the recorded/fused register), NOT --ok green: this is a recorded RESULTS surface,
+          // and the ops-status tokens (--ok / --warning) must never appear off the live ops panel
+          // (invariant #8 token register — green here would borrow the live-up vocabulary).
+          <Check className="text-seam size-4" aria-hidden />
         ) : (
           <CircleAlert className="text-muted-foreground size-4" aria-hidden />
         )}
@@ -48,33 +47,36 @@ export function TransparencyPanel({ doc }: { doc: SeedDocument }) {
   const d = doc.degradation;
   const m = doc.meta;
   const degradedKeys = Object.keys(d.degraded_sources);
+  // The mood weight (β) only does anything when a mood was actually given; on a plain run the score
+  // is all sound, so don't assert a mood split that wasn't applied.
+  const hasMood = !!doc.vibe?.trim();
 
   return (
     <div className="rounded-xl border p-5">
       <div className="grid gap-6 md:grid-cols-2">
         <div>
           <h3 className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">
-            System status
+            What ran, what didn&rsquo;t
           </h3>
           <div className="divide-border divide-y">
             <StatusRow
               ok={d.seed_audio_scored}
-              label="Seed audio-scored"
-              value={d.seed_audio_scored ? "yes" : "no (cultural-only)"}
+              label="Listened to your song"
+              value={d.seed_audio_scored ? "yes" : "no"}
             />
             <StatusRow
               ok={d.cultural_backfill_count === 0}
-              label="Cultural backfill"
-              value={`${d.cultural_backfill_count} rows`}
+              label="Crowd-only picks"
+              value={`${d.cultural_backfill_count}`}
             />
             <StatusRow
               ok={d.rationales_available}
-              label="LLM rationales"
-              value={d.rationales_available ? "available" : "unavailable"}
+              label="Write-ups"
+              value={d.rationales_available ? "yes" : "no"}
             />
             <StatusRow
               ok={degradedKeys.length === 0}
-              label="Degraded sources"
+              label="Any sources down"
               value={degradedKeys.length === 0 ? "none" : degradedKeys.join(", ")}
             />
           </div>
@@ -82,26 +84,33 @@ export function TransparencyPanel({ doc }: { doc: SeedDocument }) {
 
         <div>
           <h3 className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">
-            Snapshot provenance
+            About this snapshot
           </h3>
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 font-mono text-xs">
-            <dt className="text-muted-foreground">exported</dt>
-            <dd className="tabular-nums">{formatExportedAt(m.exported_at)}</dd>
-            <dt className="text-muted-foreground">git</dt>
+            <dt className="text-muted-foreground">saved</dt>
+            <dd className="tabular-nums">
+              <LocalStamp iso={m.exported_at} mode="datetime" />
+            </dd>
+            <dt className="text-muted-foreground">build</dt>
             <dd>
               {m.git_sha}
               {m.git_dirty && (
-                <span className="text-muted-foreground" title="Exported from a dirty working tree">
+                <span
+                  className="text-muted-foreground"
+                  title="Saved from a work-in-progress build (uncommitted changes)"
+                >
                   {" "}
-                  (dirty)
+                  (work in progress)
                 </span>
               )}
             </dd>
-            <dt className="text-muted-foreground">model</dt>
+            <dt className="text-muted-foreground">audio model</dt>
             <dd className="break-all">{m.clap_model_version}</dd>
-            <dt className="text-muted-foreground">fusion</dt>
+            <dt className="text-muted-foreground">blend</dt>
             <dd>
-              α={m.alpha} · β={m.beta} · N={m.resolve_candidate_limit}
+              {hasMood
+                ? `${Math.round(m.alpha * 100)}% sound · ${Math.round(m.beta * 100)}% mood`
+                : "all sound (no mood added)"}
             </dd>
           </dl>
         </div>
@@ -110,9 +119,9 @@ export function TransparencyPanel({ doc }: { doc: SeedDocument }) {
       <div className="mt-5 flex justify-end border-t pt-3">
         <RawJsonDialog
           data={doc}
-          title={`${doc.seed.title} — full response`}
-          description="The entire frozen seed document: the recommendation response body plus the export-only coverage and meta keys."
-          triggerLabel="View full response JSON"
+          title={`${doc.seed.title} by ${doc.seed.artist}`}
+          description="Everything behind this page, exactly as it was saved."
+          triggerLabel="See the raw data"
         />
       </div>
     </div>

@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * The above-the-fold mini-replay: the recorded run's 8 stages folded into the THREE legs
  * (cultural retrieval -> audio rerank -> fuse + rank), driven by the parent's single clock so the
@@ -7,6 +9,8 @@
  *
  * Two layouts: `strip` (compact 3-column pipeline readout above the convergence) and `list` (stacked).
  */
+import { useMemo } from "react";
+
 import { formatClock } from "@/lib/replay";
 import { cn } from "@/lib/utils";
 import type { TraceStage } from "@/types/trace";
@@ -41,29 +45,30 @@ const num = (s: TraceStage | undefined, k: string): number => Number(s?.counters
 const FOLDS: Fold[] = [
   {
     leg: "cultural",
-    label: "Cultural retrieval",
+    label: "The crowd",
     ids: ["aggregate", "gate1", "resolve"],
     describe: (by) =>
-      `${num(by.get("aggregate"), "candidates")} candidates · ${num(by.get("resolve"), "found")} resolved`,
+      `${num(by.get("aggregate"), "candidates")} to consider · ${num(by.get("resolve"), "found")} we could hear`,
   },
   {
     leg: "audio",
-    label: "Audio rerank",
+    label: "The sound",
     ids: ["seed", "gate2", "embed", "hnsw_lane"],
     describe: (by) => {
       const ready = num(by.get("embed"), "computed") + num(by.get("gate2"), "embedding_cache_hits");
-      return ready > 0 ? `${ready} embeddings · CLAP cosine` : "cultural-only — no preview";
+      return ready > 0 ? `listened to ${ready}` : "no audio this time";
     },
   },
   {
     leg: "fuse",
-    label: "Fuse + rank",
+    label: "The final list",
     ids: ["results"],
     describe: (by) => {
-      const r = by.get("results");
+      const base = `top ${num(by.get("results"), "top")} picked`;
+      // Disclose the long LLM write-up step's real duration even though the teaser doesn't animate it,
+      // so the "quick preview" never reads as the whole recorded run (recorded-replay honesty).
       const explain = by.get("explain");
-      const base = `top ${num(r, "top")} · ${num(r, "audio_scored")} audio-scored`;
-      return explain ? `${base} · +${formatClock(explain.t1_ms - explain.t0_ms)} rationales` : base;
+      return explain ? `${base} · +${formatClock(explain.t1_ms - explain.t0_ms)} write-up` : base;
     },
   },
 ];
@@ -74,36 +79,38 @@ function windowFor(ids: string[], by: Map<string, TraceStage>): [number, number]
   return [Math.min(...present.map((s) => s.t0_ms)), Math.max(...present.map((s) => s.t1_ms))];
 }
 
-interface FoldState {
+interface FoldWindow {
   fold: Fold;
-  fill: number;
-  done: boolean;
   start: number;
   end: number;
 }
 
-function computeFolds(stages: TraceStage[], clockMs: number): { by: Map<string, TraceStage>; states: FoldState[] } {
+/** The time-INVARIANT part: the stage lookup Map and each fold's [start, end] window. Pure in
+ *  `stages`, so it's memoized once and never rebuilt per RAF frame (only fill/done depend on clockMs). */
+function staticFolds(stages: TraceStage[]): { by: Map<string, TraceStage>; windows: FoldWindow[] } {
   const by = new Map(stages.map((s) => [s.stage, s] as const));
-  const states: FoldState[] = [];
+  const windows: FoldWindow[] = [];
   for (const fold of FOLDS) {
     const win = windowFor(fold.ids, by);
     if (!win) continue;
-    const [start, end] = win;
+    windows.push({ fold, start: win[0], end: win[1] });
+  }
+  return { by, windows };
+}
+
+/** The folded mini-replay as a compact 3-column strip — the only layout used (above the convergence). */
+export function FoldedStages({ stages, clockMs }: { stages: TraceStage[]; clockMs: number }) {
+  const { by, windows } = useMemo(() => staticFolds(stages), [stages]);
+  const states = windows.map(({ fold, start, end }) => {
     const span = Math.max(1, end - start);
-    states.push({
+    return {
       fold,
       start,
       end,
       fill: Math.min(1, Math.max(0, (clockMs - start) / span)),
       done: clockMs >= end,
-    });
-  }
-  return { by, states };
-}
-
-/** The folded mini-replay as a compact 3-column strip — the only layout used (above the convergence). */
-export function FoldedStages({ stages, clockMs }: { stages: TraceStage[]; clockMs: number }) {
-  const { by, states } = computeFolds(stages, clockMs);
+    };
+  });
 
   return (
     <ol className="grid grid-cols-1 gap-2 sm:grid-cols-3">

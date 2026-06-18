@@ -92,7 +92,9 @@ export function Seam({
   const draw = smoothstep(0, 0.55, p);
   const ignite = smoothstep(0.4, 0.74, p);
   const rail = railFormed ? 1 : 0;
-  const railEase = "stroke-dashoffset 0.6s ease, opacity 0.6s ease";
+  const railEase =
+    "stroke-dashoffset 0.6s var(--ease-settle), opacity 0.6s var(--ease-settle)";
+  const fadeEase = "opacity 0.6s var(--ease-settle)";
   const strandDash = { strokeDasharray: 1, strokeDashoffset: 1 - draw } as const;
   const uid = orientation;
 
@@ -193,15 +195,18 @@ export function Seam({
           className="stroke-seam/70"
           strokeWidth="1.5"
           vectorEffect="non-scaling-stroke"
-          style={{ opacity: rail, transition: "opacity 0.6s ease" }}
+          style={{ opacity: rail, transition: fadeEase }}
         />
       ))}
-      <circle cx={g.nodeX} cy={g.railEndY} r={4.5} className="fill-seam" style={{ opacity: rail, transition: "opacity 0.6s ease" }} />
+      <circle cx={g.nodeX} cy={g.railEndY} r={4.5} className="fill-seam" style={{ opacity: rail, transition: fadeEase }} />
 
-      {/* the convergence node — lens depth: outer bloom, ring, core */}
+      {/* the convergence node — lens depth: outer bloom, ring, core. The two BLUR-FILTERED circles keep
+          a FIXED radius and animate only opacity — a changing radius on a filtered element forces the
+          browser to recompute the filter region and re-rasterize the blur every frame (the teaser's
+          heaviest paint). The size "ignite" pulse rides the unfiltered core below, which is cheap. */}
       <circle cx={g.nodeX} cy={g.nodeY} r={34} className="fill-seam seam-node-glow" filter={`url(#seam-glow-strong-${uid})`} style={{ opacity: 0.35 * ignite }} />
       <circle cx={g.nodeX} cy={g.nodeY} r={18} className="fill-none stroke-seam/50" strokeWidth="1" vectorEffect="non-scaling-stroke" style={{ opacity: ignite }} />
-      <circle cx={g.nodeX} cy={g.nodeY} r={13 + 5 * ignite} className="fill-seam" filter={`url(#seam-glow-${uid})`} style={{ opacity: 0.45 * ignite }} />
+      <circle cx={g.nodeX} cy={g.nodeY} r={16} className="fill-seam" filter={`url(#seam-glow-${uid})`} style={{ opacity: 0.45 * ignite }} />
       <circle cx={g.nodeX} cy={g.nodeY} r={9 + 3 * ignite} className="fill-seam" style={{ opacity: 0.3 + 0.7 * ignite }} />
       <circle cx={g.nodeX} cy={g.nodeY} r={4} className="fill-background" style={{ opacity: ignite }} />
     </svg>

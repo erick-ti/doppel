@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Check } from "lucide-react";
 
 import { formatClock, specFor, type StageLeg } from "@/lib/replay";
@@ -52,16 +53,16 @@ function runningLine(stage: TraceStage, t: number): string {
   if (stage.stage === "resolve") {
     const cached = fired.get("resolve.cache_hit") ?? 0;
     const live = fired.get("resolve.live") ?? 0;
-    return `${cached + live} candidates · ${cached} cached · ${live} live MusicBrainz lookups`;
+    return `${cached + live} looked up · ${cached} already known · ${live} fresh`;
   }
   if (stage.stage === "embed") {
     const computed = fired.get("embed.computed") ?? 0;
-    return `${computed} previews embedded…`;
+    return `listened to ${computed}…`;
   }
-  return `running… ${formatClock(t - stage.t0_ms)} elapsed`;
+  return `running… ${formatClock(t - stage.t0_ms)} so far`;
 }
 
-function StageRow({ stage, t }: { stage: TraceStage; t: number }) {
+const StageRow = memo(function StageRow({ stage, t }: { stage: TraceStage; t: number }) {
   const spec = specFor(stage);
   const status = statusOf(stage, t);
   const durationMs = stage.t1_ms - stage.t0_ms;
@@ -105,7 +106,16 @@ function StageRow({ stage, t }: { stage: TraceStage; t: number }) {
       </p>
     </li>
   );
-}
+},
+// A done/pending row renders identically every frame; only the single running row's elapsed/progress
+// tracks the clock. Skip re-rendering the rest each RAF tick (the longest-lived animation on the page).
+(prev, next) => {
+  if (prev.stage !== next.stage) return false;
+  const ps = statusOf(prev.stage, prev.t);
+  const ns = statusOf(next.stage, next.t);
+  if (ps !== ns) return false; // a status transition must re-render
+  return ns !== "running"; // running → always re-render; done/pending → skip
+});
 
 /**
  * The animated pipeline flow: one row per RECORDED stage (a stage the run never reached is simply

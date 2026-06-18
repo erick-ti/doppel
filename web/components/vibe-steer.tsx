@@ -21,7 +21,7 @@
  * reorder — even flip — the top rows, which is exactly what the HUMBLE marquee shows). The whole
  * thing collapses to an instant, motion-free swap under `prefers-reduced-motion`.
  */
-import { useId, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Play, SlidersHorizontal } from "lucide-react";
@@ -95,6 +95,19 @@ export function VibeSteer({
   // The plain run is the baseline every delta reads against ("where this track sat before steering").
   const plainRanks = rankMap(plain.results);
 
+  // Summarize the reorder so the live region conveys the SUBSTANCE of the switch (how many tracks
+  // moved / are new), not just which mode is active — AT won't re-read the reordered cards.
+  const vibeChangeSummary = useMemo(() => {
+    let reordered = 0;
+    let added = 0;
+    vibe.results.forEach((item, i) => {
+      const d = computeRankDelta(item, i + 1, plainRanks);
+      if (d.kind === "new") added += 1;
+      else if (d.kind === "up" || d.kind === "down") reordered += 1;
+    });
+    return { reordered, added };
+  }, [vibe.results, plainRanks]);
+
   // Cultural-backfill divider: first non-audio-scored row, if audio-scored rows precede it. The
   // HUMBLE pair is fully audio-scored so this stays inert, but the logic is preserved for a future
   // degraded vibe pair (faithful to the pipeline's audio-first ordering). The divider is rendered
@@ -127,7 +140,7 @@ export function VibeSteer({
         >
           <div className="bg-border h-px flex-1" />
           <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-            Cultural backfill — not audio-reranked
+            From the crowd, not scored by sound
           </span>
           <div className="bg-border h-px flex-1" />
         </motion.div>,
@@ -161,7 +174,7 @@ export function VibeSteer({
           className="text-muted-foreground hover:text-foreground -mb-4 inline-flex w-fit items-center gap-1.5 font-mono text-xs transition-colors"
         >
           <Play className="size-3" aria-hidden />
-          watch the {mode === "vibe" ? "vibe-steered" : "plain"} run&rsquo;s recorded replay
+          watch this run play back, step by step
         </Link>
       )}
       {/* Funnel + everything below reflect the ACTIVE run (only latency differs across the pair). */}
@@ -169,9 +182,9 @@ export function VibeSteer({
 
       <section className="flex flex-col gap-5">
         <h2 className="font-display flex items-baseline gap-2 text-xl font-semibold tracking-tight">
-          Recommendations
+          The picks
           <span className="text-muted-foreground text-sm font-normal">
-            top {results.length}, audio-scored first
+            top {results.length}, best sound matches first
           </span>
         </h2>
 
@@ -179,14 +192,14 @@ export function VibeSteer({
         <div className="flex flex-wrap items-center gap-3">
           <div
             role="group"
-            aria-label="Vibe steering"
+            aria-label="Mood"
             className="bg-card/40 inline-flex w-fit gap-1 rounded-lg border p-1"
           >
             <ToggleButton
               active={mode === "plain"}
               onClick={() => setMode("plain")}
               controls={listId}
-              ariaLabel="Show the plain, un-steered run"
+              ariaLabel="Show the results without a mood"
             >
               Plain
             </ToggleButton>
@@ -194,15 +207,18 @@ export function VibeSteer({
               active={mode === "vibe"}
               onClick={() => setMode("vibe")}
               controls={listId}
-              ariaLabel={`Show the vibe-steered run: ${vibeText}`}
+              ariaLabel={`Show the results with the mood: ${vibeText}`}
             >
               <SlidersHorizontal className="size-3.5" aria-hidden />
-              Vibe-steered
+              With a mood
             </ToggleButton>
           </div>
-          {/* Concise, polite announcement of the active run for screen readers. */}
+          {/* Polite announcement of the active list for screen readers — the mood message carries the
+              substance of the reorder, since AT won't re-read the FLIP-reordered cards. */}
           <span className="sr-only" aria-live="polite">
-            Showing the {mode === "vibe" ? "vibe-steered" : "plain"} run.
+            {mode === "vibe"
+              ? `Showing the results with the mood: ${vibeChangeSummary.reordered} songs reordered, ${vibeChangeSummary.added} new.`
+              : "Showing the results without a mood."}
           </span>
         </div>
 
@@ -219,17 +235,13 @@ export function VibeSteer({
             >
               <div className="border-audio/40 bg-audio/5 rounded-lg border-l-2 px-4 py-3">
                 <span className="text-muted-foreground text-xs tracking-wide uppercase">
-                  Vibe steer
+                  Your mood
                 </span>
                 <p className="text-audio text-sm italic">&ldquo;{vibeText}&rdquo;</p>
                 <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
-                  Directional steering, not a hard filter. Audio stays the
-                  heavier-weighted leg (α = 0.7), but because each leg is
-                  min-max-normalized within this batch before weighting, a strong
-                  text match can still reorder — even flip — the top rows. The text
-                  encoder is a deliberately weak signal; stronger LLM vibe-to-audio
-                  translation is a named v2 item. Badges show how far each track
-                  moved versus the plain run.
+                  This nudges the picks toward your mood. It&rsquo;s a gentle lean, not a hard filter.
+                  Sound still matters most, but a strong mood match can shuffle the top of the list
+                  around. The badges show how far each song moved compared to no mood at all.
                 </p>
               </div>
             </motion.div>
