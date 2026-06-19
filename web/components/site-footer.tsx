@@ -17,7 +17,7 @@ export function SiteFooter() {
         <p className="mt-3 font-mono">
           Doppel · songs that sound like the one you love.
         </p>
-        <p className="mt-3">
+        <p className="mt-3 flex items-center justify-center gap-3">
           <Link
             href="/status"
             className={cn(
@@ -26,6 +26,18 @@ export function SiteFooter() {
             )}
           >
             System status
+          </Link>
+          <span className="text-muted-foreground/40" aria-hidden>
+            ·
+          </span>
+          <Link
+            href="/changelog"
+            className={cn(
+              "hover:text-foreground underline-offset-4 transition-colors hover:underline",
+              linkFocus,
+            )}
+          >
+            Changelog
           </Link>
         </p>
       </div>
