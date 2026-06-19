@@ -214,8 +214,13 @@ Done = the redesigned showcase live on Vercel; the engine/VPS untouched and SSH-
 ## Upcoming Milestones
 
 **v1.3 — Signal-Convergence UI Overhaul: COMPLETE (2026-06-15, #34)** — the showcase redesign shipped +
-auto-deployed (section above). A frontend milestone, not engine work; the next *engine* milestone is still
-unpicked (sessions 22–24 all diverted).
+auto-deployed (section above). **Follow-on #35 (2026-06-17, `ce49a2c`):** a plain-language copy rewrite +
+a11y/responsive/perf polish + hero masthead/glow, hardened across a multi-agent pass and two
+`/codex:adversarial-review` rounds. **Follow-on — `/changelog` page (2026-06-19):** a curated,
+plain-language history of the whole project (engine + site), newest first, each entry linked to its real
+PR, presented as the convergence seam extended through time (an in-register seam-spine timeline; static /
+idle=final, no live pulse). All frontend follow-ons, not engine work; the next *engine* milestone is
+still unpicked (sessions 22–26 all diverted).
 
 **v2 — Deepen the Engine is COMPLETE (2026-05-31 → 2026-06-12)**: the HNSW vibe-retrieval lane shipped
 end-to-end — built flag-off, provenance-gated, 2×2 A/B-measured, enabled by default (β=0.3), and live in
@@ -232,7 +237,7 @@ corpus densification. Past v2: **LLM-reranking A/B** is **v3** and
 
 ## Non-Goals
 
-- Frontend or UI (API-first, validate with curl) — consciously crossed for the public showcase (v1.1 / v1.2 / v1.3); the live backend stays API-first + SSH-only
+- Frontend or UI (API-first, validate with curl) — consciously crossed for the public showcase (v1.1 / v1.2 / v1.3 / #35); the live backend stays API-first + SSH-only
 - SSE/WebSocket streaming
 - User accounts, auth, multi-tenancy
 - Spotify/Apple Music integration or in-app audio playback
