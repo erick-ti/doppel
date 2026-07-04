@@ -2,7 +2,7 @@
  * Pure helpers for the replay console (client-safe — no server-only imports).
  *
  * Everything here renders RECORDED telemetry (types/trace.ts) — the v1.2 cardinal rule
- * (DECISIONS.md 2026-06-12) is that the UI never implies a live run: timings come from the trace
+ * is that the UI never implies a live run: timings come from the trace
  * verbatim, playback speed is always labeled, and a doc/trace pair captured at different times is
  * dual-stamped (`pairProvenance`), never presented under one frame-accuracy claim.
  */
@@ -146,7 +146,7 @@ export interface PairProvenance {
  * Pairing identity is the exporter's own `paired_export` flag (exact — written by the only code
  * that knows whether doc and trace came from one run). The sha+date heuristic survives only as the
  * fallback for sidecars captured before the flag existed; it cannot distinguish a same-day,
- * same-commit refresh (Codex review 2026-06-12), which is why the flag replaced it.
+ * same-commit refresh, which is why the flag replaced it.
  */
 export function pairProvenance(meta: ExportMeta, trace: RunTrace): PairProvenance {
   const docDate = meta.exported_at.slice(0, 10);

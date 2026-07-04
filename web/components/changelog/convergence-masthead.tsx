@@ -5,12 +5,11 @@
  * latest change). There is deliberately NO separate node/label here: the latest change IS the present
  * Doppel, so a "Doppel today" node would just duplicate the first entry's node.
  *
- * IN REGISTER (invariant #8 / DECISIONS 2026-06-15): the two streams mean the crowd and the sound —
- * their meaning everywhere else on the site — never repurposed to mean engine-vs-site work.
+ * IN REGISTER: the two streams mean the crowd and the sound (their meaning everywhere else on the
+ * site), never repurposed to mean engine-vs-site work.
  *
- * HONEST (invariant #8 / DECISIONS 2026-06-18): fully rendered and static (idle=final), so SSR / no-JS
- * show the complete truthful state, and there is NO pulse — the "live" pulse idiom belongs only to the
- * genuinely-live ops-panel marker.
+ * HONEST: fully rendered and static (idle=final), so SSR / no-JS show the complete truthful state, and
+ * there is NO pulse. The "live" pulse idiom belongs only to the genuinely-live ops-panel marker.
  *
  * GLOW: each leg is a crisp bright core stroke plus a soft blurred bloom of the same color behind it
  * (real emitted light), not a faded outline. The fused rail exits at the bottom (x=36) so, inside the

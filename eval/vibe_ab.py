@@ -8,7 +8,7 @@ inconsistent), so the translation *might* help — but "did the vibe steer corre
 ground truth.
 
 This module builds the **label-free ship gate** that decides the flagship before it is wired into the
-pipeline (DECISIONS.md 2026-05-31). It exploits the eval's proven asymmetry: audio-to-audio cosine
+pipeline. It exploits the eval's proven asymmetry: audio-to-audio cosine
 (~0.8) is reliable, so the **audio-reranked order is a silent proxy for correct steering**. For one
 already-resolved + already-embedded candidate batch we score it twice via the existing pure-numpy
 :func:`~doppel.embedding.scoring.score_candidates` — swapping *only* the text vector (raw vibe vs
@@ -287,7 +287,7 @@ async def run_vibe_ab_seed(
         # MBIDs (no re-resolve — warm canonical_lookups), then bulk-fetch their vectors. We require
         # status=='found' (a `rejected` lookup also carries an MBID; fetch_embeddings' servable filter
         # would drop it anyway, but filtering here is explicit and excludes the cross-query servable edge).
-        # FIDELITY LIMITATION (Codex review 2026-05-31): this batch does NOT replicate _build_results'
+        # FIDELITY LIMITATION: this batch does NOT replicate _build_results'
         # provider_track_id dedup or seed-equivalence suppression (a ~0.98-audio near-master of the seed
         # that production drops can still enter here and skew the audio-rank proxy). Immaterial to the
         # disconfirmed-flagship verdict (translation's magnitude drop is large and robust), but if this

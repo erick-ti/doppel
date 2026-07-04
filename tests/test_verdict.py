@@ -1,6 +1,6 @@
 """Regression tests for the Day-0 go/no-go verdict logic.
 
-Guards an adversarial-review finding: ``Status.SKIP`` used to be ignored by the
+Guards a fix: ``Status.SKIP`` used to be ignored by the
 verdict logic, so a skipped *critical* check (via ``--skip-clap`` or because the
 CLAP deps weren't installed) printed "GO — all dependencies validated" and exited 0.
 A critical SKIP must instead be INCOMPLETE (exit 2) and never read as a passing GO.

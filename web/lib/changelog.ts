@@ -1,19 +1,19 @@
 /**
- * The curated changelog — the single source of truth for the /changelog page.
+ * The curated changelog: the single source of truth for the /changelog page.
  *
  * Hand-authored on purpose (not generated from git): every entry is written in the site's plain,
  * human voice, dated with its real ship date, and linked to the real merged pull request(s) behind
  * it, so a reader can open the actual code. This is the project's whole story (engine + site), newest
- * first. Each `track` ("engine" | "site" | "infra") is a small neutral orientation label, NOT a colored
- * stream — the retrieval-leg tokens (--cultural/--audio) keep meaning the crowd/the sound everywhere.
+ * first. Each `track` ("engine" | "site" | "infra") is a small neutral orientation label, not a
+ * colored stream; the retrieval-leg tokens (--cultural/--audio) keep meaning the crowd/the sound
+ * everywhere.
  *
- * `highlights` are a scannable mono line of the concrete stack + key metrics per milestone — the
- * engineering substance a technical reader looks for. They are NEUTRAL TECHNICAL FACTS ONLY: never
- * audience/recruiter/hiring framing, which must never land in a committed public file (invariant #6).
+ * `highlights` are a scannable mono line of the concrete stack and key metrics per milestone, the
+ * engineering substance a technical reader looks for. Keep them to neutral technical facts.
  *
  * MAINTENANCE: when a milestone ships, add an entry at the TOP with its real merge date + PR numbers.
- * The newest entry (this page itself) ships with `prs: []` because its own PR doesn't exist until it
- * merges — fill in that number in the next session (and that's the whole upkeep ritual).
+ * The top "This changelog" entry is the page describing itself, not a versioned release, so it stays
+ * `caption: "latest version"` with no PR link.
  */
 
 export type ReleaseTrack = "engine" | "site" | "infra";
@@ -21,7 +21,7 @@ export type ReleaseTrack = "engine" | "site" | "infra";
 export interface Release {
   /** Stable slug (anchor / React key). */
   id: string;
-  /** Real ship date — the last merge in the release — as ISO yyyy-mm-dd. Drives display + ordering. */
+  /** Real ship date (the last merge in the release), as ISO yyyy-mm-dd. Drives display + ordering. */
   date: string;
   /** Milestone tag shown after the track, e.g. "v1.2". Optional. */
   version?: string;

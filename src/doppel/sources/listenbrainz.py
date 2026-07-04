@@ -7,7 +7,7 @@ Labs calls:
   1. ``recording-search`` — resolve the seed to a ListenBrainz-*canonical* recording
      MBID. This step is mandatory: ``similar-recordings`` is keyed on these canonical
      MBIDs, and an arbitrary MusicBrainz recording MBID returns ``[]`` (validated
-     Day 0; see DECISIONS.md). The chosen row must be the seed *itself* — exact
+     Day 0). The chosen row must be the seed *itself*, exact
      normalized title (so live / remaster / edit variants are rejected) and a matching
      artist, with cover / karaoke / tribute markers rejected — because the entire
      similar set is generated from it and ``resolve()`` later verifies the *candidates*,

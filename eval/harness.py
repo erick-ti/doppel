@@ -5,7 +5,7 @@ Mirrors the API's orchestration (`aggregate` → a `queued` query_logs row → `
 Redis. Per seed it records the persisted telemetry (`query_logs`) plus the returned results and emits:
 
   * **coverage** — candidate yield, resolve found/rejected/not-found, audio-scored vs cultural backfill
-    (the #1 risk per BRAINDUMP: does Deezer preview coverage hold across genres?);
+    (the #1 risk: does Deezer preview coverage hold across genres?);
   * **score distributions** — raw audio / vibe-text / fused cosine ranges (does the audio leg occupy a
     different range than the vibe leg — i.e. is the within-batch min-max-then-fuse choice justified, or
     is the rank-fusion fallback warranted?);
@@ -106,7 +106,7 @@ def _hnsw_ablation(results: Sequence[RecommendationResult]) -> dict[str, Any]:
     """Attribution for the v2 HNSW vibe lane: how many produced results came from it (vs the cultural
     pool), how many reached the top-k, their final ranks, and their fused-score spread.
 
-    A lane result is tagged ``sources == ("hnsw",)`` (DECISIONS.md 2026-05-31) and is never merged with
+    A lane result is tagged ``sources == ("hnsw",)`` and is never merged with
     a cultural source, so ``"hnsw" in r.sources`` cleanly separates the two lanes. Everything is
     zero/empty when the lane is off (``HNSW_LANE_ENABLED=false``) or surfaced nothing — so an
     off-vs-on run pair is directly diff-able, which is the measurement gate to flipping the flag.

@@ -7,8 +7,8 @@
  * uncached lookups → defer resolution; GATE2_ASYNC_THRESHOLD=10 found-but-unembedded → defer
  * embedding), RESOLVE_CANDIDATE_LIMIT=75, WORKER_MAX_JOBS=1, RRF_K=60, AUDIO_SIM_WEIGHT=0.7 /
  * VIBE_TEXT_WEIGHT=0.3, RECOMMENDATION_LIMIT=10. Latency: warm ~12s (the median `latency_ms` across
- * the frozen exports); cold ≈ 701s ≈ ~12 min END-TO-END, measured in prod on 2026-05-27 (DECISIONS.md
- * / ROADMAP.md). The MusicBrainz resolve is the bulk of that — cap-bounded at ~75×7s ≈ 9 min
+ * the frozen exports); cold ≈ 701s ≈ ~12 min END-TO-END, measured in prod on 2026-05-27. The
+ * MusicBrainz resolve is the bulk of that, cap-bounded at ~75×7s ≈ 9 min
  * (RESOLVE_CANDIDATE_LIMIT × COLD_RESOLVE_SECONDS_PER_CANDIDATE, matching DEPLOY.md's "~N×7s") — with
  * embedding, scoring, and the rationale on top. Narrated as approximate.
  */

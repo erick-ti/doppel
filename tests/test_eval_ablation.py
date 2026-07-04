@@ -1,6 +1,6 @@
 """Offline tests for the eval harness's HNSW-lane attribution (``eval.harness._hnsw_ablation``).
 
-Pure-function tests (no DB) for the source-aware provenance gate (DECISIONS.md 2026-05-31): the eval
+Pure-function tests (no DB) for the source-aware provenance gate: the eval
 report must attribute produced results to the HNSW vibe lane vs the cultural pool, so an
 ``HNSW_LANE_ENABLED`` off-vs-on run pair is directly diff-able before the flag is ever flipped.
 """

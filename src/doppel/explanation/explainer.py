@@ -3,8 +3,8 @@
 One batched Anthropic Messages call turns the seed + the scored top-N results (their audio / vibe
 cosines and cultural-source overlap) into a short, grounded rationale for each. The model is told to
 ground strictly in the evidence it is given and stay restrained when that evidence is thin — never to
-invent musicological connections, and never to re-order the results (CLAP owns ranking; BRAINDUMP
-"the LLM explains, it does not rank").
+invent musicological connections, and never to re-order the results (CLAP owns ranking; the LLM
+explains, it does not rank).
 
 Fully degradable: no ``ANTHROPIC_API_KEY``, an API error, or a timeout all yield an empty rationale
 map, and the pipeline returns the recommendations without rationales (``rationales_available=False``).

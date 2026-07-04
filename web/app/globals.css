@@ -232,7 +232,7 @@
 /* The idle "alive" motion animates ONLY transform (scale) — never opacity. Opacity on the seam SVG is
  * state-bearing (RAF-derived `ignite`, the degraded-audio-leg dimming), so it must stay React/clock-
  * authoritative for recorded-replay honesty; a CSS opacity animation would override it and pulse the
- * node before ignition / un-dim a degraded leg (Codex review). */
+ * node before ignition / un-dim a degraded leg. */
 @keyframes seam-glow {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.12); }
@@ -277,11 +277,10 @@
 }
 
 /*
- * The /changelog convergence node — a gentle --seam "engine idling" pulse on the fused node where the
- * crowd and the sound meet (the newest release). A DELIBERATE, owner-approved EXTENSION of invariant
- * #8's recorded-surface pulse exception (DECISIONS 2026-06-19): kept strictly in the --seam register
- * (never --ok green) and slow/gentle, so the genuinely-live ops-panel marker still owns the strongest
- * live cue. Reduced-motion / no-JS rest as a complete STATIC bloom (idle=final) so it never looks
+ * The /changelog convergence node: a gentle --seam "engine idling" pulse on the fused node where the
+ * crowd and the sound meet (the newest release). This recorded-surface pulse is kept strictly in the
+ * --seam register (never --ok green) and slow/gentle, so the genuinely-live ops-panel marker still owns
+ * the strongest live cue. Reduced-motion / no-JS rest as a complete STATIC bloom (idle=final) so it never looks
  * broken or implies a live run. The bloom radiates outward (scale + opacity, like feeling-glow's
  * sound-wave) and the core glow swells in step. Decorative opacity here is NOT state-bearing (unlike
  * the hero seam SVG, whose opacity is RAF-authoritative), so animating it is safe.

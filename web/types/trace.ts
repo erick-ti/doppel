@@ -5,7 +5,7 @@
  *
  * Every timing/counter is REAL measured telemetry from the recorded run the sidecar stamps
  * (`captured_at` + `git_sha`) — the replay console renders it as a recorded replay, never as a live
- * run (the v1.2 cardinal rule, DECISIONS.md 2026-06-12). `mode` is the run's measured Gate-1 verdict.
+ * run (the v1.2 cardinal rule). `mode` is the run's measured Gate-1 verdict.
  * Stages a run never reached (e.g. resolve/embed on a degraded, cultural-only capture) are simply
  * absent — render what is there, honestly.
  */

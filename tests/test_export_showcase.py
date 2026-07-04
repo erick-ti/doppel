@@ -1,6 +1,6 @@
 """Offline tests for the v1.1 showcase exporter's gate logic (``scripts/export_showcase.py``).
 
-Guards the Codex finding that gate failures were advisory-only. Curated seeds must pass *every* gate
+Guards against gate failures being advisory-only. Curated seeds must pass *every* gate
 (they back the showcase's public claims); the intentionally-degraded capture runs the inverse profile
 — it MUST come back cultural-only. (``scripts`` is on the pytest ``pythonpath``, so the module imports
 by its bare name.)

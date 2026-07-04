@@ -1,6 +1,6 @@
 """The matcher quality gate — match-verification edge cases.
 
-BRAINDUMP calls this "the most important quality gate in the entire project":
+This is the most important quality gate in the project:
 a bad preview match poisons the corpus invisibly (a karaoke cover embedded under
 the studio recording's MBID recommends wrong forever). So this suite is broad and
 deliberate, covering feat. artists, remasters, live takes, remixes, covers,
@@ -377,7 +377,7 @@ class TestCoverDetector:
             ("One More Time", "Daft Punk", "One More Time (feat. Romanthony)", "Daft Punk"),
             ("Take Five", "Dave Brubeck", "Take Five (Remastered 1999)", "Dave Brubeck"),
             # legit title that contains a cover-ish phrase, with only an article difference
-            # vs the query — must NOT be flagged (4th adversarial review)
+            # vs the query, must NOT be flagged
             ("Music of the Night", "Andrew Lloyd Webber", "The Music of the Night", "Andrew Lloyd Webber"),
         ],
     )

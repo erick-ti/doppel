@@ -6,7 +6,7 @@ existing matcher dataclasses (:class:`SeedRecording`, :class:`ProviderTrack`, :c
 the caller acquires one from :func:`doppel.db.pool.get_pool` (so transactions and the connection
 lifetime stay the caller's concern).
 
-Two facts shape the persistence mapping (see DECISIONS.md):
+Two facts shape the persistence mapping:
   * the resolver is Deezer-first, so ``NOT_FOUND`` never has an MBID and is recorded only in
     ``canonical_lookups`` — ``FOUND`` and ``REJECTED`` both carry an MBID + a verified asset;
   * the cache key reuses :func:`aggregation.candidates.normalized_key` verbatim, so a lookup hit
@@ -387,7 +387,7 @@ async def knn(
 # per returned track. A COLD request inserts a ``queued`` row at enqueue (so the poll finds it
 # immediately), which the worker finalizes; a WARM request inserts a terminal row in one shot. The
 # result rows are the durable record the COLD poll reconstructs from and Day-7 eval reads — a child
-# table, not a JSONB blob, so per-result analytics are plain SQL (see DECISIONS.md / migration 0002).
+# table, not a JSONB blob, so per-result analytics are plain SQL (see migration 0002).
 
 _TERMINAL_STATUSES = frozenset({"succeeded", "failed"})
 

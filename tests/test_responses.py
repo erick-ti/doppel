@@ -52,7 +52,7 @@ def test_decode_failed_sources_handles_dict_json_and_none():
 
 
 def test_response_from_rows_preserves_failed_sources_as_degraded_sources():
-    # The Codex-flagged regression: a degraded cultural source MUST surface in the response body.
+    # The regression this guards: a degraded cultural source must surface in the response body.
     resp = response_from_rows(_row(failed_sources={"listenbrainz": "503"}), [_result()])
     assert resp.degradation.degraded_sources == {"listenbrainz": "503"}
 

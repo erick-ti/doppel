@@ -2,7 +2,7 @@
 
 Covers the recorder's sequential stage/timeline model, the sidecar document builder, the trace↔doc
 reconciliation gate (the export-time guard behind the "replay always animates the run that produced
-the cards it shows" rule — DECISIONS.md 2026-06-12), and the step-level pipeline wiring
+the cards it shows" rule), and the step-level pipeline wiring
 (_resolve_pool cache counters/events; _embed_missing's once-bound recorder). The full run_pipeline
 stage SEQUENCE is not asserted offline — it is exercised end-to-end by every real export run, and
 the seam is a no-op (``trace_recorder is None``) on all production paths.

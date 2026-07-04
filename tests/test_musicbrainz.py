@@ -220,7 +220,7 @@ async def test_isrc_anchor_rejected_when_mb_length_missing(no_pace: AsyncLimiter
 
 # --------------------------------------------------------------------------- #
 # Artist-identity (MBID) check — the non-string signal that separates tributes
-# from collaborations (3rd adversarial review).
+# from collaborations.
 # --------------------------------------------------------------------------- #
 
 async def test_tribute_recording_rejected_by_artist_mbid(no_pace: AsyncLimiter) -> None:
