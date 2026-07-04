@@ -1,0 +1,38 @@
+# Dependabot version updates. Security updates run separately (no config needed).
+# Minor and patch bumps are grouped into one PR per ecosystem to cut review noise;
+# major bumps arrive as individual PRs so a breaking change is reviewed on its own.
+version: 2
+updates:
+  # Root Python project (pyproject.toml + uv.lock).
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      python-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Showcase frontend (web/package.json + package-lock.json).
+  - package-ecosystem: "npm"
+    directory: "/web"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      web-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions used by the workflows in .github/workflows.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions:
+        patterns:
+          - "*"
