@@ -57,7 +57,7 @@ export default async function SeedPage({ params }: Params) {
 
   // Replay links are trace-gated AND run-specific (v1.2). On a paired page the link lives inside
   // VibeSteer so it tracks the active run with the toggle — rendered here it could point at a
-  // different recorded run than the visible results (Codex review 2026-06-12). A lone seed keeps
+  // different recorded run than the visible results. A lone seed keeps
   // the static link below the header.
   const replayHref = async (slugFor: string) =>
     (await getTraceBySlug(slugFor)) !== null ? `/run/${slugFor}` : null;

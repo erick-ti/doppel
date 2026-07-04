@@ -1,20 +1,27 @@
 # Doppel
 
-A song recommendation engine that matches the *vibe* of a seed track — mood,
-texture, production aesthetic, scene feel — by combining cultural retrieval with
+[![tests](https://github.com/erick-ti/doppel/actions/workflows/tests.yml/badge.svg)](https://github.com/erick-ti/doppel/actions/workflows/tests.yml)
+[![web](https://github.com/erick-ti/doppel/actions/workflows/web.yml/badge.svg)](https://github.com/erick-ti/doppel/actions/workflows/web.yml)
+[![CodeQL](https://github.com/erick-ti/doppel/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/erick-ti/doppel/actions/workflows/github-code-scanning/codeql)
+[![gitleaks](https://github.com/erick-ti/doppel/actions/workflows/gitleaks.yml/badge.svg)](https://github.com/erick-ti/doppel/actions/workflows/gitleaks.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![live showcase](https://img.shields.io/badge/live-doppel.erickti.com-2ea44f)](https://doppel.erickti.com)
+
+A song recommendation engine that matches the *vibe* of a seed track (mood,
+texture, production aesthetic, scene feel) by combining cultural retrieval with
 audio-embedding scoring and LLM-generated rationales. API-first.
 
 ## Live showcase
 
-[![Doppel — the hero thesis, proof-stat ribbon, and seed gallery](docs/showcase.png)](https://doppel.erickti.com)
+[![Doppel: the hero thesis, proof-stat ribbon, and seed gallery](docs/showcase.png)](https://doppel.erickti.com)
 
-A fully static web showcase is live at **https://doppel.erickti.com** — a curated gallery of seed
+A fully static web showcase is live at **https://doppel.erickti.com**. It is a curated gallery of seed
 tracks across eight genres, each rendering its real top-10: ranked neighbors, the four-axis score
 breakdown (raw CLAP audio cosine, vibe-text cosine, within-batch fused rerank, and unbounded RRF
 cultural consensus), source overlap, and the LLM rationale.
 
 Every number is a serialization of **real** pipeline output. The committed `web/public/seeds/*.json`
-hold derived CLAP scores, Deezer track-*page* links, and rationale text only — **no audio is persisted
+hold derived CLAP scores, Deezer track-*page* links, and rationale text only. **No audio is persisted
 or served**, and the live embedding pipeline is never invoked publicly. The site is a Next.js app built
 with `output: "export"` (no backend, no request-time inference); the source lives in [`web/`](web/).
 
@@ -25,7 +32,7 @@ container).
 
 ```bash
 uv sync                # core deps (add --group clap for the heavy CLAP audio stack)
-cp .env.example .env   # then fill in LASTFM_API_KEY (optional — the aggregator degrades without it)
+cp .env.example .env   # then fill in LASTFM_API_KEY (optional; the aggregator degrades without it)
 ```
 
 ### Database (Postgres 16 + pgvector)
@@ -53,5 +60,9 @@ uv run --group dev pytest --run-integration  # + live Deezer / MusicBrainz / Lis
 
 ## Production deploy
 
-Single-user VPS deploy (Docker Compose, SSH-tunnel access, no public ports) — see
+Single-user VPS deploy (Docker Compose, SSH-tunnel access, no public ports). See
 [DEPLOY.md](DEPLOY.md) for the full runbook.
+
+## License
+
+Licensed under the [MIT License](LICENSE). Copyright (c) 2026 Erick Ti.

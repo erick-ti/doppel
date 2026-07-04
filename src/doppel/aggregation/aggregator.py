@@ -5,7 +5,7 @@ Given a seed ``(title, artist)``:
   1. fan out to every :class:`CandidateSource` concurrently, with **per-source
      isolation** — a source that errors *or* runs past its timeout contributes nothing
      rather than sinking the run, so Last.fm carries recall when ListenBrainz is down
-     and vice versa (BRAINDUMP: degraded mode is a first-class feature). A failed source
+     and vice versa (degraded mode is a first-class feature). A failed source
      is recorded in :attr:`AggregateResult.failed_sources` so a broken/slow *primary*
      source is observable, not silently erased;
   2. drop any candidate that is the seed itself (never recommend a track back to

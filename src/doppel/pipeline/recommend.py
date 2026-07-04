@@ -398,7 +398,7 @@ def _is_seed_equivalent(title: str, audio_score: float, seed_title: str | None) 
     close seed-title match. Neither identity key (mbid/ptid) catches it — a re-release carries its own
     MBID + Deezer track (live Day-7: Take Five → "Take Five — Dave Brubeck", 0.988). The high audio
     floor keeps a live/acoustic *version* (same title family, lower audio similarity) out of scope, so
-    the product still surfaces those (BRAINDUMP: each recording is first-class, never collapsed)."""
+    the product still surfaces those (each recording is first-class, never collapsed)."""
     if not seed_title or audio_score < SEED_EQUIVALENCE_AUDIO_MIN:
         return False
     return fuzz.token_set_ratio(title, seed_title, processor=default_process) / 100.0 >= SEED_EQUIVALENCE_TITLE_MIN
@@ -407,7 +407,7 @@ def _is_seed_equivalent(title: str, audio_score: float, seed_title: str | None) 
 async def _hnsw_lane(
     deps: PipelineDeps, vibe_vector: np.ndarray, seed_mbid: str | None, already: set[str]
 ) -> tuple[list[_Resolved], dict[str, np.ndarray]]:
-    """The HNSW vibe lane (v2 — DECISIONS.md 2026-05-31): ``knn`` the corpus for the vibe-nearest tracks
+    """The HNSW vibe lane (v2): ``knn`` the corpus for the vibe-nearest tracks
     and hydrate each by its EXACT corpus MBID into a pre-resolved, pre-embedded scoring input.
 
     The lane candidates are already-resolved, already-embedded corpus rows, so they enter at the SCORING
@@ -441,7 +441,7 @@ async def _hnsw_lane(
             title, artist = meta[m]
             # cultural_score=0.0 — an HNSW-only hit has NO cultural-source consensus, and that field is
             # read downstream (API/showcase/explainer) as Last.fm/ListenBrainz evidence; fabricating an
-            # RRF value there would misrepresent it (Codex review 2026-05-31). `sources=("hnsw",)` carries
+            # RRF value there would misrepresent it. `sources=("hnsw",)` carries
             # the real provenance; audio-scored ranking uses combined_score, not cultural_score. ("hnsw"
             # is a RESERVED synthetic source tag — never name a real cultural source it, or the
             # source-aware provenance guards (frontend chip / explainer / eval) would collide with it.)
@@ -468,7 +468,7 @@ def _build_results(
     backfill only tops up to :data:`RECOMMENDATION_LIMIT`. Handles cultural-only (no seed vector /
     nothing embedded) by producing pure backfill. Dedups on the verified resolver MBID (and drops
     ``seed_mbid``) so two credits for one recording don't both appear and the seed can't recommend
-    itself — string ``(title, artist)`` alone misses these (adversarial review). Also dedups on
+    itself. String ``(title, artist)`` alone misses these. Also dedups on
     ``provider_track_id`` (seeded with the seed's own, so the seed can't return under a different
     MBID + the same Deezer track): two distinct MBIDs can map to one Deezer track (same audio), which
     the MBID key misses (live Day-7: "Three to Get Ready" ×2 under one ``/track/69122368``). Finally,
@@ -517,8 +517,8 @@ def _build_results(
     used = {(r.title, r.artist) for r in ordered}
     # A backfill row's identity comes from the VERIFIED resolver match when the candidate resolved
     # FOUND — including one that resolved but failed to embed (so we keep its mbid + Deezer link) —
-    # NEVER the unverified, possibly-conflicting source MBID carried on the cultural candidate (adversarial
-    # review). An unresolved cultural-only row gets mbid=None: we never verified its identity.
+    # NEVER the unverified, possibly-conflicting source MBID carried on the cultural candidate.
+    # An unresolved cultural-only row gets mbid=None: we never verified its identity.
     resolved_by_key = {(item.ranked.title, item.ranked.artist): item for item in resolved}
     for cand in pool:
         if len(ordered) >= RECOMMENDATION_LIMIT:
@@ -691,7 +691,7 @@ async def run_pipeline(
     # No-op while VIBE_TRANSLATION_ENABLED is OFF (default): translator=None ⇒ raw vibe, no Anthropic
     # call. If the flag is ever enabled, move _translate_vibe BELOW the Gate-2 COLD deferral (the
     # `return Deferred(...)` further down) so an inline request that returns 202 doesn't pay an LLM call
-    # the worker then repeats from the raw vibe (Codex review 2026-05-31). The CLAP _embed_vibe is
+    # the worker then repeats from the raw vibe. The CLAP _embed_vibe is
     # local/cheap, so its position here is fine.
     vibe_for_embed = await _translate_vibe(deps, vibe)
     vibe_vector = await _embed_vibe(deps, vibe_for_embed)
@@ -764,8 +764,8 @@ async def run_pipeline(
             )
             resolved += lane_resolved
             vectors.update(lane_vectors)
-            # lane vectors are servable_embeddings reads = cache hits, never new CLAP computations
-            # (Codex review 2026-05-31), so they must NOT inflate embeddings_computed.
+            # lane vectors are servable_embeddings reads = cache hits, never new CLAP computations,
+            # so they must NOT inflate embeddings_computed.
             cache_hits += len(lane_vectors)
             if (tr := deps.trace_recorder) is not None:
                 tr.stage("hnsw_lane", k=HNSW_LANE_K, hydrated=len(lane_resolved))

@@ -232,7 +232,7 @@
 /* The idle "alive" motion animates ONLY transform (scale) — never opacity. Opacity on the seam SVG is
  * state-bearing (RAF-derived `ignite`, the degraded-audio-leg dimming), so it must stay React/clock-
  * authoritative for recorded-replay honesty; a CSS opacity animation would override it and pulse the
- * node before ignition / un-dim a degraded leg (Codex review). */
+ * node before ignition / un-dim a degraded leg. */
 @keyframes seam-glow {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.12); }
@@ -273,5 +273,59 @@
 @media (prefers-reduced-motion: no-preference) {
   .feeling-glow {
     animation: feeling-pulse 2.2s ease-in-out infinite;
+  }
+}
+
+/*
+ * The /changelog convergence node: a gentle --seam "engine idling" pulse on the fused node where the
+ * crowd and the sound meet (the newest release). This recorded-surface pulse is kept strictly in the
+ * --seam register (never --ok green) and slow/gentle, so the genuinely-live ops-panel marker still owns
+ * the strongest live cue. Reduced-motion / no-JS rest as a complete STATIC bloom (idle=final) so it never looks
+ * broken or implies a live run. The bloom radiates outward (scale + opacity, like feeling-glow's
+ * sound-wave) and the core glow swells in step. Decorative opacity here is NOT state-bearing (unlike
+ * the hero seam SVG, whose opacity is RAF-authoritative), so animating it is safe.
+ */
+@keyframes changelog-radiate {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.22);
+    opacity: 1;
+  }
+}
+@keyframes changelog-core-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 9px 1px color-mix(in oklch, var(--seam) 55%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 17px 3px color-mix(in oklch, var(--seam) 85%, transparent);
+  }
+}
+/* The whole convergence breathes as one: the crowd/sound stream halos brighten and dim in step with the
+ * node's radiate, so it reads as the engine pulsing — not just a lone dot. The crisp stream cores are a
+ * separate, un-animated SVG group, so the lines never disappear; only their glow halos pulse. */
+@keyframes changelog-stream-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .changelog-node-bloom {
+    animation: changelog-radiate 2.6s ease-in-out infinite;
+    transform-origin: center;
+  }
+  .changelog-node-core {
+    animation: changelog-core-glow 2.6s ease-in-out infinite;
+  }
+  .changelog-stream-glow {
+    animation: changelog-stream-pulse 2.6s ease-in-out infinite;
   }
 }

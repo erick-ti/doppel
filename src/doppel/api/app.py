@@ -3,8 +3,9 @@
 ``POST /recommend`` aggregates the cultural pool, applies **Gate 1** (the *uncached* canonicalization
 count), and either runs the pipeline inline (WARM → 200 with results) or enqueues the worker (COLD →
 202 with a poll handle). ``run_pipeline`` may itself defer at Gate 2 (also → 202). ``GET
-/recommend/{job_id}`` polls the durable status from Postgres (the worker keeps it terminal — see the
-worker's finding-3 handling), returning the same result body on success.
+/recommend/{job_id}`` polls the durable status from Postgres (the worker marks the query-log row
+terminal, failed, on any error or cancellation, so a COLD poll always reaches a terminal state and
+never wedges), returning the same result body on success.
 
 Run with ``uvicorn doppel.api.app:app``. The lifespan opens the shared deps (pool, HTTP client, CLAP,
 Anthropic, the ARQ enqueue handle) + the cultural sources; ``create_app(lifespan=...)`` lets tests

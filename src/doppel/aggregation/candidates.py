@@ -14,7 +14,7 @@ strips recording-variant tokens ("live", "acoustic", "remaster", "remix", "edit"
 candidates while "HUMBLE." and "humble" merge. The asymmetry is intentional: a false
 negative (two entries for one recording) costs one extra MusicBrainz lookup, but a
 false positive (collapsing two different recordings) permanently loses a candidate —
-so we bias toward keeping both. See DECISIONS.md / BRAINDUMP "conservative dedupe".
+so we bias toward keeping both.
 """
 from __future__ import annotations
 
@@ -95,7 +95,7 @@ def dedupe(candidates: Iterable[Candidate]) -> list[MergedCandidate]:
     is in first-appearance order; :func:`~doppel.aggregation.ranking.rank` orders by RRF.
 
     The key is text only — MBIDs are merged as provenance, *not* used to split. That is
-    deliberate (see DECISIONS.md): the vibe-relevant variants already differ by title
+    deliberate: the vibe-relevant variants already differ by title
     token, Last.fm's MBIDs are unreliable (splitting would false-split the same recording
     and defeat RRF consensus), and ``resolve()`` keys on ``(title, artist)`` anyway.
     """

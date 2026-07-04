@@ -5,7 +5,7 @@ did NOT test: the pipeline reranks by audio-similarity-to-the-SEED, so for a ste
 → acoustic) the retrieved acoustic tracks have LOW audio-sim-to-seed — does the score_candidates
 fusion (with the unlocked β≈0.5, min-max-normalized vibe leg) let them SURVIVE into the top-10, or
 does the audio leg bury them? If they survive, the lane is worth building; if they're buried, the
-build also needs a scoring change (DECISIONS.md).
+build also needs a scoring change.
 
 Method, per vibe seed (corpus is already warm, so no run_pipeline / resolve loop needed):
   1. aggregate() → cultural candidates; reconstruct the embedded subset from the warm cache

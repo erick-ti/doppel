@@ -3,7 +3,7 @@
  *
  * The showcase is a static export with NO server, so "live" data is fetched in the browser at
  * runtime from PUBLIC URLs the VPS pushes to (outbound-push model — no inbound surface, no
- * client-held secrets; DECISIONS.md 2026-06-12 v1.2):
+ * client-held secrets):
  *
  *   - `stats.json` — corpus/usage/api/backup counts the VPS cron writes to a public Cloudflare R2
  *     bucket (scripts/push_stats.sh). One controlled shape, one controlled CORS origin.
@@ -21,13 +21,13 @@
 export const STATS_CADENCE_MIN = 15;
 
 /** Abort a fetch that hasn't resolved in this long — a hung R2/network connection must fail (→ the
- *  panel ages the last snapshot) rather than freeze the displayed freshness (Codex review 2026-06-13). */
+ *  panel ages the last snapshot) rather than freeze the displayed freshness. */
 export const FETCH_TIMEOUT_MS = 8_000;
 
 /** Public URLs, operator-set in Vercel (NEXT_PUBLIC_* is inlined at build). Null when unconfigured. */
 const RAW_STATS_URL = process.env.NEXT_PUBLIC_STATS_URL ?? null;
 /** Gated through safeStatsUrl (below) so a mis-pasted ping credential never gets fetched — a rejected
- *  URL is null, which the panel treats as unconfigured and never fetches (Codex review 2026-06-13). */
+ *  URL is null, which the panel treats as unconfigured and never fetches. */
 export const STATS_URL = safeStatsUrl(RAW_STATS_URL);
 export const HEALTHCHECK_BADGE_URL = process.env.NEXT_PUBLIC_HEALTHCHECK_BADGE_URL ?? null;
 
@@ -73,7 +73,7 @@ export function safeBadgeUrl(url: string | null): string | null {
 }
 
 /**
- * Fail-closed gate for the stats feed URL — symmetric to safeBadgeUrl (Codex review 2026-06-13).
+ * Fail-closed gate for the stats feed URL, symmetric to safeBadgeUrl.
  * The feed URL is GETed on mount and every poll, so a mis-pasted healthchecks **ping** credential
  * (`hc-ping.com/<uuid>`) would be hit by every visitor, silently spoofing the dead-man's switch
  * green. The stats feed is a public JSON object — never a healthchecks URL — so require https + a
@@ -99,7 +99,7 @@ export function safeStatsUrl(url: string | null): string | null {
 
 /** Tolerance for a `generated_at` ahead of the viewer's clock. Must stay WELL under the stale window
  *  (2× cadence = 30 min): a wider tolerance would let a clock-jumped/bad-write future stamp read
- *  age-0/fresh and mask staleness for tolerance+30 min (Codex review 2026-06-13 — 60 min did exactly
+ *  age-0/fresh and mask staleness for tolerance+30 min (60 min did exactly
  *  that). 5 min absorbs benign VPS↔browser skew (incl. a mildly-wrong visitor clock) while keeping the
  *  worst-case false-fresh window near the stale threshold; beyond it the feed is treated as invalid. */
 const FUTURE_SKEW_MS = 5 * 60_000;
@@ -175,7 +175,7 @@ export async function fetchStats(nowMs: number): Promise<FeedState> {
     // The feed is public JSON — validate its shape BEFORE trusting it as OpsStats, so a stale
     // schema / mispointed URL / partial upload degrades to the documented "unavailable" state
     // instead of throwing mid-render on a missing nested field (no app error boundary; the panel
-    // is on the homepage). Codex review 2026-06-13.
+    // is on the homepage).
     const raw: unknown = await res.json();
     if (!isOpsStats(raw)) return { kind: "error" };
     const generatedMs = Date.parse(raw.generated_at);

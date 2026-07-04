@@ -10,7 +10,7 @@ scales). RRF sidesteps calibration entirely by fusing on **rank** alone:
 with rank 1-based and ``k`` = :data:`~doppel.config.RRF_K` (60, the standard value).
 A track both sources rank highly outscores one that only a single source ranks #1, so
 cross-source consensus rises to the top — exactly what we want for the degraded /
-backfill cultural ordering. See DECISIONS.md / BRAINDUMP "Cultural ranking via RRF".
+backfill cultural ordering.
 """
 from __future__ import annotations
 

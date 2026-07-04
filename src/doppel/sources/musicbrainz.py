@@ -23,7 +23,7 @@ MBIDs; and because the artist lookup is non-essential hardening, a transient fai
 it degrades rather than aborting the resolve.
 
 Calls are paced with an aiolimiter to honor MB's ~1 req/sec hard limit, and every
-request carries the descriptive User-Agent MB requires. See DECISIONS.md.
+request carries the descriptive User-Agent MB requires.
 """
 from __future__ import annotations
 

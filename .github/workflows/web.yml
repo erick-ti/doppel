@@ -1,0 +1,39 @@
+name: web
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:  # allow manual runs from the Actions tab
+
+permissions:
+  contents: read  # least privilege: the job only reads the checked-out code
+
+jobs:
+  build:
+    name: lint + build (web)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: checkout
+        uses: actions/checkout@v7
+
+      - name: install Node 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      # `npm ci` installs exactly the committed lockfile (fails if package.json drifts).
+      - name: install deps
+        run: npm ci
+
+      - name: eslint
+        run: npm run lint
+
+      # `output: "export"` static build. The ops-panel's NEXT_PUBLIC_* feed vars are optional;
+      # absent, the panel renders "feed not configured", so the build needs no secrets.
+      - name: next build (static export)
+        run: npm run build

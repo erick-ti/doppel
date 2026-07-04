@@ -7,8 +7,7 @@ Two safety boundaries the script defends:
   run before any state is touched);
 - the off-box validation (`OFFSITE_KEEP_DAYS` is a positive integer; rclone is on PATH when
   `BACKUP_REMOTE` is set) runs **inside the off-box phase, AFTER the local dump is durable** — so a
-  misconfigured optional add-on can never disable the core local backup (Codex adversarial review,
-  2026-05-27).
+  misconfigured optional add-on can never disable the core local backup.
 
 And the off-box behavior itself, exercised end-to-end with stubbed `docker` (fakes the pg_dump
 stream) and stubbed `rclone` (records args, configurable exit):
@@ -81,7 +80,7 @@ def test_invalid_keep_fails_closed_and_deletes_nothing(tmp_path, bad):
 
 
 # ---- Misconfigured off-box must not block the core local backup -----------------------------
-# (Codex adversarial review, 2026-05-27: an optional add-on must never disable the core feature.)
+# (An optional add-on must never disable the core feature.)
 
 
 @pytest.mark.parametrize("bad", ["0", "-1", "foo", "3.5"])
@@ -417,8 +416,8 @@ def test_healthcheck_url_is_not_echoed_in_logs(tmp_path):
 
 
 # ---- Retention prune: keep newest $KEEP, and FAIL CLOSED when the dir can't be enumerated ----------
-# (Codex adversarial review, 2026-06-14: the earlier `ls … | sort | tail || true` masked ANY listing
-# failure, not just the empty-glob case — an unreadable BACKUP_DIR would skip pruning behind a green
+# (The earlier `ls … | sort | tail || true` masked ANY listing
+# failure, not just the empty-glob case. An unreadable BACKUP_DIR would skip pruning behind a green
 # healthcheck. The prune now builds a nullglob array behind an explicit readability preflight.)
 
 
@@ -449,7 +448,7 @@ def test_unreadable_backup_dir_fails_closed(tmp_path):
     """A writable-but-unreadable BACKUP_DIR can't be enumerated to prune. The new dump still lands, but
     the prune must FAIL CLOSED (exit non-zero + /fail ping) rather than silently skip pruning behind a
     green healthcheck — a bare glob would expand to empty there and report success while old dumps pile
-    up to disk-full (Codex adversarial review, 2026-06-14)."""
+    up to disk-full."""
     bindir = tmp_path / "bin"
     bindir.mkdir()
     _make_docker_dump_stub(bindir)
@@ -505,7 +504,7 @@ def test_retention_order_independent_of_globsort(tmp_path):
     """Deletion order must come from an explicit filename sort, not the shell's glob order. Under
     GLOBSORT=-mtime (newest-mtime-first), a position-based prune over raw glob order would delete the
     name-newest dumps — including the freshly written one. The explicit LC_ALL=C sort keeps the
-    name-newest $KEEP regardless (Codex adversarial review, 2026-06-14)."""
+    name-newest $KEEP regardless."""
     bindir = tmp_path / "bin"
     bindir.mkdir()
     _make_docker_dump_stub(bindir)

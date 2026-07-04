@@ -23,7 +23,7 @@ First run of an uncached seed pays the ~701 s cold path once; a warm seed export
 intentionally-degraded (no-seed-preview → cultural-only) response for the System-Transparency panel.
 
 v1.2 replay sidecars: every export also writes ``<slug>.trace.json`` — real per-stage timings/counters
-from a :class:`TraceRecorder` riding the run (DECISIONS.md 2026-06-12). ``--trace-only`` refreshes the
+from a :class:`TraceRecorder` riding the run. ``--trace-only`` refreshes the
 sidecars without rewriting the frozen seed docs, gated on the traced top-N matching the doc's.
 """
 from __future__ import annotations
@@ -90,7 +90,7 @@ CURATED: list[ShowcaseSeed] = [
     # Second, honestly-subtle vibe example.
     ShowcaseSeed("midnight-city-vibe-latenight", "Midnight City", "M83", "electronic",
                  vibe="melancholic, late-night driving"),
-    # v1.2 cold-run capture (DECISIONS.md 2026-06-12): chosen because the corpus held NO country at
+    # v1.2 cold-run capture: chosen because the corpus held NO country at
     # capture time (verified: 0 tracks/lookups), so its first export records a REAL cold trace — the
     # Gate-1 COLD verdict and the MB-paced resolve grind the replay console animates. Warm thereafter.
     ShowcaseSeed("jolene", "Jolene", "Dolly Parton", "country"),
@@ -281,7 +281,7 @@ async def export_seed(
     selected seed is blocked or errors, any stale ``<slug>.json`` is removed (fail-closed: the public
     set stays current-and-passing or absent, never a prior run's JSON).
 
-    **Traces (v1.2 — DECISIONS.md 2026-06-12)**: a :class:`TraceRecorder` rides ``deps`` for the run
+    **Traces (v1.2)**: a :class:`TraceRecorder` rides ``deps`` for the run
     and its sidecar is written next to the seed doc. ``trace_only=True`` refreshes the sidecar
     WITHOUT rewriting the frozen seed doc — gated by :func:`reconcile_top_identity`: the traced run's
     top-N must equal the on-disk doc's, else the seed fails (the documented signal to re-export doc +
@@ -388,9 +388,9 @@ async def export_seed(
                                 "refreshed (transient? re-run; persistent? re-export doc + trace)")
             frozen = json.loads(path.read_text())
             # 3. Config drift: a sidecar must not pair knobs with a doc whose scores they didn't
-            #    produce. Every contract field the frozen meta RECORDS is compared (Codex adversarial
-            #    review 2026-06-12 — clap_model_version re-keys the whole embeddings cache, invariant
-            #    #4, so a model flip invalidates the pairing even when the top-N happens to hold).
+            #    produce. Every contract field the frozen meta RECORDS is compared (clap_model_version
+            #    re-keys the whole embeddings cache, invariant #4, so a model flip invalidates the
+            #    pairing even when the top-N happens to hold).
             #    The hnsw knobs / gate thresholds have no frozen-meta baseline to compare: thresholds
             #    cannot alter results in job mode (gates never defer), and a lane change on a vibe
             #    seed moves the top-N, which check 4 catches.

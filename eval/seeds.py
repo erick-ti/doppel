@@ -1,9 +1,9 @@
 """Benchmark seeds for the Day-7 evaluation.
 
-Grouped by the genres BRAINDUMP flags as the Deezer-coverage risk surface (the project's #1 risk):
+Grouped by the genres that are the Deezer-coverage risk surface (the project's #1 risk):
 pop, R&B, hip-hop, indie rock, electronic, jazz, pre-2000 classics, non-English. ``PILOT_SEEDS`` is
 the small set the harness is validated on first; ``FULL_SEEDS`` is the later multi-hour benchmark.
-A ``vibe`` exercises the CLAP text leg (the weak encoder BRAINDUMP calls out).
+A ``vibe`` exercises the CLAP text leg (CLAP's weaker text encoder).
 
 Seeds are editable — recall and Deezer coverage hinge on the exact ``(title, artist)`` credit, so
 swap any that resolve poorly (the harness reports per-seed coverage so a bad credit is visible).

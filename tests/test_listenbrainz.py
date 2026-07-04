@@ -130,7 +130,7 @@ async def test_http_error_propagates() -> None:
 
 async def test_does_not_anchor_on_title_variant() -> None:
     # token_set scores "HUMBLE." vs "HUMBLE. (Live)" at 100; the exact-title gate must reject
-    # the live row and anchor on the real recording (Codex adversarial finding #1).
+    # the live row and anchor on the real recording.
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/recording-search/json":
             return httpx.Response(200, json=[
