@@ -65,7 +65,7 @@ export function SiteHeader() {
           </Link>
           {/* Changelog is gated to md+: below 768px the wordmark + tagline + a 4th link overflow, and
               the header is overflow-x:clip, so an overflowed link would be unreachable. The footer
-              carries the changelog link on narrower screens. (Mobile-header fit — DECISIONS 2026-06-18.) */}
+              carries the changelog link on narrower screens. (Mobile-header fit.) */}
           <span className="text-muted-foreground/30 hidden select-none md:inline" aria-hidden>
             |
           </span>

@@ -52,7 +52,7 @@ DEEZER_API = "https://api.deezer.com"
 # ISRC-anchor MusicBrainz canonicalization + the verify_match short-circuit. When
 # false, skip the ISRC entirely and rely on nearest-duration + weighted scoring.
 # (We resolve the ISRC from the documented /track/{id}, not the undocumented
-# /track/isrc: endpoint — see DECISIONS.md.)
+# /track/isrc: endpoint.)
 DEEZER_ISRC_ENABLED = _env_bool("DEEZER_ISRC_ENABLED", True)
 
 # --- Matching ---------------------------------------------------------------- #
@@ -68,7 +68,7 @@ SEARCH_RELEVANCE_MIN = 80
 LISTENBRAINZ_LABS = "https://labs.api.listenbrainz.org"
 # similar-recordings is keyed on ListenBrainz-canonical recording MBIDs; the seed is
 # resolved to one via the Labs recording-search dataset first (MusicBrainz MBIDs
-# return [] — see DECISIONS.md). This session-based algorithm favors broad recall.
+# return []). This session-based algorithm favors broad recall.
 LISTENBRAINZ_ALGORITHM = (
     "session_based_days_9000_session_300_contribution_5_threshold_15_limit_50_skip_30"
 )
@@ -98,8 +98,7 @@ RRF_K = 60
 # MusicBrainz at ~1 req/s, ~7 s each — Day-7 measurement), resolve on the async/COLD path instead of
 # inline in the request. Sized to a ~35 s inline budget (5 × ~7 s) and kept <= GATE2_ASYNC_THRESHOLD
 # (enforced by _validate_tuning below) so a request that *would* defer at Gate 2 defers up front,
-# instead of burning the resolve inline and then deferring anyway (the old 15 > 10 dead band the Codex
-# review surfaced). Provisional; calibrate in Day-7 eval. See ROADMAP "two-gate async model".
+# instead of burning the resolve inline and then deferring anyway (the old 15 > 10 dead band). Provisional; calibrate in Day-7 eval. See ROADMAP "two-gate async model".
 GATE1_ASYNC_THRESHOLD = int(os.getenv("GATE1_ASYNC_THRESHOLD", "5"))
 
 # Per-source wall-clock budget for the aggregator's fan-out. Past this, a slow/hung
@@ -151,22 +150,22 @@ MAX_PREVIEW_SAMPLES = CLAP_SAMPLE_RATE * MAX_PREVIEW_DURATION_S
 # https on one of these hosts, with redirects disabled, so the host contacted always equals
 # the validated one. Deezer serves previews from cdnt-preview.dzcdn.net (confirmed live);
 # deezer.com is kept for search-shaped hosts. Full DNS/private-IP pinning is deferred to the
-# deployment-hardening pass (see DECISIONS.md) — low marginal value once these + no-redirects
+# deployment-hardening pass, low marginal value once these + no-redirects
 # are in, and correct only with connection pinning to avoid DNS-rebinding.
 ALLOWED_PREVIEW_HOST_SUFFIXES = ("dzcdn.net", "deezer.com")
 
-# Audio/text fusion weights (BRAINDUMP "Scoring calibration"):
+# Audio/text fusion weights:
 #   combined = α·norm(audio_cos) + β·norm(vibe_text_cos)
 # with each similarity min-max normalized *within the candidate batch* first. Audio
 # is the precision leg; CLAP's text encoder is the weaker one on cultural/emotional
-# descriptors (BRAINDUMP risk), so the default leans audio-dominant. Provisional —
+# descriptors (a known CLAP weakness), so the default leans audio-dominant. Provisional,
 # to be calibrated against real score distributions in Day 7 eval. With no vibe
 # description, scoring falls back to audio alone (β drops out) regardless of these.
 # β (the vibe-text leg) is the single tunable knob; α (audio leg) is DERIVED as 1−β so the pair stays
 # convex (α+β=1) and combined_score is provably in [0, 1]. scoring.py min-max-normalizes each leg to
 # [0, 1], so the fused top reaches α+β — an independent α+β>1 would emit combined_score>1 and break the
-# [0, 1] contract the API/showcase render (Codex adversarial review 2026-05-31; the original v2 unlock
-# validated each weight separately and missed the sum). The live β-sweep showed β=0.3 leaves the vibe
+# [0, 1] contract the API/showcase render (validate the sum α+β, not each weight in isolation). The
+# live β-sweep showed β=0.3 leaves the vibe
 # leg nearly inert and β≈0.5 makes steering visible, so β stays env-tunable; default 0.3 ⇒ α=0.7, the
 # eval-validated pair, unchanged. (score_candidates still accepts explicit α/β for offline sweeps.)
 VIBE_TEXT_WEIGHT = float(os.getenv("VIBE_TEXT_WEIGHT", "0.3"))  # β
@@ -220,7 +219,7 @@ DB_POOL_MAX_SIZE = int(os.getenv("DB_POOL_MAX_SIZE", "10"))
 # Derived (not a hand-minted alias) precisely so it can't be forgotten on a contract change.
 CLAP_MODEL_VERSION = f"{CLAP_MODEL_ID}+{CLAP_EMBED_POOLING}"
 
-# Re-embedding policy (BRAINDUMP): an embedding is eligible for refresh when a newly matched
+# Re-embedding policy: an embedding is eligible for refresh when a newly matched
 # asset's confidence exceeds the embedded asset's by at least this much — so the corpus upgrades
 # off a "good enough" preview when a clearly better one appears, without churning on noise.
 REEMBED_CONFIDENCE_DELTA = 0.15
@@ -239,7 +238,7 @@ RESOLVER_VERSION = "1"
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 
 # Anthropic (Claude) — the LLM explainer. It writes per-result rationales and NEVER ranks (ranking
-# is CLAP's job — BRAINDUMP "the LLM explains, it does not rank"). Absent key / API error / timeout
+# is CLAP's job; the LLM explains, it does not rank). Absent key / API error / timeout
 # ⇒ results are returned without rationales (graceful degradation), so a recommendation never
 # depends on the LLM. Sonnet 4.6 by default; override LLM_MODEL to swap checkpoints.
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
@@ -247,7 +246,7 @@ LLM_MODEL = os.getenv("LLM_MODEL", "claude-sonnet-4-6")
 LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "2048"))
 LLM_TIMEOUT_S = float(os.getenv("LLM_TIMEOUT_S", "30"))
 
-# Vibe→acoustic-terms translation (v2 flagship — DECISIONS.md 2026-05-31). Default OFF: when enabled,
+# Vibe→acoustic-terms translation (v2 flagship). Default OFF: when enabled,
 # a small/fast LLM rewrites the listener's natural-language vibe into literal CLAP-trained acoustic
 # terms before text-encoding, to clear the weak text encoder's ~0.15–0.37 cultural-descriptor wall.
 # Degrades to the raw vibe on any failure (missing key / API error / timeout / empty output), so the
@@ -257,7 +256,7 @@ VIBE_TRANSLATION_MODEL = os.getenv("VIBE_TRANSLATION_MODEL", "claude-haiku-4-5-2
 VIBE_TRANSLATION_MAX_TOKENS = int(os.getenv("VIBE_TRANSLATION_MAX_TOKENS", "256"))
 VIBE_TRANSLATION_TIMEOUT_S = float(os.getenv("VIBE_TRANSLATION_TIMEOUT_S", "10"))
 
-# HNSW vibe-retrieval lane (v2 — DECISIONS.md 2026-05-31). Default ON since the source-aware provenance
+# HNSW vibe-retrieval lane (v2). Default ON since the source-aware provenance
 # work landed and the off-vs-on eval A/B passed at β=0.3 (2026-06-12): when enabled AND a vibe is
 # present, run_pipeline's scoring stage knn()s the corpus for the K vibe-nearest tracks and injects them
 # as PRE-RESOLVED, MBID-keyed scoring inputs (`_hnsw_lane`) — already-embedded servable corpus rows,
@@ -306,7 +305,7 @@ JOB_TIMEOUT_S = int(os.getenv("JOB_TIMEOUT_S", "900"))
 # (the same budget split N ways), only multiplies each job's wall time (risking job_timeout) and
 # embedding memory (up to WORKER_MAX_JOBS × EMBED_CONCURRENCY concurrent CLAP inferences). Per-job
 # embed parallelism stays bounded by EMBED_CONCURRENCY regardless. Raise only alongside JOB_TIMEOUT_S
-# (the validation below couples them). (Codex adversarial review, 2nd round.)
+# (the validation below couples them).
 WORKER_MAX_JOBS = int(os.getenv("WORKER_MAX_JOBS", "1"))
 
 # Stale-running-row reaper threshold (seconds). A COLD recommend_job marks its query_logs row terminal
@@ -330,13 +329,13 @@ def _validate_tuning(*, resolve_limit: int, job_timeout: int, gate1: int, gate2:
     """Fail fast on incoherent tuning rather than silently defeating the cap or the gates.
 
     These are deploy/eval knobs (compose passes them through), so a fat-fingered value must be loud,
-    not a silent production regression (Codex adversarial review). A non-positive resolve cap makes
+    not a silent production regression. A non-positive resolve cap makes
     ``pool[:N]`` resolve nearly everything (``N=-1`` → ``pool[:-1]``) or nothing (``N=0`` → no
     candidate audio scoring); a cap that can't finish inside ``job_timeout`` reintroduces the very
     timeout the cap removes; and ``GATE1 > GATE2`` recreates the "resolve inline, then defer at Gate 2
     anyway" dead band. The timeout budget is sized against *concurrent* cold jobs — all ``max_jobs``
     share one ~1 req/s MusicBrainz limiter, so the worst case is ``max_jobs × N × cost``; sizing for a
-    single job (the original check) lets concurrent jobs time out despite passing (Codex 2nd round).
+    single job (the original check) lets concurrent jobs time out despite passing.
     Finally ``STALE_JOB_RECLAIM_S`` must exceed ``job_timeout`` so the stale-row reaper can never
     reclaim a COLD job that is still inside its allowed runtime.
     """

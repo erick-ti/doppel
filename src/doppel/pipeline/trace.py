@@ -1,4 +1,4 @@
-"""Per-stage trace capture for the showcase replay (v1.2 — DECISIONS.md 2026-06-12).
+"""Per-stage trace capture for the showcase replay (v1.2).
 
 :class:`TraceRecorder` is an **export-only** seam: ``PipelineDeps.trace_recorder`` defaults to
 ``None`` and production paths (API lifespan / ARQ worker) never construct one, so ``run_pipeline``'s
@@ -94,8 +94,8 @@ def build_trace_document(
     ``paired_export`` records, at the only place it is knowable, whether this trace came from the
     SAME run that produced the seed doc beside it (a full export) or from a ``--trace-only`` refresh
     — the frontend's single-vs-dual provenance stamp keys on it exactly, instead of inferring batch
-    identity from sha+date heuristics (Codex review 2026-06-12: a same-day refresh on the same
-    commit must still dual-stamp). Empty ``events`` and absent ``top_mbids`` are omitted per stage
+    identity from sha+date heuristics (a same-day refresh on the same commit could otherwise be
+    misidentified as the paired export and must still dual-stamp). Empty ``events`` and absent ``top_mbids`` are omitted per stage
     to keep the public file lean.
     """
     stages: list[dict[str, Any]] = []

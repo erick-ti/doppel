@@ -4,12 +4,12 @@ Drives ``run_pipeline`` / ``enqueue_recommendation`` against real Postgres with 
 sources (Deezer / MusicBrainz / CLAP / LLM), so the orchestration, the two-gate handoff, the
 in-flight-dedup lifecycle, and the degraded paths are tested without live APIs or the heavy model.
 
-Locks in the two adversarial-review fixes:
-  * **Finding 1** — a *terminal* query_logs row never blocks a fresh identical request (the dedup
-    key is decoupled from the per-request id), while two *concurrent* identical requests still share
+Locks in two fixes:
+  * A *terminal* query_logs row never blocks a fresh identical request (the dedup key is
+    decoupled from the per-request id), while two *concurrent* identical requests still share
     one in-flight job.
-  * **Finding 2** — an httpx preview error (expired Deezer URL / CDN 5xx) degrades (seed →
-    cultural-only; candidate → skipped + backfilled) instead of aborting the request.
+  * An httpx preview error (expired Deezer URL / CDN 5xx) degrades (seed to cultural-only,
+    candidate skipped + backfilled) instead of aborting the request.
 """
 from __future__ import annotations
 
@@ -180,7 +180,7 @@ async def test_resolve_pool_capped_to_top_n_rest_backfills(pool, monkeypatch):
 
 
 async def test_seed_preview_http_error_degrades_to_cultural_only(pool):
-    """Finding 2 (seed): an httpx error fetching the seed preview ⇒ cultural-only, not a 500."""
+    """Seed path: an httpx error fetching the seed preview means cultural-only, not a 500."""
     cands = [_cand("SongA", 1, 0.05)]
     deps = _deps(pool, finder=FakeFinder(["Seed", "SongA"]),
                  embedder=FakeEmbedder(http_fail_titles=["Seed"]))
@@ -192,7 +192,7 @@ async def test_seed_preview_http_error_degrades_to_cultural_only(pool):
 
 
 async def test_candidate_preview_http_error_is_skipped_and_backfilled(pool):
-    """Finding 2 (candidate): one bad preview is skipped + backfilled; the run still completes."""
+    """Candidate path: one bad preview is skipped + backfilled; the run still completes."""
     cands = [_cand("SongA", 1, 0.05), _cand("SongB", 2, 0.04)]
     deps = _deps(pool, finder=FakeFinder(["Seed", "SongA", "SongB"]),
                  embedder=FakeEmbedder(http_fail_titles=["SongA"]))
@@ -206,7 +206,7 @@ async def test_candidate_preview_http_error_is_skipped_and_backfilled(pool):
 
 
 async def test_terminal_row_does_not_block_fresh_request(pool):
-    """Finding 1: in-flight requests dedup to one job; a *terminal* row never blocks a fresh repeat."""
+    """In-flight requests dedup to one job; a *terminal* row never blocks a fresh repeat."""
     cands = [_cand("SongA", 1, 0.05)]
     enqueued: list[str] = []
 
@@ -280,14 +280,14 @@ async def test_worker_job_finalizes_queued_row_to_succeeded(pool):
 
 
 class _FailingFinder:
-    """A TrackFinder whose lookups raise a non-degradable error (to exercise finding-3 failure path)."""
+    """A TrackFinder whose lookups raise a non-degradable error (to exercise the non-degradable-error failure path)."""
 
     async def find_track(self, title, artist):
         raise RuntimeError("upstream exploded")
 
 
 async def test_worker_job_marks_row_failed_on_error(pool):
-    """Finding 3: an uncaught error → the row becomes terminal `failed`, not a stuck `running`."""
+    """An uncaught error makes the row terminal `failed`, not a stuck `running`."""
     deps = _deps(pool, finder=_FailingFinder())
     qid = await _queue_row(pool)
 
@@ -319,7 +319,7 @@ class _HttpFailingFinder:
 
 
 async def test_enqueue_failure_does_not_wedge_future_requests(pool):
-    """Finding 1: a failed job-enqueue removes the queued row, so it neither polls 202 forever nor
+    """A failed job-enqueue removes the queued row, so it neither polls 202 forever nor
     dedup-wedges future identical requests onto a stuck handle."""
     rk = request_key_for("Seed", "Artist", None)
     fields = QueryLogFields(seed_title="Seed", seed_artist="Artist", status="queued", request_key=rk,
@@ -351,7 +351,7 @@ async def test_enqueue_failure_does_not_wedge_future_requests(pool):
 
 
 async def test_seed_resolve_http_error_degrades_to_cultural_only(pool):
-    """Finding 2 (seed): a transient Deezer/MB error resolving the seed → cultural-only, not a 500."""
+    """Seed path: a transient Deezer/MB error resolving the seed means cultural-only, not a 500."""
     deps = _deps(pool, finder=_HttpFailingFinder(fail_titles=["Seed"], found_titles=["SongA"]))
     rec = await run_pipeline(deps, "Seed", "Artist", None, [_cand("SongA", 1, 0.05)],
                              _warm_gate1(1), execution_mode="inline")
@@ -361,7 +361,7 @@ async def test_seed_resolve_http_error_degrades_to_cultural_only(pool):
 
 
 async def test_candidate_resolve_http_error_is_skipped_and_backfilled(pool):
-    """Finding 2 (candidate): one candidate's transient resolve error is skipped + backfilled; the run
+    """Candidate path: one candidate's transient resolve error is skipped + backfilled; the run
     completes and the other candidate is still audio-scored."""
     deps = _deps(pool, finder=_HttpFailingFinder(fail_titles=["SongA"], found_titles=["Seed", "SongB"]))
     rec = await run_pipeline(deps, "Seed", "Artist", None, [_cand("SongA", 1, 0.05), _cand("SongB", 2, 0.04)],
@@ -380,8 +380,8 @@ class _CancellingFinder:
 
 
 async def test_worker_job_marks_row_failed_on_cancellation(pool):
-    """Round-3 finding 1: CancelledError is a BaseException the bare `except Exception` missed, so a
-    cancelled COLD job used to leave a stuck `running` row. It must now reach a terminal `failed`."""
+    """CancelledError is a BaseException the bare `except Exception` missed, so a cancelled COLD job
+    used to leave a stuck `running` row. It must now reach a terminal `failed`."""
     deps = _deps(pool, finder=_CancellingFinder())
     qid = await _queue_row(pool)
 

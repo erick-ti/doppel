@@ -16,11 +16,11 @@ Two rules shape the implementation:
   worker threads via ``asyncio.to_thread``); dual-load across FastAPI + ARQ is accepted
   for v1.
 
-CLAP specifics (transformers 5.x — see CLAUDE.md / DECISIONS.md): the processor takes
+CLAP specifics (transformers 5.x): the processor takes
 ``audio=`` (not ``audios=``); ``get_audio_features`` / ``get_text_features`` return an
 output object whose 512-dim embedding is ``.pooler_output``. MP3 decode uses PyAV
 because Deezer previews carry an ID3v2 tag that breaks libsndfile's in-memory MP3
-detection (DECISIONS.md, 2026-05-21).
+detection.
 """
 from __future__ import annotations
 
@@ -79,7 +79,7 @@ def validate_preview_url(url: str) -> None:
     data (and from Day 5 it is persisted then re-fetched), so the outbound target is checked
     before the request. With redirects disabled in :meth:`ClapEmbedder.embed_preview`, the
     host actually contacted always equals the one validated here, which closes the realistic
-    SSRF vector without DNS/IP pinning (that is deferred — see DECISIONS.md). Raises
+    SSRF vector without DNS/IP pinning (that is deferred). Raises
     :class:`PreviewUrlRejected`.
     """
     parsed = urlparse(url)
@@ -97,8 +97,7 @@ def decode_preview(mp3_bytes: bytes) -> NDArray[np.float32]:
     """Decode preview MP3 bytes → 48 kHz mono float32, fully in memory (never to disk).
 
     PyAV (bundled ffmpeg) rather than soundfile/librosa: Deezer previews carry a leading
-    ID3v2 tag that breaks libsndfile's in-memory MP3 auto-detection (DECISIONS.md,
-    2026-05-21).
+    ID3v2 tag that breaks libsndfile's in-memory MP3 auto-detection.
 
     Bytes that are *not decodable audio* — a truncated download, a non-audio body, an
     error page served as HTTP 200 — raise :class:`EmbeddingError` (the pipeline's
@@ -254,8 +253,8 @@ class ClapEmbedder:
         :func:`~doppel.embedding.scoring.score_candidates`, not an empty string), the string
         is trimmed to :data:`MAX_VIBE_TEXT_CHARS` before tokenizing, and the tokens are
         truncated, so a verbose description degrades gracefully instead of crashing the
-        request. CLAP's text encoder is the weaker leg on cultural/emotional phrasing
-        (BRAINDUMP risk), hence the audio-dominant fusion default; an LLM caption-translation
+        request. CLAP's text encoder is the weaker leg on cultural/emotional phrasing,
+        hence the audio-dominant fusion default; an LLM caption-translation
         step is a deferred fix.
         """
         # Validate + bound *before* loading the model, so a blank or pathological vibe never

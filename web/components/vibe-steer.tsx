@@ -80,7 +80,7 @@ export function VibeSteer({
   initialMode?: Mode;
   /** v1.2: per-run replay routes (null = that run has no trace sidecar). Rendered IN here — a
    *  run-specific surface must track the toggle like every other one, or the link can point at a
-   *  different recorded run than the visible results (Codex review 2026-06-12). */
+   *  different recorded run than the visible results. */
   replayHrefs?: { plain: string | null; vibe: string | null };
 }) {
   const [mode, setMode] = useState<Mode>(initialMode);

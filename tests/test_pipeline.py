@@ -1,6 +1,6 @@
 """Offline unit tests for pipeline result-building (no DB / model).
 
-Locks in the round-2 finding-3 fix: a cultural-backfill row's identity comes from the VERIFIED
+Locks in the fix: a cultural-backfill row's identity comes from the VERIFIED
 resolver match (when the candidate resolved FOUND, even if its preview later failed to embed) or is
 ``None`` — never the unverified, possibly-conflicting source MBID carried on the candidate.
 """
@@ -50,7 +50,7 @@ class _FakeDeps:
 
 
 async def test_hnsw_lane_hydrates_distinct_mbids_by_exact_identity(monkeypatch):
-    # The redesigned lane (Codex round 3): knn hits become pre-resolved, MBID-keyed scoring inputs.
+    # The redesigned lane: knn hits become pre-resolved, MBID-keyed scoring inputs.
     # Two distinct corpus recordings that SHARE a title/artist stay distinct by exact MBID (no title
     # dedupe); the seed and already-scorable MBIDs are excluded; an unservable hit is skipped.
     knn_hits = [{"mbid": "seed"}, {"mbid": "m1"}, {"mbid": "m2"}, {"mbid": "dup"}, {"mbid": "unservable"}]
@@ -196,7 +196,7 @@ def test_seed_provider_track_id_suppresses_same_track_alias():
     # / one-provider-track alias of the seed). seed_mbid can't catch it (the MBID differs); seeding
     # used_ptids with the seed's own provider_track_id must — otherwise the seed is recommended back as
     # its own ~1.0-scoring top result. Exercises both phases: the alias is dropped from the audio loop
-    # AND must not re-enter as backfill (adversarial review).
+    # AND must not re-enter as backfill.
     alias = _cand("Take Five (Remastered)", 1, 0.05)
     other = _cand("Other", 2, 0.04)
     r_alias = _Resolved(ranked=alias, mbid="alias-mbid", asset_id=1, preview_url="x",

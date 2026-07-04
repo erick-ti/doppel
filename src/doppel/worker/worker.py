@@ -5,7 +5,7 @@ under ARQ ``_job_id = "rec-<query_logs.id>"``. It re-runs the whole pipeline aga
 already-resolved candidates and cached embeddings are cheap hits the second time — and finalizes the
 pre-created ``query_logs`` row by id.
 
-**Finding 3 (Codex review): the pollable row never stalls.** The job marks the row ``running`` at the
+The pollable query-log row never stalls: the job marks the row ``running`` at the
 start and, on any uncaught error, writes ``status='failed'`` + a sanitized message + ``completed_at``
 before re-raising — so a COLD poll always sees a terminal state instead of a forever-``queued`` /
 ``running`` row. ARQ records the failure too; the durable, user-facing status lives in Postgres.

@@ -1,6 +1,6 @@
 """Db-gated regression for the eval harness's query_logs lifecycle (``eval/harness.py:run_seed``).
 
-Locks the adversarial-review fix: a failure *after* the queued row is inserted must not leave an
+Locks the fix: a failure after the queued row is inserted must not leave an
 active ``request_key`` that wedges the in-flight dedup. The harness omits ``request_key`` entirely (so
 an orphaned row can't wedge — the active-request unique index treats NULLs as distinct) and
 terminalizes the row to ``failed`` on error.
@@ -47,9 +47,9 @@ def _cand(title: str) -> RankedCandidate:
 
 
 async def test_run_seed_failure_leaves_no_active_dedup_wedge(pool, monkeypatch):
-    # A seed whose pipeline raises AFTER the queued row is inserted is exactly the orphan vector the
-    # review flagged. The row must end terminal ('failed') with a NULL request_key, so it can never
-    # wedge the in-flight dedup, and a re-run of the same seed must insert cleanly.
+    # A seed whose pipeline raises AFTER the queued row is inserted is exactly the orphan-row risk:
+    # the row must end terminal ('failed') with a NULL request_key, so it can never wedge the
+    # in-flight dedup, and a re-run of the same seed must insert cleanly.
     seed = Seed("Seed", "Artist", "test")
     deps = PipelineDeps(pool=pool, finder=None, canonicalizer=None, embedder=None,
                         http=None, explainer=None, enqueue_job=None)

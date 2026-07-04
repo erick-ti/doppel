@@ -100,7 +100,7 @@ export function ReleaseTimeline({ className }: { className?: string }) {
             {r.highlights && (
               // Scannable stack + metrics for a technical reader — neutral facts in the telemetry
               // (mono) voice, kept secondary to the plain summary. A short --seam lead-in ties it
-              // to the motif. NEVER recruiter/audience framing here (invariant #6).
+              // to the motif. Highlights stay neutral technical facts.
               <p className="text-muted-foreground/70 mt-2 max-w-[62ch] font-mono text-[11.5px] leading-relaxed">
                 <span className="bg-seam/60 mr-2 inline-block h-px w-3 align-middle" aria-hidden />
                 {r.highlights.join(" · ")}

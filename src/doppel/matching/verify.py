@@ -26,7 +26,7 @@ Three signals, combined:
     confidence = duration*0.40 + title*0.35 + artist*0.25      (each in [0, 1])
 
 A confidence below ``MATCH_ACCEPT_THRESHOLD`` (0.75) is a reject. The weights and
-threshold are decision-grade (see DECISIONS.md): change them only together with
+threshold are decision-grade: change them only together with
 the test suite, which is calibrated against them.
 
 Cover/karaoke/tribute handling: a candidate carrying a cover marker the seed lacks
@@ -39,7 +39,7 @@ spellings (Ke$ha/Kesha ≈0.40, P!nk/Pink ≈0.50). Different-artist covers spli
 low-similarity ones ("Glee Cast") are rejected by the source relevance gate, and a
 *bare artist-name superset* ("The Weeknd Experience") — which scores ~1.0 by name — is
 rejected at canonicalization by an artist-identity (MusicBrainz artist MBID) check, the
-one signal that separates it from a legit band/collaboration. See DECISIONS.md.
+one signal that separates it from a legit band/collaboration.
 """
 from __future__ import annotations
 
@@ -51,7 +51,7 @@ from rapidfuzz import fuzz
 from rapidfuzz.utils import default_process
 
 # --------------------------------------------------------------------------- #
-# Tunables — decision-grade. Keep in sync with DECISIONS.md and the test suite.
+# Tunables (calibrated constants): keep in sync with the test suite.
 # --------------------------------------------------------------------------- #
 
 DURATION_WEIGHT = 0.40

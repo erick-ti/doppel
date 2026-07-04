@@ -142,9 +142,9 @@ def strip_title_noise(title: str) -> str:
     """Drop parenthetical/bracketed and ' - <suffix>' noise for a relaxed query.
 
     For *querying* a search backend only. The real matcher's dedupe must PRESERVE
-    variant tokens (live/remaster/acoustic/etc.) to distinguish recordings — see
-    BRAINDUMP "conservative dedupe". This strips them solely to widen a search that
-    an exact-phrase query missed; disambiguation then happens via duration/ISRC.
+    variant tokens (live/remaster/acoustic/etc.) to distinguish recordings (the
+    matcher does a conservative dedupe). This strips them solely to widen a search
+    that an exact-phrase query missed; disambiguation then happens via duration/ISRC.
     """
     cleaned = _PARENTHETICAL.sub(" ", title)
     cleaned = _DASH_SUFFIX.sub("", cleaned)

@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 const POLL_MS = 5 * 60_000;
 /** Re-age the displayed snapshot on the wall clock INDEPENDENT of fetches — so staleness advances
  *  (and the green marker drops) even when refreshes hang, not just when a poll resolves. 60s matches
- *  the minute-granularity age label (Codex review 2026-06-13). */
+ *  the minute-granularity age label. */
 const TICK_MS = 60_000;
 
 /** Validated once at module load: only a real read-only badge URL survives (never a ping credential). */
@@ -142,7 +142,7 @@ export function OpsPanel() {
           // A stale snapshot only knows the API was up AS OF its timestamp — never assert live-up on
           // stale data (the cardinal rule): drop the green tone and qualify with the age. The `sub`
           // scopes the claim honestly: this is an HTTP **liveness** probe (/health is a static 200),
-          // not a dependency-aware health check (Redis/worker not verified) — Codex review 2026-06-13.
+          // not a dependency-aware health check (Redis/worker not verified).
           value={stats ? (stats.api.status === "up" ? "online" : "offline") : "—"}
           sub={stats ? (stale ? `as of ${relativeAge(ok!.ageMs)}` : "responding") : undefined}
           tone={stats ? (stale ? "idle" : stats.api.status === "up" ? "good" : "bad") : "idle"}

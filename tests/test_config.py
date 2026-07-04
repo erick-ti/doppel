@@ -1,6 +1,6 @@
 """Offline tests for the config-tuning validation (``_validate_tuning``).
 
-A Codex adversarial review flagged that the Day-7 resolve/timeout knobs accept any int from the
+The Day-7 resolve/timeout knobs accept any int from the
 environment and are used directly as a slice bound, so a fat-fingered value silently defeats the cap
 (``-1`` → ``pool[:-1]`` resolves nearly everything; ``0`` → no candidate audio scoring). These lock
 the fail-fast guard, plus the ``GATE1 <= GATE2`` coupling that closes the inline-resolve-then-defer
@@ -52,7 +52,7 @@ def test_gate1_equal_gate2_ok():
 
 def test_concurrency_exceeding_timeout_raises():
     # max_jobs=4 cold jobs share one ~1 req/s MB limiter: 4 × 75 × 7s = 2100s worst case > 900s, even
-    # though a single job (525s) fits. The budget must be sized against concurrency (Codex 2nd round).
+    # though a single job (525s) fits. The budget must be sized against concurrency.
     with pytest.raises(ValueError, match="WORKER_MAX_JOBS"):
         _validate_tuning(**{**_OK, "max_jobs": 4})
 
@@ -77,7 +77,7 @@ def test_stale_reclaim_just_above_timeout_ok():
 
 def test_fusion_weights_are_convex_by_construction():
     # α is DERIVED as 1−β, so the fusion pair is always convex (α+β=1) and combined_score stays in
-    # [0, 1]. A Codex review caught that an earlier independent-knob form let β=0.5 + default α=0.7
+    # [0, 1]. An earlier independent-knob form let β=0.5 + default α=0.7
     # emit combined_score>1 and break the [0, 1] contract the API/showcase render; this pins the fix.
     assert config.AUDIO_SIM_WEIGHT + config.VIBE_TEXT_WEIGHT == pytest.approx(1.0)
     assert 0.0 <= config.VIBE_TEXT_WEIGHT <= 1.0

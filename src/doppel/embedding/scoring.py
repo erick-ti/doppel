@@ -8,7 +8,7 @@ text in one space, so a text vector is directly comparable to an audio vector).
 
 The two similarity families live on different scales — audio-to-audio cosine and
 text-to-audio cosine do not occupy the same range — so they are **min-max normalized
-within the candidate batch** before fusion (BRAINDUMP "Scoring calibration"):
+within the candidate batch** before fusion:
 
     combined = α · norm(audio_cos) + β · norm(vibe_text_cos)
 

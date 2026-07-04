@@ -36,7 +36,7 @@ LOCK_FILE="${LOCK_FILE:-$HOME/.doppel-push-stats.lock}"
 CALL_TIMEOUT="${CALL_TIMEOUT:-30}"   # seconds; bounds each hang-prone docker exec
 RCLONE_TIMEOUT="${RCLONE_TIMEOUT:-120}"  # seconds; bounds the network rclone copyto
 
-# Single-instance guard (Codex review 2026-06-13): a */15-min cron must never pile up. Take a
+# Single-instance guard: a */15-min cron must never pile up. Take a
 # NON-BLOCKING exclusive lock on fd 9; if a prior run still holds it (e.g. a hung dependency), skip
 # this tick rather than spawning an overlapping copy that would race on STATS_TMP. The lock auto-
 # releases when this process exits. Paired with the per-call `timeout`s below so a hung run dies and
@@ -67,9 +67,9 @@ fi
 # password, works against dev and prod overlays alike (same approach as backup_db.sh's pg_dump).
 # Returns the scalar on success (an empty string is a VALID result — e.g. an empty corpus). FAILS
 # (non-zero, via pipefail) on a docker/compose/psql/timeout error, so the caller can abort rather
-# than publish fabricated zeros — `set -e` is held off by the caller's `|| _abort_db` (Codex review
-# 2026-06-13: do NOT swallow DB failures into 0; that would overwrite the last good public snapshot
-# with a fresh, misleading "healthy, corpus 0").
+# than publish fabricated zeros. `set -e` is held off by the caller's `|| _abort_db` (do NOT swallow
+# DB failures into 0; that would overwrite the last good public snapshot with a fresh, misleading
+# "healthy, corpus 0").
 _count() {
     # shellcheck disable=SC2086
     _timeout "$CALL_TIMEOUT" docker compose $COMPOSE_FILES exec -T postgres \
@@ -106,8 +106,8 @@ tracks="$(_count 'SELECT count(*) FROM tracks')" || _abort_db
 # Corpus = what the live engine can actually SERVE: the `servable_embeddings` view (source asset still
 # status='found') scoped to the ACTIVE CLAP contract — NOT raw `embeddings` (counts rejected-asset
 # rows) and NOT the dominant stored contract (after a model/pooling change or a mid-flight re-embed,
-# old rows can stay dominant while the engine reads only the configured version — Codex review
-# 2026-06-13). The active version is read from the running app's OWN config (no duplicated derivation
+# old rows can stay dominant while the engine reads only the configured version). The active version
+# is read from the running app's OWN config (no duplicated derivation
 # of CLAP_MODEL_ID+CLAP_EMBED_POOLING); this only matters when the app is up-and-serving, which is
 # exactly when the exec succeeds. If the app is unreachable (already shown as api.status=down, so no
 # active serving to misrepresent) fall back to the dominant servable contract rather than blanking
@@ -133,7 +133,7 @@ queries_completed="$(_count "SELECT count(*) FROM query_logs WHERE status='succe
 # API HTTP liveness from the loopback health endpoint (the box never exposes this publicly). NB:
 # /health is a static 200 — this is process liveness, NOT a dependency-aware check (Redis/worker/
 # enqueue are not verified). The panel labels the tile "liveness probe" so it can't be read as
-# full-engine health; a deep /health is a separate backend decision (Codex review 2026-06-13).
+# full-engine health; a deep /health is a separate backend decision.
 if curl --silent --show-error --max-time 5 --fail "$API_HEALTH_URL" >/dev/null 2>&1; then
     api_status="up"
 else
@@ -209,7 +209,7 @@ fi
 # Enforce the privacy boundary: the PUBLIC stats object must never land in the encrypted backup's
 # bucket (a shared crontab makes a copy-paste typo realistic; a collision would expose backup
 # ciphertext if that bucket is public, or hide the stats where the panel can't read them). Three
-# guards, cheap→thorough (Codex review 2026-06-13):
+# guards, cheap to thorough:
 #   (1) STATS_REMOTE sharing an rclone alias with BACKUP_REMOTE.
 if [[ -n "${BACKUP_REMOTE:-}" && "${STATS_REMOTE%%:*}" == "${BACKUP_REMOTE%%:*}" ]]; then
     echo "push_stats: STATS_REMOTE ('${STATS_REMOTE%%:*}:') shares an rclone remote with BACKUP_REMOTE — " \
