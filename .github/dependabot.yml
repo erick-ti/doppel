@@ -1,6 +1,10 @@
-# Dependabot version updates. Security updates run separately (no config needed).
+# Dependabot version updates. Security updates run separately (no config needed),
+# and they intentionally bypass the cooldown below, since they fix known vulnerabilities.
 # Minor and patch bumps are grouped into one PR per ecosystem to cut review noise;
 # major bumps arrive as individual PRs so a breaking change is reviewed on its own.
+# `cooldown` holds each version update until its release is 7 days old, so a bump is
+# not proposed until it has survived the window where most malicious or broken releases
+# are caught and yanked.
 version: 2
 updates:
   # Root Python project (pyproject.toml + uv.lock).
@@ -9,6 +13,8 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
     groups:
       python-minor-patch:
         update-types:
@@ -21,6 +27,13 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
+    # eslint 10 is a breaking major that needs a flat-config migration. Hold its major
+    # bumps until that work is done; remove this entry to resume eslint major updates.
+    ignore:
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
     groups:
       web-minor-patch:
         update-types:
@@ -32,6 +45,8 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
     groups:
       actions:
         patterns:
