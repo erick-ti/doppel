@@ -230,3 +230,6 @@ __marimo__/
 /V1.1_SHOWCASE_PLAN.md
 /V1.2_REPLAY_PLAN.md
 /docs/archive/
+
+# ROADMAP.md is a published doc; re-include it (overrides the global ignore that would exclude it).
+!ROADMAP.md
