@@ -244,7 +244,7 @@ requires-dist = [
 clap = [
     { name = "av", specifier = ">=18.0.0" },
     { name = "psutil", specifier = ">=7.2.2" },
-    { name = "torch", specifier = ">=2.12.1", index = "https://download.pytorch.org/whl/cpu" },
+    { name = "torch", specifier = ">=2.13.0", index = "https://download.pytorch.org/whl/cpu" },
     { name = "transformers", specifier = ">=5.13.0" },
 ]
 dev = [
