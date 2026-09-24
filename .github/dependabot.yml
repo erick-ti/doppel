@@ -17,6 +17,7 @@ updates:
       default-days: 7
     groups:
       python-minor-patch:
+        patterns: ["*"]
         update-types:
           - "minor"
           - "patch"
@@ -29,13 +30,18 @@ updates:
     open-pull-requests-limit: 5
     cooldown:
       default-days: 7
-    # eslint 10 is a breaking major that needs a flat-config migration. Hold its major
-    # bumps until that work is done; remove this entry to resume eslint major updates.
     ignore:
+      # Lift when Next's eslint-plugin-import, eslint-plugin-jsx-a11y and
+      # eslint-plugin-react dependencies all accept ESLint 10.
       - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      # typescript-eslint requires TypeScript <6.1.0. Lift when the installed
+      # lint tooling supports TypeScript 7; #55 currently crashes in its parser.
+      - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
     groups:
       web-minor-patch:
+        patterns: ["*"]
         update-types:
           - "minor"
           - "patch"
@@ -51,3 +57,28 @@ updates:
       actions:
         patterns:
           - "*"
+
+  # Root Dockerfile base image. The docker ecosystem reads Dockerfiles and
+  # Kubernetes manifests, not Compose files, so Compose has its own entry below.
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    groups:
+      docker-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # Service images in the root docker-compose*.yml files.
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    groups:
+      compose-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
