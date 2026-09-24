@@ -58,7 +58,8 @@ updates:
         patterns:
           - "*"
 
-  # Root Dockerfile and Compose images.
+  # Root Dockerfile base image. The docker ecosystem reads Dockerfiles and
+  # Kubernetes manifests, not Compose files, so Compose has its own entry below.
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
@@ -67,5 +68,17 @@ updates:
       default-days: 7
     groups:
       docker-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # Service images in the root docker-compose*.yml files.
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    groups:
+      compose-minor-patch:
         patterns: ["*"]
         update-types: ["minor", "patch"]
