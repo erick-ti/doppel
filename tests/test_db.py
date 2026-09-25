@@ -1,18 +1,22 @@
 """Offline db-layer tests — no Postgres required (these run on the CI merge gate).
 
 Covers the migration runner's pure decision core (discovery, ordering, checksum drift), the
-re-embedding threshold, and the resolver→rows persistence *mapping* via a recording fake
-connection. The live round-trips against real Postgres live in ``test_db_integration.py``.
+re-embedding threshold, the resolver→rows persistence *mapping* via a recording fake
+connection, and the pool's ``vector`` codec round-trip. The live round-trips against real
+Postgres live in ``test_db_integration.py``.
 """
 from __future__ import annotations
 
 import uuid
 
+import numpy as np
 import pytest
+from pgvector import Vector
 
 from doppel.aggregation.candidates import normalize_text
 from doppel.config import RESOLVER_VERSION
 from doppel.db import migrate, repository as repo
+from doppel.db.pool import decode_vector, encode_vector
 from doppel.matching.resolver import ResolvedMatch, ResolveStatus
 from doppel.matching.verify import MatchReason, MatchScore, ProviderTrack, SeedRecording
 
@@ -158,3 +162,31 @@ async def test_upsert_canonical_lookup_uses_shared_normalization():
     # first two args are normalized via the SAME function the aggregator dedupes by
     assert args[0] == normalize_text("HUMBLE.") and args[1] == normalize_text("Kendrick Lamar")
     assert RESOLVER_VERSION in args  # the row is version-stamped
+
+
+# --- vector codec (pool.py) ------------------------------------------------- #
+# pgvector-python 0.5.0 changed its asyncpg decoder to return a `Vector` object (no len / indexing /
+# implicit NumPy conversion). pool.py owns the codec so stored vectors always decode to float32 ndarrays; this
+# runs offline against whichever pgvector is installed, so a regression shows up on the CI gate.
+
+
+@pytest.mark.parametrize("value", [
+    np.arange(4, dtype=np.float32) / 4,
+    [0.25, -1.0, 3.5, 0.0],
+    (0.5, 0.5, -0.5, -0.5),
+    Vector([1.0, 2.0, 3.0, 4.0]),
+])
+def test_vector_codec_round_trips_to_float32_ndarray(value):
+    decoded = decode_vector(encode_vector(value))
+    assert isinstance(decoded, np.ndarray) and decoded.dtype == np.float32 and decoded.shape == (4,)
+    expected = value.to_numpy() if isinstance(value, Vector) else np.asarray(value, dtype=np.float32)
+    np.testing.assert_array_equal(decoded, expected)
+    assert len(decoded) == 4 and float(decoded[1]) == float(expected[1])  # the ops that broke under 0.5.0
+    assert decoded.flags.writeable and decoded.flags.owndata  # an owned copy, not a view of the wire buffer
+
+
+def test_vector_codec_wire_format_is_pgvector_binary():
+    # header = (dimensions, unused) as big-endian uint16, then a big-endian float32 payload
+    buf = encode_vector(np.array([1.0, -2.0], dtype=np.float32))
+    assert buf[:4] == b"\x00\x02\x00\x00" and len(buf) == 4 + 2 * 4
+    np.testing.assert_array_equal(np.frombuffer(buf[4:], dtype=">f4"), [1.0, -2.0])
