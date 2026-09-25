@@ -24,10 +24,12 @@ import pytest
 from doppel import db
 from doppel.aggregation.aggregator import Gate
 from doppel.aggregation.ranking import RankedCandidate
-from doppel.config import CLAP_EMBED_DIM, DATABASE_URL, GATE2_ASYNC_THRESHOLD
+from doppel.config import CLAP_EMBED_DIM, CLAP_MODEL_VERSION, DATABASE_URL, GATE2_ASYNC_THRESHOLD
 from doppel.db import QueryLogFields, migrate
 from doppel.db.pool import create_pool
-from doppel.matching.verify import ProviderTrack, SeedRecording
+from doppel.matching.resolver import ResolvedMatch, ResolveStatus
+from doppel.matching.verify import MatchReason, MatchScore, ProviderTrack, SeedRecording
+from doppel.pipeline import recommend as pipeline_mod
 from doppel.pipeline.recommend import (
     Deferred,
     Gate1Meta,
@@ -391,3 +393,84 @@ async def test_worker_job_marks_row_failed_on_cancellation(pool):
     async with pool.acquire() as conn:
         row = await db.get_query_log(conn, qid)
         assert row["status"] == "failed" and row["completed_at"] is not None
+
+
+# --- regressions: decoded corpus vectors flow into scoring ------------------------------------- #
+# pgvector-python 0.5.0 changed the asyncpg `vector` decoder to return a `Vector` object instead of an
+# ndarray. `db/pool.py` owns the codec so stored embeddings keep arriving as float32 arrays; these two
+# runs are served entirely from the corpus, so a decoder regression surfaces at scoring instead of
+# passing unnoticed (the other pipeline tests start from an empty corpus and never decode a vector).
+
+
+class _RaisingFinder:
+    """TrackFinder that must never be consulted: every lookup is expected to hit canonical_lookups."""
+
+    async def find_track(self, title, artist):
+        raise AssertionError(f"live resolve attempted for {title!r} / {artist!r}; expected a cache hit")
+
+
+class _RaisingEmbedder(FakeEmbedder):
+    """ClapEmbedder stand-in that must never embed a preview: every vector is expected to come from the
+    corpus. ``embed_text`` still works (the vibe vector is computed per request, never cached)."""
+
+    async def embed_preview(self, url, client):
+        raise AssertionError(f"embed_preview called for {url}; expected a cached vector")
+
+
+def _found_match(title: str, artist: str) -> ResolvedMatch:
+    """A FOUND resolve for (title, artist): the deterministic MBID plus a Deezer-shaped preview."""
+    isrc = f"ISRC{title}"
+    seed = SeedRecording(title, artist, 180000, frozenset({isrc}), _mbid(title))
+    cand = ProviderTrack(title, artist, 180000, isrc, _preview(title), abs(hash(title)) % 10**9)
+    match = MatchScore(1.0, True, MatchReason.ISRC, 1.0, 1.0, None, 0, isrc_match=True)
+    return ResolvedMatch(ResolveStatus.FOUND, seed, cand, match)
+
+
+async def _seed_corpus(pool, pairs: list[tuple[str, str]]) -> None:
+    """Persist FOUND lookups + cached embeddings so a run is served entirely from the corpus."""
+    async with pool.acquire() as conn:
+        for title, artist in pairs:
+            asset_id = await db.persist_resolved_match(conn, title, artist, _found_match(title, artist))
+            assert asset_id is not None
+            await db.upsert_embedding(conn, mbid=_mbid(title), model_version=CLAP_MODEL_VERSION,
+                                      embedding=FakeEmbedder._vec(_preview(title)),
+                                      source_confidence=1.0, asset_id=asset_id)
+
+
+async def test_warm_path_uses_cached_vectors_from_db(pool):
+    # seed cache hit (_resolve_and_embed_seed) + the Gate-2 fetch_embeddings load: every vector is a
+    # decoded `embedding` column and scoring must accept it as an ndarray.
+    await _seed_corpus(pool, [("Seed", "Artist"), ("SongA", "Artist SongA"), ("SongB", "Artist SongB")])
+    cands = [_cand("SongA", 1, 0.05), _cand("SongB", 2, 0.04)]
+    deps = _deps(pool, finder=_RaisingFinder(), embedder=_RaisingEmbedder())
+    rec = await run_pipeline(deps, "Seed", "Artist", None, cands, _warm_gate1(2), execution_mode="inline")
+
+    assert isinstance(rec, Recommendation)
+    assert rec.degradation.seed_audio_scored is True
+    assert [r.was_audio_scored for r in rec.results] == [True, True]
+    by_mbid = {r.mbid: r for r in rec.results}
+    assert set(by_mbid) == {_mbid("SongA"), _mbid("SongB")}
+    # value fidelity through the DB round trip: audio_score is the raw cosine of the two stored vectors
+    expected = float(np.dot(FakeEmbedder._vec(_preview("Seed")), FakeEmbedder._vec(_preview("SongA"))))
+    assert by_mbid[_mbid("SongA")].audio_score == pytest.approx(expected, abs=1e-5)
+    async with pool.acquire() as conn:
+        log = await db.get_query_log(conn, rec.query_log_id)
+        assert log["status"] == "succeeded" and log["audio_scored_count"] == 2
+        assert log["embeddings_cache_hits"] == 2 and log["embeddings_computed"] == 0  # served from the corpus
+
+
+async def test_mood_lane_hydrates_cached_vectors_from_db(pool, monkeypatch):
+    # the third consumer: _hnsw_lane hydrates its knn hits via fetch_embeddings, so a corpus-only track
+    # (never in the cultural pool) is scored and recommended from its decoded vector.
+    monkeypatch.setattr(pipeline_mod, "HNSW_LANE_ENABLED", True)
+    await _seed_corpus(pool, [("Seed", "Artist"), ("SongA", "Artist SongA"), ("Corpus", "Artist Corpus")])
+    cands = [_cand("SongA", 1, 0.05)]
+    deps = _deps(pool, finder=_RaisingFinder(), embedder=_RaisingEmbedder())
+    rec = await run_pipeline(deps, "Seed", "Artist", "dreamy late-night synths", cands, _warm_gate1(1),
+                             execution_mode="inline")
+
+    assert isinstance(rec, Recommendation)
+    by_mbid = {r.mbid: r for r in rec.results}
+    assert by_mbid[_mbid("SongA")].was_audio_scored is True
+    corpus = by_mbid[_mbid("Corpus")]
+    assert corpus.was_audio_scored is True and "hnsw" in corpus.sources

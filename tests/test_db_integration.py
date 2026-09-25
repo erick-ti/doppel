@@ -138,6 +138,7 @@ async def test_embedding_round_trip_and_knn(conn):
     await repo.upsert_embedding(conn, mbid=mbid, model_version=CLAP_MODEL_VERSION,
                                 embedding=vec, source_confidence=1.0, asset_id=asset_id)
     emb = await repo.get_embedding(conn, mbid, CLAP_MODEL_VERSION)
+    assert isinstance(emb["embedding"], np.ndarray) and emb["embedding"].dtype == np.float32  # pool codec contract
     assert len(emb["embedding"]) == 512
     fetched = await repo.fetch_embeddings(conn, [mbid], CLAP_MODEL_VERSION)
     assert len(fetched) == 1 and str(fetched[0]["mbid"]) == mbid
@@ -397,3 +398,15 @@ async def test_reap_stale_active_query_logs(conn):
     assert await repo.get_active_query_log(conn, "stale-run-key") is None
     assert await repo.get_active_query_log(conn, "stale-queue-key") is not None
     assert await repo.get_active_query_log(conn, "fresh-key") is not None
+
+
+async def test_vector_codec_agrees_with_the_server(conn):
+    # Non-symmetric anchor for pool.py's codec: the server renders what our encoder sent, and our
+    # decoder reads what the server encoded, so a byte-order or layout bug cannot hide behind a
+    # matching encode/decode pair (every other db test goes through the same codec both ways).
+    sent = np.array([1.0, -2.0, 0.5], dtype=np.float32)
+    text = await conn.fetchval("SELECT $1::vector::text", sent)
+    assert [float(x) for x in text.strip("[]").split(",")] == [1.0, -2.0, 0.5]
+    got = await conn.fetchval("SELECT '[1,-2,0.5]'::vector")
+    assert isinstance(got, np.ndarray) and got.dtype == np.float32
+    np.testing.assert_array_equal(got, sent)
